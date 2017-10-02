@@ -19,20 +19,12 @@ make_EHelper(mov_cr2r) {
   TODO();
 
   print_asm("movl %%cr%d,%%%s", id_src->reg, reg_name(id_dest->reg, 4));
-
-#ifdef DIFF_TEST
-  diff_test_skip_qemu();
-#endif
 }
 
 make_EHelper(int) {
   TODO();
 
   print_asm("int %s", id_dest->str);
-
-#ifdef DIFF_TEST
-  diff_test_skip_nemu();
-#endif
 }
 
 make_EHelper(iret) {
@@ -48,18 +40,10 @@ make_EHelper(in) {
   TODO();
 
   print_asm_template2(in);
-
-#ifdef DIFF_TEST
-  diff_test_skip_qemu();
-#endif
 }
 
 make_EHelper(out) {
   TODO();
 
   print_asm_template2(out);
-
-#ifdef DIFF_TEST
-  diff_test_skip_qemu();
-#endif
 }
