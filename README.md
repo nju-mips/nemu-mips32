@@ -26,7 +26,7 @@ make
 ## 运行
 将nexus-am/tests/cputest/build下的\*.bin文件拷贝到build目录下，运行
 ```
-./nemu -i \*.bin
+./nemu -i *.bin
 ```
 注意，由于我们在模拟器中并没有loader，请务必运行经过了objcopy处理过的\*.bin文件，而不是运行直接运行非.bin结尾的可执行文件。
 
