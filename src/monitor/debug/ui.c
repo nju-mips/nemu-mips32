@@ -36,6 +36,8 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_si(char *args);
+static int cmd_info(char *args);
 static int cmd_help(char *args);
 
 static struct {
@@ -46,9 +48,8 @@ static struct {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
-  /* TODO: Add more commands */
-
+  { "si", "Single step", cmd_si}, 
+  { "info", "Print information", cmd_info}
 };
 
 #define NR_CMD (sizeof(cmd_table) / sizeof(cmd_table[0]))
@@ -74,6 +75,54 @@ static int cmd_help(char *args) {
     printf("Unknown command '%s'\n", arg);
   }
   return 0;
+}
+
+static int cmd_si(char *args)
+{
+  unsigned step_num;
+  /*if no step number is specified, by default it execute one instruction*/
+  if(args==NULL)
+  {
+    cpu_exec(1);
+    return 0;
+  }
+  if(sscanf(args,"%u",&step_num)>0)
+    cpu_exec(step_num);
+  else
+    printf("Error, you should follow the si command with a number!\n");
+  return 0;
+}
+
+static char *regs[32] = {
+  "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
+  "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+  "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"
+};
+
+static int cmd_info(char *args)
+{
+  char subcmd[5];
+  if(sscanf(args, "%4s", subcmd) > 0)
+  {
+    if(strcmp(subcmd, "r")==0)
+    {
+      // print pc
+      printf("$pc: 0x%08x\n", cpu.pc);
+      // print in eight lines
+      for(int i = 0; i < 8; i++) {
+        for(int j = 0; j < 4; j++) {
+          int regno = 4 * i + j;
+          printf("$%s 0x%08x  ", regs[regno], cpu.gpr[regno]);
+        }
+        printf("\n");
+      }
+      return 0;
+    }
+  }
+  printf("Error, illegal subcommand!\nNote" 
+      "that, only 'r' is allowed!\n");
+  return 1;
 }
 
 void ui_mainloop(int is_batch_mode) {

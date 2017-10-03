@@ -45,7 +45,9 @@ static inline void load_img() {
   size = ftell(fp);
 
   fseek(fp, 0, SEEK_SET);
-  ret = fread(guest_to_host(ENTRY_START), size, 1, fp);
+  // load into ddr
+  // be careful about memory mapping
+  ret = fread(ddr, size, 1, fp);
   assert(ret == 1);
 
   fclose(fp);
@@ -53,21 +55,21 @@ static inline void load_img() {
 
 static inline void restart() {
   /* Set the initial instruction pointer. */
-  cpu.eip = ENTRY_START;
+  cpu.pc = ENTRY_START;
 }
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bl:")) != -1) {
+  while ( (o = getopt(argc, argv, "-bli:")) != -1) {
     switch (o) {
       case 'b': is_batch_mode = true; break;
       case 'l': log_file = optarg; break;
-      case 1:
+      case 'i':
                 if (img_file != NULL) Log("too much argument '%s', ignored", optarg);
                 else img_file = optarg;
                 break;
       default:
-                panic("Usage: %s [-b] [-l log_file] [img_file]", argv[0]);
+                panic("Usage: %s [-b] [-l log_file] [-i img_file]", argv[0]);
     }
   }
 }
