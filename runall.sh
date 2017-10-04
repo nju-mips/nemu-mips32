@@ -5,28 +5,29 @@ nemu=build/nemu
 if make &> /dev/null; then
   echo "NEMU compile OK"
 else
-  echo "testcases compile error... exit..."
+  echo "NEMU compile error... exit..."
   exit
 fi
 
 echo "compiling testcases..."
-if make -C $AM_HOME/tests/cputest ARCH=x86-nemu &> /dev/null; then
+if make -C $AM_HOME/tests/cputest ARCH=mips32-npc &> /dev/null; then
   echo "testcases compile OK"
 else
   echo "testcases compile error... exit..."
   exit
 fi
 
-files=`ls $AM_HOME/tests/cputest/build/*-x86-nemu.bin`
+files=`ls $AM_HOME/tests/cputest/build/*-mips32-npc.bin`
 ori_log="build/nemu-log.txt"
 
 for file in $files; do
-  base=`basename $file | sed -e 's/-x86-nemu.bin//'`
+  base=`basename $file | sed -e 's/-mips32-npc.bin//'`
   printf "[%14s] " $base
   logfile=$base-log.txt
-  $nemu -b -l $ori_log $file &> $logfile
+#  $nemu -b -l $ori_log -i $file &> $logfile
+  $nemu -b -i $file &> $logfile
 
-  if (grep 'nemu: HIT GOOD TRAP' $logfile > /dev/null) then
+  if (grep 'HIT GOOD TRAP' $logfile > /dev/null) then
     echo -e "\033[1;32mPASS!\033[0m"
     rm $logfile
   else
