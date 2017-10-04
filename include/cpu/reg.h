@@ -8,5 +8,6 @@ typedef struct {
   vaddr_t pc;
 } CPU_state;
 
+extern const char *regs[];
 extern CPU_state cpu;
 #endif
