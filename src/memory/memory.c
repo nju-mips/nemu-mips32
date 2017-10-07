@@ -1,10 +1,13 @@
 #include "nemu.h"
+#include "monitor/monitor.h"
 
 typedef uint32_t (*read_func) (paddr_t addr, int len);
 typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
 static uint32_t ddr_read(paddr_t addr, int len);
 static void ddr_write(paddr_t addr, int len, uint32_t data);
+static uint32_t uartlite_read(paddr_t addr, int len);
+static void uartlite_write(paddr_t addr, int len, uint32_t data);
 static void gpio_write(paddr_t addr, int len, uint32_t data);
 static uint32_t invalid_read(paddr_t addr, int len);
 static void invalid_write(paddr_t addr, int len, uint32_t data);
@@ -23,7 +26,7 @@ struct mmap_region {
   {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {0x10000000, 0x1fffffff, ddr_read, ddr_write},
   {0x40000000, 0x40000fff, invalid_read, gpio_write},
-  {0x40001000, 0x40001fff, invalid_read, invalid_write},
+  {0x40001000, 0x40001fff, uartlite_read, uartlite_write},
   {0x40010000, 0x4001ffff, invalid_read, invalid_write}
 };
 
@@ -70,14 +73,64 @@ static void ddr_write(paddr_t addr, int len, uint32_t data) {
   memcpy((uint8_t *)ddr + addr, &data, len);
 }
 
-#include "monitor/monitor.h"
+/* serial port */
+#define SERIAL_PORT ((volatile char *)0x40001000)
+#define Rx 0x0
+#define Tx 0x04
+#define STAT 0x08
+#define CTRL 0x0c
+
+#define check_uartlite(addr, len) \
+  Assert(addr >= 0 && addr <= STAT, \
+      "address(0x%08x) is out side UARTLite", addr); \
+  Assert(len == 1, \
+      "UARTLite only allow byte read/write");
+
+static uint32_t uartlite_read(paddr_t addr, int len) {
+  /* CTRL not yet implemented, only allow byte read/write */
+  check_uartlite(addr, len);
+  switch (addr) {
+    // only allow stat read
+    // Rx not supported
+    case STAT:
+      // ready for Tx
+      // no valid Rx
+      return 0;
+      break;
+    default:
+      Assert(false, "UARTLite: address(0x%08x) is not readable", addr);
+      break;
+  }
+}
+
+static void uartlite_write(paddr_t addr, int len, uint32_t data) {
+  check_uartlite(addr, len);
+  switch (addr) {
+    case Tx:
+      printf("%c", (char)data);
+      break;
+    default:
+      Assert(false, "UARTLite: address(0x%08x) is not writable", addr);
+      break;
+  }
+}
+
+/* gpio trap */
+
+#define check_gpio(addr, len) \
+  Assert(addr == 0, \
+      "address(0x%08x) is out side GPIO", addr); \
+  Assert(len == 1, \
+      "GPIO only allow byte read/write");
+
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
-	if (data == 0) {
-		Log("HIT GOOD TRAP");
-	}
-	else
-		Log("HIT BAD TRAP");
-	nemu_state = NEMU_END;
+  check_gpio(addr, len);
+  if ((unsigned char)data == 0) {
+    Log("HIT GOOD TRAP");
+  }
+  else
+    Log("HIT BAD TRAP");
+  nemu_state = NEMU_END;
 }
 
 static uint32_t invalid_read(paddr_t addr, int len) {
