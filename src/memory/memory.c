@@ -5,6 +5,7 @@ typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
 static uint32_t ddr_read(paddr_t addr, int len);
 static void ddr_write(paddr_t addr, int len, uint32_t data);
+static void gpio_write(paddr_t addr, int len, uint32_t data);
 static uint32_t invalid_read(paddr_t addr, int len);
 static void invalid_write(paddr_t addr, int len, uint32_t data);
 
@@ -21,7 +22,7 @@ struct mmap_region {
 } mmap_table [] = {
   {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {0x10000000, 0x1fffffff, ddr_read, ddr_write},
-  {0x40000000, 0x40000fff, invalid_read, invalid_write},
+  {0x40000000, 0x40000fff, invalid_read, gpio_write},
   {0x40001000, 0x40001fff, invalid_read, invalid_write},
   {0x40010000, 0x4001ffff, invalid_read, invalid_write}
 };
@@ -56,7 +57,7 @@ uint8_t ddr[DDR_SIZE];
 /* Memory accessing interfaces */
 
 #define check_ddr(addr, len) \
-  Assert(addr >= 0 && addr < DDR_SIZE && addr + len < DDR_SIZE, \
+  Assert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
       "address(0x%08x) is out side DDR", addr);
 
 static uint32_t ddr_read(paddr_t addr, int len) {
@@ -67,6 +68,16 @@ static uint32_t ddr_read(paddr_t addr, int len) {
 static void ddr_write(paddr_t addr, int len, uint32_t data) {
   check_ddr(addr, len);
   memcpy((uint8_t *)ddr + addr, &data, len);
+}
+
+#include "monitor/monitor.h"
+static void gpio_write(paddr_t addr, int len, uint32_t data) {
+	if (data == 0) {
+		Log("HIT GOOD TRAP");
+	}
+	else
+		Log("HIT BAD TRAP");
+	nemu_state = NEMU_END;
 }
 
 static uint32_t invalid_read(paddr_t addr, int len) {
