@@ -115,6 +115,15 @@ void mult(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "mult %s,%s", regs[rs], regs[rt]);
 }
 
+void div(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	cpu.lo = (int32_t)cpu.gpr[rs] / (int32_t)cpu.gpr[rt];
+	cpu.hi = (int32_t)cpu.gpr[rs] % (int32_t)cpu.gpr[rt];
+	sprintf(asm_buf_p, "div %s,%s", regs[rs], regs[rt]);
+}
+
 void sltu(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -381,7 +390,7 @@ exec_func gp0_table[64] = {
   /* 0x0c */	inv, inv, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
-  /* 0x18 */	mult, inv, inv, inv,
+  /* 0x18 */	mult, inv, div, inv,
   /* 0x1c */	inv, inv, inv, inv,
   /* 0x20 */	inv, addu, inv, subu,
   /* 0x24 */	and, or, xor, nor,
