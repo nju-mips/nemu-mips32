@@ -105,6 +105,16 @@ void mul(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "mul %s,%s,%s", regs[rd], regs[rs], regs[rt]);
 }
 
+void mult(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	int64_t prod = (int64_t)(int32_t)cpu.gpr[rs] * (int64_t)(int32_t)cpu.gpr[rt];
+	cpu.lo = (uint32_t)prod;
+	cpu.hi = (uint32_t)(prod >> 32);
+	sprintf(asm_buf_p, "mult %s,%s", regs[rs], regs[rt]);
+}
+
 void sltu(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -185,6 +195,22 @@ void movz(vaddr_t *pc, uint32_t instr) {
 	if (cpu.gpr[rt] == 0)
 		cpu.gpr[rd] = cpu.gpr[rs];
 	sprintf(asm_buf_p, "movz %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+}
+
+void mfhi(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(rs == 0 && rt == 0 && dummy == 0);
+	cpu.gpr[rd] = cpu.hi;
+	sprintf(asm_buf_p, "mfhi %s", regs[rd]);
+}
+
+void mflo(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(rs == 0 && rt == 0 && dummy == 0);
+	cpu.gpr[rd] = cpu.lo;
+	sprintf(asm_buf_p, "mflo %s", regs[rd]);
 }
 
 void decode_i_format(uint32_t instr, uint32_t *rs,
@@ -341,14 +367,21 @@ void jal(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "jal %x", *pc);
 }
 
+void j(vaddr_t *pc, uint32_t instr) {
+	uint32_t instr_index;
+	decode_j_format(instr, &instr_index);
+	*pc = (*pc & 0xf0000000) | (instr_index << 2);
+	sprintf(asm_buf_p, "j %x", *pc);
+}
+
 exec_func gp0_table[64] = {
   /* 0x00 */    sll, inv, srl, sra,
   /* 0x04 */	sllv, inv, srlv, srav,
   /* 0x08 */	jr, inv, movz, movn,
   /* 0x0c */	inv, inv, inv, inv,
-  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
-  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x18 */	mult, inv, inv, inv,
   /* 0x1c */	inv, inv, inv, inv,
   /* 0x20 */	inv, addu, inv, subu,
   /* 0x24 */	and, or, xor, nor,
@@ -388,7 +421,7 @@ void exec_gp2(vaddr_t *pc, uint32_t instr) {
 }
 
 exec_func opcode_table[64] = {
-  /* 0x00 */    exec_gp0, inv, inv, jal,
+  /* 0x00 */    exec_gp0, inv, j, jal,
   /* 0x04 */	beq, bne, inv, inv,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
@@ -418,4 +451,5 @@ void exec_wrapper(bool print_flag) {
 
 	if (print_flag)
 		puts(asm_buf);
+	Log_write("%s\n", asm_buf);
 }
