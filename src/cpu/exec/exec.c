@@ -97,6 +97,14 @@ void subu(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "subu %s,%s,%s", regs[rd], regs[rs], regs[rt]);
 }
 
+void mul(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = cpu.gpr[rs] * cpu.gpr[rt];
+	sprintf(asm_buf_p, "mul %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+}
+
 void sltu(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -356,6 +364,29 @@ void exec_gp0(vaddr_t *pc, uint32_t instr) {
   gp0_table[get_funct(instr)](pc, instr);
 }
 
+exec_func gp2_table[64] = {
+  /* 0x00 */    inv, inv, mul, inv,
+  /* 0x04 */	inv, inv, inv, inv,
+  /* 0x08 */	inv, inv, inv, inv,
+  /* 0x0c */	inv, inv, inv, inv,
+  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x14 */	inv, inv, inv, inv,
+  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x1c */	inv, inv, inv, inv,
+  /* 0x20 */	inv, inv, inv, inv,
+  /* 0x24 */	inv, inv, inv, inv,
+  /* 0x28 */	inv, inv, inv, inv,
+  /* 0x2c */	inv, inv, inv, inv,
+  /* 0x30 */	inv, inv, inv, inv,
+  /* 0x34 */	inv, inv, inv, inv,
+  /* 0x38 */	inv, inv, inv, inv,
+  /* 0x3c */	inv, inv, inv, inv
+};
+
+void exec_gp2(vaddr_t *pc, uint32_t instr) {
+  gp2_table[get_funct(instr)](pc, instr);
+}
+
 exec_func opcode_table[64] = {
   /* 0x00 */    exec_gp0, inv, inv, jal,
   /* 0x04 */	beq, bne, inv, inv,
@@ -364,7 +395,7 @@ exec_func opcode_table[64] = {
   /* 0x10 */	inv, inv, inv, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
-  /* 0x1c */	inv, inv, inv, inv,
+  /* 0x1c */	exec_gp2, inv, inv, inv,
   /* 0x20 */	lb, lh, inv, lw,
   /* 0x24 */	lbu, lhu, inv, inv,
   /* 0x28 */	sb, sh, inv, sw,
