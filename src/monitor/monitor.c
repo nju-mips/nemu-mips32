@@ -60,7 +60,7 @@ static inline void restart() {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bli:")) != -1) {
+  while ( (o = getopt(argc, argv, "-bl:i:")) != -1) {
     switch (o) {
       case 'b': is_batch_mode = true; break;
       case 'l': log_file = optarg; break;
