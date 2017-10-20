@@ -137,6 +137,30 @@ void sra(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "sra %s,%s,0x%x", regs[rd], regs[rt], sa);
 }
 
+void srav(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = (int32_t)cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
+	sprintf(asm_buf_p, "srav %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+}
+
+void srl(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, sa;
+	decode_r_format(instr, &rs, &rt, &rd, &sa);
+	assert(rs == 0);
+	cpu.gpr[rd] = cpu.gpr[rt] >> sa;
+	sprintf(asm_buf_p, "srl %s,%s,0x%x", regs[rd], regs[rt], sa);
+}
+
+void srlv(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
+	sprintf(asm_buf_p, "srlv %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+}
+
 void movn(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -310,8 +334,8 @@ void jal(vaddr_t *pc, uint32_t instr) {
 }
 
 exec_func gp0_table[64] = {
-  /* 0x00 */    sll, inv, inv, sra,
-  /* 0x04 */	sllv, inv, inv, inv,
+  /* 0x00 */    sll, inv, srl, sra,
+  /* 0x04 */	sllv, inv, srlv, srav,
   /* 0x08 */	jr, inv, movz, movn,
   /* 0x0c */	inv, inv, inv, inv,
   /* 0x10 */	inv, inv, inv, inv,
