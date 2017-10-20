@@ -222,6 +222,15 @@ void mflo(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "mflo %s", regs[rd]);
 }
 
+void jalr(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, hint;
+	decode_r_format(instr, &rs, &rt, &rd, &hint);
+	assert(rt == 0 && hint == 0);
+	cpu.gpr[rd] = *pc + 4;
+	*pc = cpu.gpr[rs];
+	sprintf(asm_buf_p, "jalr %s,%s", regs[rd], regs[rs]);
+}
+
 void decode_i_format(uint32_t instr, uint32_t *rs,
     uint32_t *rt, uint32_t *imm) {
   *rs = get_bits(instr, 25, 21);
@@ -364,6 +373,16 @@ void bne(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[rs], regs[rt], offset);
 }
 
+void blez(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, imm;
+	decode_i_format(instr, &rs, &rt, &imm);
+	assert(rt == 0);
+	int32_t offset = (int32_t)(int16_t)imm << 2;
+	if ((int32_t)cpu.gpr[rs] <= 0)
+		*pc += offset;
+	sprintf(asm_buf_p, "blez %s,0x%x", regs[rs], offset);
+}
+
 void decode_j_format(uint32_t instr, uint32_t *addr) {
   *addr = get_bits(instr, 25, 0);
 }
@@ -386,7 +405,7 @@ void j(vaddr_t *pc, uint32_t instr) {
 exec_func gp0_table[64] = {
   /* 0x00 */    sll, inv, srl, sra,
   /* 0x04 */	sllv, inv, srlv, srav,
-  /* 0x08 */	jr, inv, movz, movn,
+  /* 0x08 */	jr, jalr, movz, movn,
   /* 0x0c */	inv, inv, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
@@ -431,7 +450,7 @@ void exec_gp2(vaddr_t *pc, uint32_t instr) {
 
 exec_func opcode_table[64] = {
   /* 0x00 */    exec_gp0, inv, j, jal,
-  /* 0x04 */	beq, bne, inv, inv,
+  /* 0x04 */	beq, bne, blez, inv,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
   /* 0x10 */	inv, inv, inv, inv,
