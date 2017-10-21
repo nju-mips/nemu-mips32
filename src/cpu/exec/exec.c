@@ -124,6 +124,15 @@ void div(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "div %s,%s", regs[rs], regs[rt]);
 }
 
+void divu(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	cpu.lo = cpu.gpr[rs] / cpu.gpr[rt];
+	cpu.hi = cpu.gpr[rs] % cpu.gpr[rt];
+	sprintf(asm_buf_p, "divu %s,%s", regs[rs], regs[rt]);
+}
+
 void sltu(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -383,6 +392,15 @@ void blez(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "blez %s,0x%x", regs[rs], offset);
 }
 
+void bltz(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, imm;
+	decode_i_format(instr, &rs, &rt, &imm);
+	int32_t offset = (int32_t)(int16_t)imm << 2;
+	if ((int32_t)cpu.gpr[rs] < 0)
+		*pc += offset;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[rs], offset);
+}
+
 void decode_j_format(uint32_t instr, uint32_t *addr) {
   *addr = get_bits(instr, 25, 0);
 }
@@ -409,7 +427,7 @@ exec_func special_table[64] = {
   /* 0x0c */	inv, inv, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
-  /* 0x18 */	mult, inv, div, inv,
+  /* 0x18 */	mult, inv, div, divu,
   /* 0x1c */	inv, inv, inv, inv,
   /* 0x20 */	inv, addu, inv, subu,
   /* 0x24 */	and, or, xor, nor,
@@ -448,8 +466,23 @@ void exec_special2(vaddr_t *pc, uint32_t instr) {
   special2_table[get_funct(instr)](pc, instr);
 }
 
+exec_func regimm_table[64] = {
+  /* 0x00 */    bltz, inv, inv, inv,
+  /* 0x04 */	inv, inv, inv, inv,
+  /* 0x08 */	inv, inv, inv, inv,
+  /* 0x0c */	inv, inv, inv, inv,
+  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x14 */	inv, inv, inv, inv,
+  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x1c */	inv, inv, inv, inv,
+};
+
+void exec_regimm(vaddr_t *pc, uint32_t instr) {
+  regimm_table[get_bits(instr, 20, 16)](pc, instr);
+}
+
 exec_func opcode_table[64] = {
-  /* 0x00 */    exec_special, inv, j, jal,
+  /* 0x00 */    exec_special, exec_regimm, j, jal,
   /* 0x04 */	beq, bne, blez, inv,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
