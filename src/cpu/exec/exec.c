@@ -402,7 +402,7 @@ void j(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "j %x", *pc);
 }
 
-exec_func gp0_table[64] = {
+exec_func special_table[64] = {
   /* 0x00 */    sll, inv, srl, sra,
   /* 0x04 */	sllv, inv, srlv, srav,
   /* 0x08 */	jr, jalr, movz, movn,
@@ -421,11 +421,11 @@ exec_func gp0_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void exec_gp0(vaddr_t *pc, uint32_t instr) {
-  gp0_table[get_funct(instr)](pc, instr);
+void exec_special(vaddr_t *pc, uint32_t instr) {
+  special_table[get_funct(instr)](pc, instr);
 }
 
-exec_func gp2_table[64] = {
+exec_func special2_table[64] = {
   /* 0x00 */    inv, inv, mul, inv,
   /* 0x04 */	inv, inv, inv, inv,
   /* 0x08 */	inv, inv, inv, inv,
@@ -444,19 +444,19 @@ exec_func gp2_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void exec_gp2(vaddr_t *pc, uint32_t instr) {
-  gp2_table[get_funct(instr)](pc, instr);
+void exec_special2(vaddr_t *pc, uint32_t instr) {
+  special2_table[get_funct(instr)](pc, instr);
 }
 
 exec_func opcode_table[64] = {
-  /* 0x00 */    exec_gp0, inv, j, jal,
+  /* 0x00 */    exec_special, inv, j, jal,
   /* 0x04 */	beq, bne, blez, inv,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
   /* 0x10 */	inv, inv, inv, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
-  /* 0x1c */	exec_gp2, inv, inv, inv,
+  /* 0x1c */	exec_special2, inv, inv, inv,
   /* 0x20 */	lb, lh, inv, lw,
   /* 0x24 */	lbu, lhu, inv, inv,
   /* 0x28 */	sb, sh, inv, sw,
