@@ -97,6 +97,42 @@ void subu(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "subu %s,%s,%s", regs[rd], regs[rs], regs[rt]);
 }
 
+void mul(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = cpu.gpr[rs] * cpu.gpr[rt];
+	sprintf(asm_buf_p, "mul %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+}
+
+void mult(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	int64_t prod = (int64_t)(int32_t)cpu.gpr[rs] * (int64_t)(int32_t)cpu.gpr[rt];
+	cpu.lo = (uint32_t)prod;
+	cpu.hi = (uint32_t)(prod >> 32);
+	sprintf(asm_buf_p, "mult %s,%s", regs[rs], regs[rt]);
+}
+
+void div(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	cpu.lo = (int32_t)cpu.gpr[rs] / (int32_t)cpu.gpr[rt];
+	cpu.hi = (int32_t)cpu.gpr[rs] % (int32_t)cpu.gpr[rt];
+	sprintf(asm_buf_p, "div %s,%s", regs[rs], regs[rt]);
+}
+
+void divu(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, dummy1, dummy2;
+	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
+	assert(dummy1 == 0 && dummy2 == 0);
+	cpu.lo = cpu.gpr[rs] / cpu.gpr[rt];
+	cpu.hi = cpu.gpr[rs] % cpu.gpr[rt];
+	sprintf(asm_buf_p, "divu %s,%s", regs[rs], regs[rt]);
+}
+
 void sltu(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -137,6 +173,30 @@ void sra(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "sra %s,%s,0x%x", regs[rd], regs[rt], sa);
 }
 
+void srav(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = (int32_t)cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
+	sprintf(asm_buf_p, "srav %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+}
+
+void srl(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, sa;
+	decode_r_format(instr, &rs, &rt, &rd, &sa);
+	assert(rs == 0);
+	cpu.gpr[rd] = cpu.gpr[rt] >> sa;
+	sprintf(asm_buf_p, "srl %s,%s,0x%x", regs[rd], regs[rt], sa);
+}
+
+void srlv(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(dummy == 0);
+	cpu.gpr[rd] = cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
+	sprintf(asm_buf_p, "srlv %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+}
+
 void movn(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, rd, dummy;
 	decode_r_format(instr, &rs, &rt, &rd, &dummy);
@@ -153,6 +213,31 @@ void movz(vaddr_t *pc, uint32_t instr) {
 	if (cpu.gpr[rt] == 0)
 		cpu.gpr[rd] = cpu.gpr[rs];
 	sprintf(asm_buf_p, "movz %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+}
+
+void mfhi(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(rs == 0 && rt == 0 && dummy == 0);
+	cpu.gpr[rd] = cpu.hi;
+	sprintf(asm_buf_p, "mfhi %s", regs[rd]);
+}
+
+void mflo(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, dummy;
+	decode_r_format(instr, &rs, &rt, &rd, &dummy);
+	assert(rs == 0 && rt == 0 && dummy == 0);
+	cpu.gpr[rd] = cpu.lo;
+	sprintf(asm_buf_p, "mflo %s", regs[rd]);
+}
+
+void jalr(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, rd, hint;
+	decode_r_format(instr, &rs, &rt, &rd, &hint);
+	assert(rt == 0 && hint == 0);
+	cpu.gpr[rd] = *pc + 4;
+	*pc = cpu.gpr[rs];
+	sprintf(asm_buf_p, "jalr %s,%s", regs[rd], regs[rs]);
 }
 
 void decode_i_format(uint32_t instr, uint32_t *rs,
@@ -297,6 +382,25 @@ void bne(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[rs], regs[rt], offset);
 }
 
+void blez(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, imm;
+	decode_i_format(instr, &rs, &rt, &imm);
+	assert(rt == 0);
+	int32_t offset = (int32_t)(int16_t)imm << 2;
+	if ((int32_t)cpu.gpr[rs] <= 0)
+		*pc += offset;
+	sprintf(asm_buf_p, "blez %s,0x%x", regs[rs], offset);
+}
+
+void bltz(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, imm;
+	decode_i_format(instr, &rs, &rt, &imm);
+	int32_t offset = (int32_t)(int16_t)imm << 2;
+	if ((int32_t)cpu.gpr[rs] < 0)
+		*pc += offset;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[rs], offset);
+}
+
 void decode_j_format(uint32_t instr, uint32_t *addr) {
   *addr = get_bits(instr, 25, 0);
 }
@@ -309,14 +413,21 @@ void jal(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "jal %x", *pc);
 }
 
-exec_func gp0_table[64] = {
-  /* 0x00 */    sll, inv, inv, sra,
-  /* 0x04 */	sllv, inv, inv, inv,
-  /* 0x08 */	jr, inv, movz, movn,
+void j(vaddr_t *pc, uint32_t instr) {
+	uint32_t instr_index;
+	decode_j_format(instr, &instr_index);
+	*pc = (*pc & 0xf0000000) | (instr_index << 2);
+	sprintf(asm_buf_p, "j %x", *pc);
+}
+
+exec_func special_table[64] = {
+  /* 0x00 */    sll, inv, srl, sra,
+  /* 0x04 */	sllv, inv, srlv, srav,
+  /* 0x08 */	jr, jalr, movz, movn,
   /* 0x0c */	inv, inv, inv, inv,
-  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
-  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x18 */	mult, inv, div, divu,
   /* 0x1c */	inv, inv, inv, inv,
   /* 0x20 */	inv, addu, inv, subu,
   /* 0x24 */	and, or, xor, nor,
@@ -328,19 +439,57 @@ exec_func gp0_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void exec_gp0(vaddr_t *pc, uint32_t instr) {
-  gp0_table[get_funct(instr)](pc, instr);
+void exec_special(vaddr_t *pc, uint32_t instr) {
+  special_table[get_funct(instr)](pc, instr);
+}
+
+exec_func special2_table[64] = {
+  /* 0x00 */    inv, inv, mul, inv,
+  /* 0x04 */	inv, inv, inv, inv,
+  /* 0x08 */	inv, inv, inv, inv,
+  /* 0x0c */	inv, inv, inv, inv,
+  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x14 */	inv, inv, inv, inv,
+  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x1c */	inv, inv, inv, inv,
+  /* 0x20 */	inv, inv, inv, inv,
+  /* 0x24 */	inv, inv, inv, inv,
+  /* 0x28 */	inv, inv, inv, inv,
+  /* 0x2c */	inv, inv, inv, inv,
+  /* 0x30 */	inv, inv, inv, inv,
+  /* 0x34 */	inv, inv, inv, inv,
+  /* 0x38 */	inv, inv, inv, inv,
+  /* 0x3c */	inv, inv, inv, inv
+};
+
+void exec_special2(vaddr_t *pc, uint32_t instr) {
+  special2_table[get_funct(instr)](pc, instr);
+}
+
+exec_func regimm_table[64] = {
+  /* 0x00 */    bltz, inv, inv, inv,
+  /* 0x04 */	inv, inv, inv, inv,
+  /* 0x08 */	inv, inv, inv, inv,
+  /* 0x0c */	inv, inv, inv, inv,
+  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x14 */	inv, inv, inv, inv,
+  /* 0x18 */	inv, inv, inv, inv,
+  /* 0x1c */	inv, inv, inv, inv,
+};
+
+void exec_regimm(vaddr_t *pc, uint32_t instr) {
+  regimm_table[get_bits(instr, 20, 16)](pc, instr);
 }
 
 exec_func opcode_table[64] = {
-  /* 0x00 */    exec_gp0, inv, inv, jal,
-  /* 0x04 */	beq, bne, inv, inv,
+  /* 0x00 */    exec_special, exec_regimm, j, jal,
+  /* 0x04 */	beq, bne, blez, inv,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
   /* 0x10 */	inv, inv, inv, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
-  /* 0x1c */	inv, inv, inv, inv,
+  /* 0x1c */	exec_special2, inv, inv, inv,
   /* 0x20 */	lb, lh, inv, lw,
   /* 0x24 */	lbu, lhu, inv, inv,
   /* 0x28 */	sb, sh, inv, sw,
@@ -363,4 +512,5 @@ void exec_wrapper(bool print_flag) {
 
 	if (print_flag)
 		puts(asm_buf);
+	Log_write("%s\n", asm_buf);
 }
