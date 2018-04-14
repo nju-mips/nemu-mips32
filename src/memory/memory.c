@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "nemu.h"
 #include "monitor/monitor.h"
 
@@ -103,11 +104,17 @@ static uint32_t uartlite_read(paddr_t addr, int len) {
   }
 }
 
+static FILE *serial = NULL;
+
 static void uartlite_write(paddr_t addr, int len, uint32_t data) {
   check_uartlite(addr, len);
   switch (addr) {
     case Tx:
-      printf("%c", (char)data);
+      if (!serial) {
+        serial = fopen("serial", "w");
+        Assert(serial, "Can not open serial file for writing");
+      }
+      fprintf(serial, "%c", (char)data);
       break;
     default:
       Assert(false, "UARTLite: address(0x%08x) is not writable", addr);
@@ -126,11 +133,14 @@ static void uartlite_write(paddr_t addr, int len, uint32_t data) {
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);
   if ((unsigned char)data == 0) {
-    Log("HIT GOOD TRAP");
+    printf("\33[1;31mHIT GOOD TRAP\33[0m\n");
   }
   else
-    Log("HIT BAD TRAP");
+    printf("\33[1;31mHIT BAD TRAP code: %d\33[0m\n", (unsigned char)data == 0);
   nemu_state = NEMU_END;
+  // directly exit, so that we will not print one more commit log
+  // which makes it easier for crosschecking.
+  exit(0);
 }
 
 static uint32_t invalid_read(paddr_t addr, int len) {

@@ -12,6 +12,8 @@ int nemu_state = NEMU_STOP;
 
 void exec_wrapper(bool);
 
+extern int print_commit_log;
+
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
   if (nemu_state == NEMU_END) {
@@ -26,6 +28,11 @@ void cpu_exec(uint64_t n) {
     /* Execute one instruction, including instruction fetch,
      * instruction decode, and the actual execution. */
     exec_wrapper(print_flag);
+
+    if (print_commit_log) {
+      extern int cmd_info(char *args);
+      cmd_info("r");
+    }
 
 #ifdef DEBUG
     /* TODO: check watchpoints here. */

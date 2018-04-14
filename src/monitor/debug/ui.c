@@ -37,7 +37,7 @@ static int cmd_q(char *args) {
 }
 
 static int cmd_si(char *args);
-static int cmd_info(char *args);
+int cmd_info(char *args);
 static int cmd_help(char *args);
 
 static struct {
@@ -94,7 +94,7 @@ static int cmd_si(char *args)
 }
 
 
-static int cmd_info(char *args)
+int cmd_info(char *args)
 {
   char subcmd[5];
   if(sscanf(args, "%4s", subcmd) > 0)
@@ -102,12 +102,12 @@ static int cmd_info(char *args)
     if(strcmp(subcmd, "r")==0)
     {
       // print pc
-      printf("$pc: 0x%08x\n", cpu.pc);
+      printf("$pc: 0x%08x hi: 0x%08x lo: 0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
       // print in eight lines
       for(int i = 0; i < 8; i++) {
         for(int j = 0; j < 4; j++) {
           int regno = 4 * i + j;
-          printf("$%s 0x%08x  ", regs[regno], cpu.gpr[regno]);
+          printf("$%-4s 0x%08x  ", regs[regno], cpu.gpr[regno]);
         }
         printf("\n");
       }
