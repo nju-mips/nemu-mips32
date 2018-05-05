@@ -300,6 +300,29 @@ void slti(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "slti %s, %s, %d", regs[rt], regs[rs], simm);
 }
 
+void swl(vaddr_t *pc, uint32_t instr) {
+    uint32_t base, rt, imm;
+    decode_i_format(instr, &base, &rt, &imm);
+    int32_t offset = (int32_t)(int16_t)imm;
+    uint32_t waddr = cpu.gpr[base] + offset;
+    int idx = get_bits(waddr, 1, 0);
+    int len = idx + 1;
+    uint32_t wdata = cpu.gpr[rt] >> ((3 - idx) * 8);
+    vaddr_write((waddr >> 2) << 2, len, wdata);
+    sprintf(asm_buf_p, "swl %s, %d(%s)", regs[rt], offset, regs[base]);
+}
+
+void swr(vaddr_t *pc, uint32_t instr) {
+    uint32_t base, rt, imm;
+    decode_i_format(instr, &base, &rt, &imm);
+    int32_t offset = (int32_t)(int16_t)imm;
+    uint32_t waddr = cpu.gpr[base] + offset;
+    int len = 4 - get_bits(waddr, 1, 0);
+    uint32_t wdata = cpu.gpr[rt];
+    vaddr_write(waddr, len, wdata);
+    sprintf(asm_buf_p, "swr %s, %d(%s)", regs[rt], offset, regs[base]);
+}
+
 void sw(vaddr_t *pc, uint32_t instr) {
 	uint32_t base, rt, imm;
 	decode_i_format(instr, &base, &rt, &imm);
@@ -322,6 +345,36 @@ void sb(vaddr_t *pc, uint32_t instr) {
 	int32_t offset = (int32_t)(int16_t)imm;
 	vaddr_write(cpu.gpr[base] + offset, 1, cpu.gpr[rt]);
 	sprintf(asm_buf_p, "sb %s, %d(%s)", regs[rt], offset, regs[base]);
+}
+
+void lwl(vaddr_t *pc, uint32_t instr) {
+    uint32_t base, rt, imm;
+    decode_i_format(instr, &base, &rt, &imm);
+    int32_t offset = (int32_t)(int16_t)imm;
+    uint32_t raddr = cpu.gpr[base] + offset;
+    int len = get_bits(raddr, 1, 0) + 1;
+    uint32_t rdata = vaddr_read((raddr >> 2) << 2, len);
+    // shift count should be <= width of type
+    if (len < 4)
+      cpu.gpr[rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[rt] << (len * 8)) >> (len * 8);
+    else
+      cpu.gpr[rt] = rdata;
+    sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[rt], offset, regs[base]);
+}
+
+void lwr(vaddr_t *pc, uint32_t instr) {
+    uint32_t base, rt, imm;
+    decode_i_format(instr, &base, &rt, &imm);
+    int32_t offset = (int32_t)(int16_t)imm;
+    uint32_t raddr = cpu.gpr[base] + offset;
+    int idx = get_bits(raddr, 1, 0);
+    int len = 4 - idx;
+    uint32_t rdata = vaddr_read(raddr, len);
+    if (len < 4)
+      cpu.gpr[rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[rt] >> (len * 8)) << (len * 8);
+    else
+      cpu.gpr[rt] = (rdata << idx * 8) >> (idx * 8);
+    sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[rt], offset, regs[base]);
 }
 
 void lw(vaddr_t *pc, uint32_t instr) {
@@ -490,10 +543,10 @@ exec_func opcode_table[64] = {
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
   /* 0x1c */	exec_special2, inv, inv, inv,
-  /* 0x20 */	lb, lh, inv, lw,
-  /* 0x24 */	lbu, lhu, inv, inv,
-  /* 0x28 */	sb, sh, inv, sw,
-  /* 0x2c */	inv, inv, inv, inv,
+  /* 0x20 */	lb, lh, lwl, lw,
+  /* 0x24 */	lbu, lhu, lwr, inv,
+  /* 0x28 */	sb, sh, swl, sw,
+  /* 0x2c */	inv, inv, swr, inv,
   /* 0x30 */	inv, inv, inv, inv,
   /* 0x34 */	inv, inv, inv, inv,
   /* 0x38 */	inv, inv, inv, inv,
