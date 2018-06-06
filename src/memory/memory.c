@@ -130,13 +130,21 @@ static void uartlite_write(paddr_t addr, int len, uint32_t data) {
   Assert(len == 1, \
       "GPIO only allow byte read/write");
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);
   if ((unsigned char)data == 0) {
-    printf("\33[1;31mHIT GOOD TRAP\33[0m\n");
+    printf(ANSI_COLOR_GREEN "HIT GOOD TRAP\n" ANSI_COLOR_RESET);
   }
   else
-    printf("\33[1;31mHIT BAD TRAP code: %d\33[0m\n", (unsigned char)data == 0);
+    printf(ANSI_COLOR_RED "HIT BAD TRAP code: %d\n" ANSI_COLOR_RESET, (unsigned char)data == 0);
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more commit log
   // which makes it easier for crosschecking.
