@@ -445,6 +445,15 @@ void blez(vaddr_t *pc, uint32_t instr) {
 	sprintf(asm_buf_p, "blez %s,0x%x", regs[rs], offset);
 }
 
+void bgtz(vaddr_t *pc, uint32_t instr) {
+	uint32_t rs, rt, imm;
+	decode_i_format(instr, &rs, &rt, &imm);
+	int32_t offset = (int32_t)(int16_t)imm << 2;
+	if ((int32_t)cpu.gpr[rs] > 0)
+		*pc += offset;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[rs], offset);
+}
+
 void bltz(vaddr_t *pc, uint32_t instr) {
 	uint32_t rs, rt, imm;
 	decode_i_format(instr, &rs, &rt, &imm);
@@ -536,7 +545,7 @@ void exec_regimm(vaddr_t *pc, uint32_t instr) {
 
 exec_func opcode_table[64] = {
   /* 0x00 */    exec_special, exec_regimm, j, jal,
-  /* 0x04 */	beq, bne, blez, inv,
+  /* 0x04 */	beq, bne, blez, bgtz,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
   /* 0x10 */	inv, inv, inv, inv,
