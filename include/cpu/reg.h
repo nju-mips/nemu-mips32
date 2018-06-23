@@ -5,6 +5,7 @@
 
 typedef struct {
   uint32_t gpr[32];
+  uint32_t cp0[32][8];
   uint32_t hi, lo;
   vaddr_t pc;
 } CPU_state;
@@ -37,9 +38,9 @@ typedef struct {
 			uint32_t addr  :26;
 		};
 
-		// unaligned-iDX
+		// MFC0
 		struct {
-			uint32_t idx:2;
+			uint32_t sel:3;
 		};
 	};
 } Inst; // Instruction

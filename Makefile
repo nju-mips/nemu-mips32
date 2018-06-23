@@ -37,7 +37,7 @@ NEMU_EXEC := $(BINARY) $(ARGS)
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
-	@$(LD) -O2 -o $@ $^ -lSDL2 -lreadline
+	@$(LD) -O2 -o $@ $^ -lSDL -lreadline
 
 run: $(BINARY)
 	$(NEMU_EXEC)

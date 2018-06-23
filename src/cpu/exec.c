@@ -4,6 +4,10 @@
 char asm_buf[80];
 char *asm_buf_p;
 
+static void update_cp0_timer() {
+	cpu.cp0[9][0] += 5000; // add 5 cycles
+}
+
 void inv(vaddr_t *pc, Inst inst) {
   // the pc corresponding to this inst
   // pc has been updated by instr_fetch
@@ -16,6 +20,10 @@ void inv(vaddr_t *pc, Inst inst) {
 
 typedef void (*exec_func) (vaddr_t *, Inst);
 
+// temporary strategy: store timer registers in C0
+void mfc0(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
+}
 
 void jr(vaddr_t *pc, Inst inst) {
 	assert(inst.rt == 0 && inst.rd == 0);
@@ -374,12 +382,27 @@ void exec_regimm(vaddr_t *pc, Inst inst) {
   regimm_table[inst.rt](pc, inst);
 }
 
+exec_func cop0_table[32] = {
+  /* 0x00 */    mfc0, inv, inv, inv,
+  /* 0x04 */    inv, inv, inv, inv,
+  /* 0x08 */    inv, inv, inv, inv,
+  /* 0x0c */    inv, inv, inv, inv,
+  /* 0x10 */    inv, inv, inv, inv,
+  /* 0x14 */    inv, inv, inv, inv,
+  /* 0x18 */    inv, inv, inv, inv,
+  /* 0x1c */    inv, inv, inv, inv,
+};
+
+void exec_cop0(vaddr_t *pc, Inst inst) {
+	cop0_table[inst.rs](pc, inst);
+}
+
 exec_func opcode_table[64] = {
   /* 0x00 */    exec_special, exec_regimm, j, jal,
   /* 0x04 */	beq, bne, blez, bgtz,
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
-  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x10 */	exec_cop0, inv, inv, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
   /* 0x1c */	exec_special2, inv, inv, inv,
@@ -406,12 +429,14 @@ void print_registers(uint32_t instr) {
 }
 
 void exec_wrapper(bool print_flag) {
+	update_cp0_timer();
+
 	asm_buf_p = asm_buf;
 	asm_buf_p += sprintf(asm_buf_p, "%8x:    ", cpu.pc);
 	
 	Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
 
-	print_registers(inst.val);
+	// print_registers(inst.val);
 
 	asm_buf_p += sprintf(asm_buf_p, "%08x    ", inst.val);
 
