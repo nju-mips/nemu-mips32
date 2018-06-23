@@ -201,9 +201,9 @@ static void vga_write(paddr_t addr, int len, uint32_t data) {
 
 static inline uint32_t RGB_M12_to_M32(uint32_t color) {
 	return 0xFF000000
-		| ((color & 0xF00) << (16 + 4))
-		| ((color & 0xF0) << (8 + 4))
-		| ((color & 0xF) << (0 + 4));
+		| ((color & 0xF00) << (8 + 4)) // R
+		| ((color & 0x0F0) << (4 + 4))   // G
+		| ((color & 0x00F) << (0 + 4));   // B
 }
 
 static inline void draw_pixel(int x, int y, uint32_t color) {

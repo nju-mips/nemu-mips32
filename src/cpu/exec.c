@@ -72,7 +72,7 @@ void multu(vaddr_t *pc, Inst inst) {
 	uint64_t prod = (uint64_t)cpu.gpr[inst.rs] * (uint64_t)cpu.gpr[inst.rt];
 	cpu.lo = (uint32_t)prod;
 	cpu.hi = (uint32_t)(prod >> 32);
-	sprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
+	sprintf(asm_buf_p, "multu %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
 void div(vaddr_t *pc, Inst inst) {
@@ -310,6 +310,12 @@ void bltz(vaddr_t *pc, Inst inst) {
 	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
+void bgez(vaddr_t *pc, Inst inst) {
+	if ((int32_t)cpu.gpr[inst.rs] >= 0)
+		*pc += inst.simm << 2;
+	sprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
+}
+
 void jal(vaddr_t *pc, Inst inst) {
 	cpu.gpr[31] = *pc + 4;
 	*pc = (*pc & 0xf0000000) | (inst.addr << 2);
@@ -368,7 +374,7 @@ void exec_special2(vaddr_t *pc, Inst inst) {
 }
 
 exec_func regimm_table[64] = {
-  /* 0x00 */    bltz, inv, inv, inv,
+  /* 0x00 */    bltz, bgez, inv, inv,
   /* 0x04 */	inv, inv, inv, inv,
   /* 0x08 */	inv, inv, inv, inv,
   /* 0x0c */	inv, inv, inv, inv,
