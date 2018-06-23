@@ -59,6 +59,14 @@ void mult(vaddr_t *pc, Inst inst) {
 	sprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
+void multu(vaddr_t *pc, Inst inst) {
+	assert(inst.rd == 0 && inst.shamt == 0);
+	uint64_t prod = (uint64_t)cpu.gpr[inst.rs] * (uint64_t)cpu.gpr[inst.rt];
+	cpu.lo = (uint32_t)prod;
+	cpu.hi = (uint32_t)(prod >> 32);
+	sprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
+}
+
 void div(vaddr_t *pc, Inst inst) {
 	assert(inst.rd == 0 && inst.shamt == 0);
 	cpu.lo = (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
@@ -184,7 +192,7 @@ void swl(vaddr_t *pc, Inst inst) {
     uint32_t waddr = cpu.gpr[inst.rs] + inst.simm;
 	int idx = waddr & 0x3;
     int len = idx + 1;
-    uint32_t wdata = cpu.gpr[inst.rt] >> ((4 - idx) * 8);
+    uint32_t wdata = cpu.gpr[inst.rt] >> ((3 - idx) * 8);
 
     vaddr_write((waddr >> 2) << 2, len, wdata);
     sprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
@@ -265,7 +273,7 @@ void lhu(vaddr_t *pc, Inst inst) {
 
 void beq(vaddr_t *pc, Inst inst) {
 	if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
-		*pc += inst.simm;
+		*pc += inst.simm << 2;
 	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
@@ -312,7 +320,7 @@ exec_func special_table[64] = {
   /* 0x0c */	inv, inv, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
-  /* 0x18 */	mult, inv, div, divu,
+  /* 0x18 */	mult, multu, div, divu,
   /* 0x1c */	inv, inv, inv, inv,
   /* 0x20 */	inv, addu, inv, subu,
   /* 0x24 */	and, or, xor, nor,
@@ -385,7 +393,7 @@ exec_func opcode_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void print_registers() {
+void print_registers(uint32_t instr) {
 	printf("$zero 0x%08x  $at   0x%08x  $v0   0x%08x  $v1   0x%08x  \n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
 	printf("$a0   0x%08x  $a1   0x%08x  $a2   0x%08x  $a3   0x%08x  \n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
 	printf("$t0   0x%08x  $t1   0x%08x  $t2   0x%08x  $t3   0x%08x  \n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -394,16 +402,16 @@ void print_registers() {
 	printf("$s4   0x%08x  $s5   0x%08x  $s6   0x%08x  $s7   0x%08x  \n", cpu.gpr[20], cpu.gpr[21], cpu.gpr[22], cpu.gpr[23]);
 	printf("$t8   0x%08x  $t9   0x%08x  $k0   0x%08x  $k1   0x%08x  \n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
 	printf("$gp   0x%08x  $sp   0x%08x  $fp   0x%08x  $ra   0x%08x  \n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
-	printf("pc: 0x%08x, hi: 0x%08x, lo:%08x\n", cpu.pc, cpu.hi, cpu.lo);
+	printf("pc: 0x%08x, instr: 0x%08x, hi: 0x%08x, lo:%08x\n", cpu.pc - 4, instr, cpu.hi, cpu.lo);
 }
 
 void exec_wrapper(bool print_flag) {
 	asm_buf_p = asm_buf;
 	asm_buf_p += sprintf(asm_buf_p, "%8x:    ", cpu.pc);
 	
-	print_registers();
-
 	Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
+
+	print_registers(inst.val);
 
 	asm_buf_p += sprintf(asm_buf_p, "%08x    ", inst.val);
 
