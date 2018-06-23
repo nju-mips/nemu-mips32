@@ -4,481 +4,307 @@
 char asm_buf[80];
 char *asm_buf_p;
 
-void inv(vaddr_t *pc, uint32_t instr) {
-  // the pc corresponding to this instr
+void inv(vaddr_t *pc, Inst inst) {
+  // the pc corresponding to this inst
   // pc has been updated by instr_fetch
   uint32_t ori_pc = *pc - 4;
-  uint8_t *p = (uint8_t *)&instr;
+  uint8_t *p = (uint8_t *)&inst;
   printf("invalid opcode(pc = 0x%08x): %02x %02x %02x %02x ...\n",
       ori_pc, p[0], p[1], p[2], p[3]);
   nemu_state = NEMU_END;
 }
 
-typedef void (*exec_func) (vaddr_t *, uint32_t);
+typedef void (*exec_func) (vaddr_t *, Inst);
 
-// get bits in range [high, low]
-uint32_t get_bits(uint32_t data, uint32_t high, uint32_t low) {
-  Assert(high >= low && high <= 31 && low >= 0, "get_bits: invalid range");
-  int left_shift = 31 - high;
-  // firstly, remove the higher bits, then remove the lower bits
-  return ((data << left_shift) >> left_shift) >> low;
+
+void jr(vaddr_t *pc, Inst inst) {
+	assert(inst.rt == 0 && inst.rd == 0);
+	cpu.pc = cpu.gpr[inst.rs];
+	sprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 }
 
-uint32_t get_opcode(uint32_t instr) {
-  return get_bits(instr, 31, 26);
+#define R_SIMPLE(name, op, t)                                   \
+void name(vaddr_t *pc, Inst inst) {                            \
+	assert(inst.shamt == 0);                                   \
+	cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op                 \
+		(t)cpu.gpr[inst.rt];                                   \
+	sprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd],    \
+			regs[inst.rs], regs[inst.rt]);                    \
 }
 
-uint32_t get_funct(uint32_t instr) {
-  return get_bits(instr, 5, 0);
+R_SIMPLE(or,   |, uint32_t)
+R_SIMPLE(xor,  ^, uint32_t)
+R_SIMPLE(and,  &, uint32_t)
+R_SIMPLE(addu, +, uint32_t)
+R_SIMPLE(subu, -, uint32_t)
+R_SIMPLE(mul,  *, uint32_t)
+R_SIMPLE(slt,  <, int32_t)
+R_SIMPLE(sltu, <, uint32_t)
+
+void nor(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	cpu.gpr[inst.rd] = ~(cpu.gpr[inst.rs] | cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
+			regs[inst.rs], regs[inst.rt]);
 }
 
-void decode_r_format(uint32_t instr, uint32_t *rs,
-    uint32_t *rt, uint32_t *rd, uint32_t *shamt) {
-  *rs = get_bits(instr, 25, 21);
-  *rt = get_bits(instr, 20, 16);
-  *rd = get_bits(instr, 15, 11);
-  *shamt = get_bits(instr, 10, 6);
-  // *funct = get_bits(instr, 5, 0);
-}
+#undef R_SIMPLE
 
-void jr(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, hint;
-	decode_r_format(instr, &rs, &rt, &rd, &hint);
-	assert(rt == 0 && rd == 0);
-	cpu.pc = cpu.gpr[rs];
-	sprintf(asm_buf_p, "jr %s", regs[rs]);
-}
 
-void or(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] | cpu.gpr[rt];
-	sprintf(asm_buf_p, "or %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void nor(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = ~(cpu.gpr[rs] | cpu.gpr[rt]);
-	sprintf(asm_buf_p, "nor %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void xor(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] ^ cpu.gpr[rt];
-	sprintf(asm_buf_p, "xor %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void and(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] & cpu.gpr[rt];
-	sprintf(asm_buf_p, "and %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void addu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] + cpu.gpr[rt];
-	sprintf(asm_buf_p, "addu %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void subu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] - cpu.gpr[rt];
-	sprintf(asm_buf_p, "subu %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void mul(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] * cpu.gpr[rt];
-	sprintf(asm_buf_p, "mul %s,%s,%s", regs[rd], regs[rs], regs[rt]);
-}
-
-void mult(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, dummy1, dummy2;
-	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
-	assert(dummy1 == 0 && dummy2 == 0);
-	int64_t prod = (int64_t)(int32_t)cpu.gpr[rs] * (int64_t)(int32_t)cpu.gpr[rt];
+void mult(vaddr_t *pc, Inst inst) {
+	assert(inst.rd == 0 && inst.shamt == 0);
+	int64_t prod = (int64_t)(int32_t)cpu.gpr[inst.rs] * (int64_t)(int32_t)cpu.gpr[inst.rt];
 	cpu.lo = (uint32_t)prod;
 	cpu.hi = (uint32_t)(prod >> 32);
-	sprintf(asm_buf_p, "mult %s,%s", regs[rs], regs[rt]);
+	sprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
-void div(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, dummy1, dummy2;
-	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
-	assert(dummy1 == 0 && dummy2 == 0);
-	cpu.lo = (int32_t)cpu.gpr[rs] / (int32_t)cpu.gpr[rt];
-	cpu.hi = (int32_t)cpu.gpr[rs] % (int32_t)cpu.gpr[rt];
-	sprintf(asm_buf_p, "div %s,%s", regs[rs], regs[rt]);
+void div(vaddr_t *pc, Inst inst) {
+	assert(inst.rd == 0 && inst.shamt == 0);
+	cpu.lo = (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
+	cpu.hi = (int32_t)cpu.gpr[inst.rs] % (int32_t)cpu.gpr[inst.rt];
+	sprintf(asm_buf_p, "div %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
-void divu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, dummy1, dummy2;
-	decode_r_format(instr, &rs, &rt, &dummy1, &dummy2);
-	assert(dummy1 == 0 && dummy2 == 0);
-	cpu.lo = cpu.gpr[rs] / cpu.gpr[rt];
-	cpu.hi = cpu.gpr[rs] % cpu.gpr[rt];
-	sprintf(asm_buf_p, "divu %s,%s", regs[rs], regs[rt]);
+void divu(vaddr_t *pc, Inst inst) {
+	assert(inst.rd == 0 && inst.shamt == 0);
+	cpu.lo = cpu.gpr[inst.rs] / cpu.gpr[inst.rt];
+	cpu.hi = cpu.gpr[inst.rs] % cpu.gpr[inst.rt];
+	sprintf(asm_buf_p, "divu %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
-void sltu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rs] < cpu.gpr[rt];
-	sprintf(asm_buf_p, "sltu %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+
+void sll(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0);
+	cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << inst.shamt;
+	sprintf(asm_buf_p, "sll %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
-void slt(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = (int32_t)cpu.gpr[rs] < (int32_t)cpu.gpr[rt];
-	sprintf(asm_buf_p, "slt %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+void sllv(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << (cpu.gpr[inst.rs] & 0x1f);
+	sprintf(asm_buf_p, "sllv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
-void sll(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, sa;
-	decode_r_format(instr, &rs, &rt, &rd, &sa);
-	assert(rs == 0);
-	cpu.gpr[rd] = cpu.gpr[rt] << sa;
-	sprintf(asm_buf_p, "sll %s,%s,0x%x", regs[rd], regs[rt], sa);
+void sra(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0);
+	cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> inst.shamt;
+	sprintf(asm_buf_p, "sra %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
-void sllv(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rt] << (cpu.gpr[rs] & 0x1f);
-	sprintf(asm_buf_p, "sllv %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+void srav(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
+	sprintf(asm_buf_p, "srav %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
-void sra(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, sa;
-	decode_r_format(instr, &rs, &rt, &rd, &sa);
-	assert(rs == 0);
-	cpu.gpr[rd] = (int32_t)cpu.gpr[rt] >> sa;
-	sprintf(asm_buf_p, "sra %s,%s,0x%x", regs[rd], regs[rt], sa);
+void srl(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0);
+	cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> inst.shamt;
+	sprintf(asm_buf_p, "srl %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
-void srav(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = (int32_t)cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
-	sprintf(asm_buf_p, "srav %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+void srlv(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
+	sprintf(asm_buf_p, "srlv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
-void srl(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, sa;
-	decode_r_format(instr, &rs, &rt, &rd, &sa);
-	assert(rs == 0);
-	cpu.gpr[rd] = cpu.gpr[rt] >> sa;
-	sprintf(asm_buf_p, "srl %s,%s,0x%x", regs[rd], regs[rt], sa);
+void movn(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	if (cpu.gpr[inst.rt] != 0)
+		cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
+	sprintf(asm_buf_p, "movn %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 }
 
-void srlv(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	cpu.gpr[rd] = cpu.gpr[rt] >> (cpu.gpr[rs] & 0x1f);
-	sprintf(asm_buf_p, "srlv %s,%s,%s", regs[rd], regs[rt], regs[rs]);
+void movz(vaddr_t *pc, Inst inst) {
+	assert(inst.shamt == 0);
+	if (cpu.gpr[inst.rt] == 0)
+		cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
+	sprintf(asm_buf_p, "movz %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 }
 
-void movn(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	if (cpu.gpr[rt] != 0)
-		cpu.gpr[rd] = cpu.gpr[rs];
-	sprintf(asm_buf_p, "movn %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+void mfhi(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
+	cpu.gpr[inst.rd] = cpu.hi;
+	sprintf(asm_buf_p, "mfhi %s", regs[inst.rd]);
 }
 
-void movz(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(dummy == 0);
-	if (cpu.gpr[rt] == 0)
-		cpu.gpr[rd] = cpu.gpr[rs];
-	sprintf(asm_buf_p, "movz %s,%s,%s", regs[rd], regs[rs], regs[rt]);
+void mflo(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
+	cpu.gpr[inst.rd] = cpu.lo;
+	sprintf(asm_buf_p, "mflo %s", regs[inst.rd]);
 }
 
-void mfhi(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(rs == 0 && rt == 0 && dummy == 0);
-	cpu.gpr[rd] = cpu.hi;
-	sprintf(asm_buf_p, "mfhi %s", regs[rd]);
+void jalr(vaddr_t *pc, Inst inst) {
+	assert(inst.rt == 0 && inst.shamt == 0);
+	cpu.gpr[inst.rd] = *pc + 4;
+	*pc = cpu.gpr[inst.rs];
+	sprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
 }
 
-void mflo(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, dummy;
-	decode_r_format(instr, &rs, &rt, &rd, &dummy);
-	assert(rs == 0 && rt == 0 && dummy == 0);
-	cpu.gpr[rd] = cpu.lo;
-	sprintf(asm_buf_p, "mflo %s", regs[rd]);
+
+void lui(vaddr_t *pc, Inst inst) {
+	assert(inst.rs == 0);
+	cpu.gpr[inst.rt] = inst.imm << 16;
+	sprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.imm);
 }
 
-void jalr(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, rd, hint;
-	decode_r_format(instr, &rs, &rt, &rd, &hint);
-	assert(rt == 0 && hint == 0);
-	cpu.gpr[rd] = *pc + 4;
-	*pc = cpu.gpr[rs];
-	sprintf(asm_buf_p, "jalr %s,%s", regs[rd], regs[rs]);
+void addiu(vaddr_t *pc, Inst inst) {
+	int32_t offset = inst.offset;
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + offset;
+	sprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
 }
 
-void decode_i_format(uint32_t instr, uint32_t *rs,
-    uint32_t *rt, uint32_t *imm) {
-  *rs = get_bits(instr, 25, 21);
-  *rt = get_bits(instr, 20, 16);
-  *imm = get_bits(instr, 15, 0);
+void andi(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.imm;
+	sprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
 }
 
-void lui(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	assert(rs == 0);
-	cpu.gpr[rt] = imm << 16;
-	sprintf(asm_buf_p, "lui %s, 0x%x", regs[rt], imm);
+void ori(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.imm;
+	sprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
 }
 
-void addiu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t simm = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = cpu.gpr[rs] + simm;
-	sprintf(asm_buf_p, "addiu %s, %s, %d", regs[rt], regs[rs], simm);
+void xori(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.imm;
+	sprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
 }
 
-void andi(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	cpu.gpr[rt] = cpu.gpr[rs] & imm;
-	sprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[rt], regs[rs], imm);
+void sltiu(vaddr_t *pc, Inst inst) {
+	int32_t offset = inst.offset;
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < (uint32_t)offset;
+	sprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
 }
 
-void ori(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	cpu.gpr[rt] = cpu.gpr[rs] | imm;
-	sprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[rt], regs[rs], imm);
+void slti(vaddr_t *pc, Inst inst) {
+	int32_t offset = inst.offset;
+	cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < offset;
+	sprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
 }
 
-void xori(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	cpu.gpr[rt] = cpu.gpr[rs] ^ imm;
-	sprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[rt], regs[rs], imm);
-}
-
-void sltiu(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t simm = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = cpu.gpr[rs] < (uint32_t)simm;
-	sprintf(asm_buf_p, "sltiu %s, %s, %d", regs[rt], regs[rs], simm);
-}
-
-void slti(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t simm = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = (int32_t)cpu.gpr[rs] < simm;
-	sprintf(asm_buf_p, "slti %s, %s, %d", regs[rt], regs[rs], simm);
-}
-
-void swl(vaddr_t *pc, uint32_t instr) {
-    uint32_t base, rt, imm;
-    decode_i_format(instr, &base, &rt, &imm);
-    int32_t offset = (int32_t)(int16_t)imm;
-    uint32_t waddr = cpu.gpr[base] + offset;
-    int idx = get_bits(waddr, 1, 0);
+void swl(vaddr_t *pc, Inst inst) {
+    uint32_t waddr = cpu.gpr[inst.rs] + inst.offset;
+	int idx = waddr & 0x3;
     int len = idx + 1;
-    uint32_t wdata = cpu.gpr[rt] >> ((3 - idx) * 8);
+    uint32_t wdata = cpu.gpr[inst.rt] >> ((4 - idx) * 8);
+
     vaddr_write((waddr >> 2) << 2, len, wdata);
-    sprintf(asm_buf_p, "swl %s, %d(%s)", regs[rt], offset, regs[base]);
+    sprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void swr(vaddr_t *pc, uint32_t instr) {
-    uint32_t base, rt, imm;
-    decode_i_format(instr, &base, &rt, &imm);
-    int32_t offset = (int32_t)(int16_t)imm;
-    uint32_t waddr = cpu.gpr[base] + offset;
-    int len = 4 - get_bits(waddr, 1, 0);
-    uint32_t wdata = cpu.gpr[rt];
+void swr(vaddr_t *pc, Inst inst) {
+    uint32_t waddr = cpu.gpr[inst.rs] + inst.offset;
+    int len = 4 - (waddr & 0x3);
+    uint32_t wdata = cpu.gpr[inst.rt];
+
     vaddr_write(waddr, len, wdata);
-    sprintf(asm_buf_p, "swr %s, %d(%s)", regs[rt], offset, regs[base]);
+    sprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void sw(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	vaddr_write(cpu.gpr[base] + offset, 4, cpu.gpr[rt]);
-	sprintf(asm_buf_p, "sw %s, %d(%s)", regs[rt], offset, regs[base]);
+void sw(vaddr_t *pc, Inst inst) {
+	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 4, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void sh(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	vaddr_write(cpu.gpr[base] + offset, 2, cpu.gpr[rt]);
-	sprintf(asm_buf_p, "sh %s, %d(%s)", regs[rt], offset, regs[base]);
+void sh(vaddr_t *pc, Inst inst) {
+	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 2, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void sb(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	vaddr_write(cpu.gpr[base] + offset, 1, cpu.gpr[rt]);
-	sprintf(asm_buf_p, "sb %s, %d(%s)", regs[rt], offset, regs[base]);
+void sb(vaddr_t *pc, Inst inst) {
+	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 1, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lwl(vaddr_t *pc, uint32_t instr) {
-    uint32_t base, rt, imm;
-    decode_i_format(instr, &base, &rt, &imm);
-    int32_t offset = (int32_t)(int16_t)imm;
-    uint32_t raddr = cpu.gpr[base] + offset;
-    int len = get_bits(raddr, 1, 0) + 1;
+void lwl(vaddr_t *pc, Inst inst) {
+    uint32_t raddr = cpu.gpr[inst.rs] + inst.offset;
+    int len = (raddr & 0x3) + 1;
     uint32_t rdata = vaddr_read((raddr >> 2) << 2, len);
-    // shift count should be <= width of type
+
     if (len < 4)
-      cpu.gpr[rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[rt] << (len * 8)) >> (len * 8);
+      cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
     else
-      cpu.gpr[rt] = rdata;
-    sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[rt], offset, regs[base]);
+      cpu.gpr[inst.rt] = rdata;
+    sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lwr(vaddr_t *pc, uint32_t instr) {
-    uint32_t base, rt, imm;
-    decode_i_format(instr, &base, &rt, &imm);
-    int32_t offset = (int32_t)(int16_t)imm;
-    uint32_t raddr = cpu.gpr[base] + offset;
-    int idx = get_bits(raddr, 1, 0);
+void lwr(vaddr_t *pc, Inst inst) {
+    uint32_t raddr = cpu.gpr[inst.rs] + inst.offset;
+    int idx = raddr & 0x3;
     int len = 4 - idx;
     uint32_t rdata = vaddr_read(raddr, len);
     if (len < 4)
-      cpu.gpr[rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[rt] >> (len * 8)) << (len * 8);
+      cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
     else
-      cpu.gpr[rt] = (rdata << idx * 8) >> (idx * 8);
-    sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[rt], offset, regs[base]);
+      cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
+    sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lw(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = vaddr_read(cpu.gpr[base] + offset, 4);
-	sprintf(asm_buf_p, "lw %s, %d(%s)", regs[rt], offset, regs[base]);
+void lw(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 4);
+	sprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lb(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = (int32_t)(int8_t)vaddr_read(cpu.gpr[base] + offset, 1);
-	sprintf(asm_buf_p, "lb %s, %d(%s)", regs[rt], offset, regs[base]);
+void lb(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = (int32_t)(int8_t)vaddr_read(cpu.gpr[inst.rs] + inst.offset, 1);
+	sprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lbu(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = vaddr_read(cpu.gpr[base] + offset, 1);
-	sprintf(asm_buf_p, "lbu %s, %d(%s)", regs[rt], offset, regs[base]);
+void lbu(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 1);
+	sprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lh(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = (int32_t)(int16_t)vaddr_read(cpu.gpr[base] + offset, 2);
-	sprintf(asm_buf_p, "lh %s, %d(%s)", regs[rt], offset, regs[base]);
+void lh(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = (int32_t)(int16_t)vaddr_read(cpu.gpr[inst.rs] + inst.offset, 2);
+	sprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void lhu(vaddr_t *pc, uint32_t instr) {
-	uint32_t base, rt, imm;
-	decode_i_format(instr, &base, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm;
-	cpu.gpr[rt] = vaddr_read(cpu.gpr[base] + offset, 2);
-	sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[rt], offset, regs[base]);
+void lhu(vaddr_t *pc, Inst inst) {
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 2);
+	sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
 }
 
-void beq(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm << 2;
-	if (cpu.gpr[rs] == cpu.gpr[rt])
-		*pc += offset;
-	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[rs], regs[rt], offset);
+void beq(vaddr_t *pc, Inst inst) {
+	if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
+		*pc += inst.offset;
+	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.offset);
 }
 
-void bne(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm << 2;
-	if (cpu.gpr[rs] != cpu.gpr[rt])
-		*pc += offset;
-	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[rs], regs[rt], offset);
+void bne(vaddr_t *pc, Inst inst) {
+	if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
+		*pc += inst.offset << 2;
+	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.offset);
 }
 
-void blez(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	assert(rt == 0);
-	int32_t offset = (int32_t)(int16_t)imm << 2;
-	if ((int32_t)cpu.gpr[rs] <= 0)
-		*pc += offset;
-	sprintf(asm_buf_p, "blez %s,0x%x", regs[rs], offset);
+void blez(vaddr_t *pc, Inst inst) {
+	assert(inst.rt == 0);
+	if ((int32_t)cpu.gpr[inst.rs] <= 0)
+		*pc += inst.offset << 2;
+	sprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.offset);
 }
 
-void bgtz(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm << 2;
-	if ((int32_t)cpu.gpr[rs] > 0)
-		*pc += offset;
-	sprintf(asm_buf_p, "bltz %s,0x%x", regs[rs], offset);
+void bgtz(vaddr_t *pc, Inst inst) {
+	if ((int32_t)cpu.gpr[inst.rs] > 0)
+		*pc += inst.offset << 2;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.offset);
 }
 
-void bltz(vaddr_t *pc, uint32_t instr) {
-	uint32_t rs, rt, imm;
-	decode_i_format(instr, &rs, &rt, &imm);
-	int32_t offset = (int32_t)(int16_t)imm << 2;
-	if ((int32_t)cpu.gpr[rs] < 0)
-		*pc += offset;
-	sprintf(asm_buf_p, "bltz %s,0x%x", regs[rs], offset);
+void bltz(vaddr_t *pc, Inst inst) {
+	if ((int32_t)cpu.gpr[inst.rs] < 0)
+		*pc += inst.offset << 2;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.offset);
 }
 
-void decode_j_format(uint32_t instr, uint32_t *addr) {
-  *addr = get_bits(instr, 25, 0);
-}
-
-void jal(vaddr_t *pc, uint32_t instr) {
-	uint32_t instr_index;
-	decode_j_format(instr, &instr_index);
+void jal(vaddr_t *pc, Inst inst) {
 	cpu.gpr[31] = *pc + 4;
-	*pc = (*pc & 0xf0000000) | (instr_index << 2);
+	*pc = (*pc & 0xf0000000) | (inst.addr << 2);
 	sprintf(asm_buf_p, "jal %x", *pc);
 }
 
-void j(vaddr_t *pc, uint32_t instr) {
-	uint32_t instr_index;
-	decode_j_format(instr, &instr_index);
-	*pc = (*pc & 0xf0000000) | (instr_index << 2);
+void j(vaddr_t *pc, Inst inst) {
+	*pc = (*pc & 0xf0000000) | (inst.addr << 2);
 	sprintf(asm_buf_p, "j %x", *pc);
 }
 
@@ -501,8 +327,8 @@ exec_func special_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void exec_special(vaddr_t *pc, uint32_t instr) {
-  special_table[get_funct(instr)](pc, instr);
+void exec_special(vaddr_t *pc, Inst inst) {
+  special_table[inst.func](pc, inst);
 }
 
 exec_func special2_table[64] = {
@@ -524,8 +350,8 @@ exec_func special2_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
-void exec_special2(vaddr_t *pc, uint32_t instr) {
-  special2_table[get_funct(instr)](pc, instr);
+void exec_special2(vaddr_t *pc, Inst inst) {
+  special2_table[inst.func](pc, inst);
 }
 
 exec_func regimm_table[64] = {
@@ -539,8 +365,8 @@ exec_func regimm_table[64] = {
   /* 0x1c */	inv, inv, inv, inv,
 };
 
-void exec_regimm(vaddr_t *pc, uint32_t instr) {
-  regimm_table[get_bits(instr, 20, 16)](pc, instr);
+void exec_regimm(vaddr_t *pc, Inst inst) {
+  regimm_table[inst.rt](pc, inst);
 }
 
 exec_func opcode_table[64] = {
@@ -565,12 +391,12 @@ exec_func opcode_table[64] = {
 void exec_wrapper(bool print_flag) {
 	asm_buf_p = asm_buf;
 	asm_buf_p += sprintf(asm_buf_p, "%8x:    ", cpu.pc);
+	
+	Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
 
-	uint32_t instr = instr_fetch(&cpu.pc, 4);
+	asm_buf_p += sprintf(asm_buf_p, "%08x    ", inst.val);
 
-	asm_buf_p += sprintf(asm_buf_p, "%08x    ", instr);
-
-	opcode_table[get_opcode(instr)](&cpu.pc, instr);
+	opcode_table[inst.op](&cpu.pc, inst);
 
 	if (print_flag)
 		puts(asm_buf);
