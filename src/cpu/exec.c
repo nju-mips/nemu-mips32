@@ -5,7 +5,7 @@ char asm_buf[80];
 char *asm_buf_p;
 
 static void update_cp0_timer() {
-	cpu.cp0[9][0] += 5000; // add 5 cycles
+	cpu.cp0[9][0] += 50; // add 5 cycles
 }
 
 void inv(vaddr_t *pc, Inst inst) {

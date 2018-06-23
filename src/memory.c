@@ -136,21 +136,21 @@ static void uartlite_write(paddr_t addr, int len, uint32_t data) {
   Assert(len == 1, \
       "GPIO only allow byte read/write");
 
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
+#define ANSI_WIDTHOR_RED     "\x1b[31m"
+#define ANSI_WIDTHOR_GREEN   "\x1b[32m"
+#define ANSI_WIDTHOR_YELLOW  "\x1b[33m"
+#define ANSI_WIDTHOR_BLUE    "\x1b[34m"
+#define ANSI_WIDTHOR_MAGENTA "\x1b[35m"
+#define ANSI_WIDTHOR_CYAN    "\x1b[36m"
+#define ANSI_WIDTHOR_RESET   "\x1b[0m"
 
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);
   if ((unsigned char)data == 0) {
-    printf(ANSI_COLOR_GREEN "HIT GOOD TRAP\n" ANSI_COLOR_RESET);
+    printf(ANSI_WIDTHOR_GREEN "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);
   }
   else
-    printf(ANSI_COLOR_RED "HIT BAD TRAP code: %d\n" ANSI_COLOR_RESET, (unsigned char)data == 0);
+    printf(ANSI_WIDTHOR_RED "HIT BAD TRAP code: %d\n" ANSI_WIDTHOR_RESET, (unsigned char)data == 0);
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more commit log
   // which makes it easier for crosschecking.
@@ -170,17 +170,20 @@ static void invalid_write(paddr_t addr, int len, uint32_t data) {
 //                       vga simulation                        //
 /////////////////////////////////////////////////////////////////
 
-#define SCREEN_ROW 400
-#define SCREEN_COL 640
-#define VMEM_SIZE (4 * SCREEN_ROW * SCREEN_COL)
-#define CTR_ROW 200
-#define CTR_COL 320
+#define SCR_W 400
+#define SCR_H 300
+#define WINDOW_W (SCR_W * 2)
+#define WINDOW_H (SCR_H * 2)
+#define VMEM_SIZE (4 * WINDOW_H * WINDOW_W)
 #define VGA_HZ 25
 #define TIMER_HZ 100
 
 static uint8_t vmem[VMEM_SIZE];
-static bool vmem_dirty = false;
-static bool line_dirty[CTR_ROW];
+
+static SDL_Surface *screen;
+
+static uint64_t jiffy = 0;
+static struct itimerval it;
 
 #define check_vga(addr, len) \
   Assert(addr >= 0 && addr < VMEM_SIZE && addr + len <= VMEM_SIZE, \
@@ -193,56 +196,39 @@ static uint32_t vga_read(paddr_t addr, int len) {
 
 static void vga_write(paddr_t addr, int len, uint32_t data) {
   check_vga(addr, len);
-  int line = addr / CTR_COL;
-  if(line < CTR_ROW) {
-	line_dirty[line] = true;
-	vmem_dirty = true;
-  }
   memcpy(&vmem[addr], &data, len);
 }
 
-static SDL_Surface *real_screen;
-static SDL_Surface *screen;
-static uint8_t (*pixel_buf) [SCREEN_COL];
+static inline uint32_t RGB_M12_to_M32(uint32_t color) {
+	return 0xFF000000
+		| ((color & 0xF00) << (16 + 4))
+		| ((color & 0xF0) << (8 + 4))
+		| ((color & 0xF) << (0 + 4));
+}
 
-static uint64_t jiffy = 0;
-static struct itimerval it;
-
-static inline void draw_pixel(int x, int y, uint8_t color_idx) {
-	assert(x >= 0 && x < SCREEN_COL && y >= 0 && y < SCREEN_ROW);
-	pixel_buf[y][x] = color_idx;
+static inline void draw_pixel(int x, int y, uint32_t color) {
+	uint32_t (*pixel_buf)[WINDOW_W] = screen->pixels;
+	assert(x >= 0 && x < WINDOW_W && y >= 0 && y < WINDOW_H);
+	pixel_buf[y][x] = RGB_M12_to_M32(color);
 }
 
 static void do_update_screen_graphic_mode() {
-	int i, j;
-	uint8_t (*vmem_ptr) [CTR_COL] = (void *)vmem;
-	SDL_Rect rect;
-	rect.x = 0;
-	rect.w = CTR_COL * 2;
-	rect.h = 2;
+	uint16_t (*vmem_ptr)[SCR_W] = (void *)vmem;
 
-	for(i = 0; i < CTR_ROW; i ++) {
-		if(line_dirty[i]) {
-			for(j = 0; j < CTR_COL; j ++) {
-				uint8_t color_idx = vmem_ptr[i][j];
-				draw_pixel(2 * j, 2 * i, color_idx);
-				draw_pixel(2 * j, 2 * i + 1, color_idx);
-				draw_pixel(2 * j + 1, 2 * i, color_idx);
-				draw_pixel(2 * j + 1, 2 * i + 1, color_idx);
-			}
-			rect.y = i * 2;
-			SDL_BlitSurface(screen, &rect, real_screen, &rect);
+	for(int i = 0; i < SCR_H; i ++) {
+		for(int j = 0; j < SCR_W; j ++) {
+			uint16_t color = vmem_ptr[i][j];
+			draw_pixel(2 * j, 2 * i, color);
+			draw_pixel(2 * j, 2 * i + 1, color);
+			draw_pixel(2 * j + 1, 2 * i, color);
+			draw_pixel(2 * j + 1, 2 * i + 1, color);
 		}
 	}
-	SDL_Flip(real_screen);
+	SDL_Flip(screen);
 }
 
 static void update_screen() {
-	if(vmem_dirty) {
-		do_update_screen_graphic_mode();
-		vmem_dirty = false;
-		memset(line_dirty, false, CTR_ROW);
-	}
+	do_update_screen_graphic_mode();
 }
 
 static void device_update(int signum) {
@@ -278,13 +264,8 @@ void init_sdl() {
   int ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
   Assert(ret == 0, "SDL_Init failed");
 
-  real_screen = SDL_SetVideoMode(640, 400, 8, 
-	  SDL_HWSURFACE | SDL_HWPALETTE | SDL_HWACCEL | SDL_ASYNCBLIT);
-
-  screen = SDL_CreateRGBSurface(SDL_SWSURFACE, 640, 400, 8,
-	  real_screen->format->Rmask, real_screen->format->Gmask,
-	  real_screen->format->Bmask, real_screen->format->Amask);
-  pixel_buf = screen->pixels;
+  screen = SDL_SetVideoMode(WINDOW_W, WINDOW_H, 32, 
+	  SDL_HWSURFACE | SDL_DOUBLEBUF);
 
   SDL_WM_SetCaption("NEMU-MIPS32", NULL);
 
