@@ -146,79 +146,76 @@ void jalr(vaddr_t *pc, Inst inst) {
 
 void lui(vaddr_t *pc, Inst inst) {
 	assert(inst.rs == 0);
-	cpu.gpr[inst.rt] = inst.imm << 16;
-	sprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.imm);
+	cpu.gpr[inst.rt] = inst.uimm << 16;
+	sprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.uimm);
 }
 
 void addiu(vaddr_t *pc, Inst inst) {
-	int32_t offset = inst.offset;
-	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + offset;
-	sprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm;
+	sprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 void andi(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.imm;
-	sprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.uimm;
+	sprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void ori(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.imm;
-	sprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.uimm;
+	sprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void xori(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.imm;
-	sprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.imm);
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.uimm;
+	sprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void sltiu(vaddr_t *pc, Inst inst) {
-	int32_t offset = inst.offset;
-	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < (uint32_t)offset;
-	sprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
+	cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.uimm;
+	sprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 void slti(vaddr_t *pc, Inst inst) {
-	int32_t offset = inst.offset;
-	cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < offset;
-	sprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], offset);
+	cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < inst.simm;
+	sprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 void swl(vaddr_t *pc, Inst inst) {
-    uint32_t waddr = cpu.gpr[inst.rs] + inst.offset;
+    uint32_t waddr = cpu.gpr[inst.rs] + inst.simm;
 	int idx = waddr & 0x3;
     int len = idx + 1;
     uint32_t wdata = cpu.gpr[inst.rt] >> ((4 - idx) * 8);
 
     vaddr_write((waddr >> 2) << 2, len, wdata);
-    sprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+    sprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void swr(vaddr_t *pc, Inst inst) {
-    uint32_t waddr = cpu.gpr[inst.rs] + inst.offset;
+    uint32_t waddr = cpu.gpr[inst.rs] + inst.simm;
     int len = 4 - (waddr & 0x3);
     uint32_t wdata = cpu.gpr[inst.rt];
 
     vaddr_write(waddr, len, wdata);
-    sprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+    sprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sw(vaddr_t *pc, Inst inst) {
-	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 4, cpu.gpr[inst.rt]);
-	sprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sh(vaddr_t *pc, Inst inst) {
-	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 2, cpu.gpr[inst.rt]);
-	sprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	vaddr_write(cpu.gpr[inst.rs] + inst.simm, 2, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sb(vaddr_t *pc, Inst inst) {
-	vaddr_write(cpu.gpr[inst.rs] + inst.offset, 1, cpu.gpr[inst.rt]);
-	sprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	vaddr_write(cpu.gpr[inst.rs] + inst.simm, 1, cpu.gpr[inst.rt]);
+	sprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lwl(vaddr_t *pc, Inst inst) {
-    uint32_t raddr = cpu.gpr[inst.rs] + inst.offset;
+    uint32_t raddr = cpu.gpr[inst.rs] + inst.simm;
     int len = (raddr & 0x3) + 1;
     uint32_t rdata = vaddr_read((raddr >> 2) << 2, len);
 
@@ -226,11 +223,11 @@ void lwl(vaddr_t *pc, Inst inst) {
       cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
     else
       cpu.gpr[inst.rt] = rdata;
-    sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+    sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lwr(vaddr_t *pc, Inst inst) {
-    uint32_t raddr = cpu.gpr[inst.rs] + inst.offset;
+    uint32_t raddr = cpu.gpr[inst.rs] + inst.simm;
     int idx = raddr & 0x3;
     int len = 4 - idx;
     uint32_t rdata = vaddr_read(raddr, len);
@@ -238,63 +235,63 @@ void lwr(vaddr_t *pc, Inst inst) {
       cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
     else
       cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
-    sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+    sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lw(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 4);
-	sprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
+	sprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lb(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = (int32_t)(int8_t)vaddr_read(cpu.gpr[inst.rs] + inst.offset, 1);
-	sprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	cpu.gpr[inst.rt] = (int32_t)(int8_t)vaddr_read(cpu.gpr[inst.rs] + inst.simm, 1);
+	sprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lbu(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 1);
-	sprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 1);
+	sprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lh(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = (int32_t)(int16_t)vaddr_read(cpu.gpr[inst.rs] + inst.offset, 2);
-	sprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	cpu.gpr[inst.rt] = (int32_t)(int16_t)vaddr_read(cpu.gpr[inst.rs] + inst.simm, 2);
+	sprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lhu(vaddr_t *pc, Inst inst) {
-	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.offset, 2);
-	sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.offset, regs[inst.rs]);
+	cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 2);
+	sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void beq(vaddr_t *pc, Inst inst) {
 	if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
-		*pc += inst.offset;
-	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.offset);
+		*pc += inst.simm;
+	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
 void bne(vaddr_t *pc, Inst inst) {
 	if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
-		*pc += inst.offset << 2;
-	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.offset);
+		*pc += inst.simm << 2;
+	sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
 void blez(vaddr_t *pc, Inst inst) {
 	assert(inst.rt == 0);
 	if ((int32_t)cpu.gpr[inst.rs] <= 0)
-		*pc += inst.offset << 2;
-	sprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.offset);
+		*pc += inst.simm << 2;
+	sprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgtz(vaddr_t *pc, Inst inst) {
 	if ((int32_t)cpu.gpr[inst.rs] > 0)
-		*pc += inst.offset << 2;
-	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.offset);
+		*pc += inst.simm << 2;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bltz(vaddr_t *pc, Inst inst) {
 	if ((int32_t)cpu.gpr[inst.rs] < 0)
-		*pc += inst.offset << 2;
-	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.offset);
+		*pc += inst.simm << 2;
+	sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void jal(vaddr_t *pc, Inst inst) {
@@ -388,10 +385,24 @@ exec_func opcode_table[64] = {
   /* 0x3c */	inv, inv, inv, inv
 };
 
+void print_registers() {
+	printf("$zero 0x%08x  $at   0x%08x  $v0   0x%08x  $v1   0x%08x  \n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
+	printf("$a0   0x%08x  $a1   0x%08x  $a2   0x%08x  $a3   0x%08x  \n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
+	printf("$t0   0x%08x  $t1   0x%08x  $t2   0x%08x  $t3   0x%08x  \n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
+	printf("$t4   0x%08x  $t5   0x%08x  $t6   0x%08x  $t7   0x%08x  \n", cpu.gpr[12], cpu.gpr[13], cpu.gpr[14], cpu.gpr[15]);
+	printf("$s0   0x%08x  $s1   0x%08x  $s2   0x%08x  $s3   0x%08x  \n", cpu.gpr[16], cpu.gpr[17], cpu.gpr[18], cpu.gpr[19]);
+	printf("$s4   0x%08x  $s5   0x%08x  $s6   0x%08x  $s7   0x%08x  \n", cpu.gpr[20], cpu.gpr[21], cpu.gpr[22], cpu.gpr[23]);
+	printf("$t8   0x%08x  $t9   0x%08x  $k0   0x%08x  $k1   0x%08x  \n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
+	printf("$gp   0x%08x  $sp   0x%08x  $fp   0x%08x  $ra   0x%08x  \n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
+	printf("pc: 0x%08x, hi: 0x%08x, lo:%08x\n", cpu.pc, cpu.hi, cpu.lo);
+}
+
 void exec_wrapper(bool print_flag) {
 	asm_buf_p = asm_buf;
 	asm_buf_p += sprintf(asm_buf_p, "%8x:    ", cpu.pc);
 	
+	print_registers();
+
 	Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
 
 	asm_buf_p += sprintf(asm_buf_p, "%08x    ", inst.val);

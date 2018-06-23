@@ -24,12 +24,12 @@ typedef struct {
 
 		// I-type
 		struct {
-			uint32_t imm   :16;
+			uint32_t uimm   :16;
 		};
 
 		// SI-type
 		struct {
-			int32_t offset :16;
+			int32_t simm :16;
 		};
 
 		// J-type
