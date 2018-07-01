@@ -7,7 +7,7 @@ char asm_buf[80];
 char *asm_buf_p;
 
 static void update_cp0_timer() {
-  cpu.cp0[9][0] += 50; // add 5 cycles
+  cpu.cp0[CP0_COUNT][0] += 5; // add 5 cycles
 }
 
 void inv(vaddr_t *pc, Inst inst) {
@@ -56,30 +56,30 @@ void jr(vaddr_t *pc, Inst inst) {
   sprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 }
 
-#define R_SIMPLE(name, op, t)                                   \
-  void name(vaddr_t *pc, Inst inst) {                            \
-	assert(inst.shamt == 0);                                   \
-	cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op                 \
-	(t)cpu.gpr[inst.rt];                                   \
-	sprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd],    \
-		regs[inst.rs], regs[inst.rt]);                    \
-  }
+#define R_SIMPLE(name, op, t)                              \
+void name(vaddr_t *pc, Inst inst) {                        \
+  assert(inst.shamt == 0);                                 \
+  cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op                \
+  (t)cpu.gpr[inst.rt];                                     \
+  sprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd],  \
+	  regs[inst.rs], regs[inst.rt]);                       \
+}
 
-  R_SIMPLE(or,   |, uint32_t)
-  R_SIMPLE(xor,  ^, uint32_t)
-  R_SIMPLE(and,  &, uint32_t)
-  R_SIMPLE(addu, +, uint32_t)
-  R_SIMPLE(subu, -, uint32_t)
-  R_SIMPLE(mul,  *, uint32_t)
-  R_SIMPLE(slt,  <, int32_t)
+R_SIMPLE(or,   |, uint32_t)
+R_SIMPLE(xor,  ^, uint32_t)
+R_SIMPLE(and,  &, uint32_t)
+R_SIMPLE(addu, +, uint32_t)
+R_SIMPLE(subu, -, uint32_t)
+R_SIMPLE(mul,  *, uint32_t)
+R_SIMPLE(slt,  <, int32_t)
 R_SIMPLE(sltu, <, uint32_t)
 
-  void nor(vaddr_t *pc, Inst inst) {
-	assert(inst.shamt == 0);
-	cpu.gpr[inst.rd] = ~(cpu.gpr[inst.rs] | cpu.gpr[inst.rt]);
-	sprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
-		regs[inst.rs], regs[inst.rt]);
-  }
+void nor(vaddr_t *pc, Inst inst) {
+  assert(inst.shamt == 0);
+  cpu.gpr[inst.rd] = ~(cpu.gpr[inst.rs] | cpu.gpr[inst.rt]);
+  sprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
+	  regs[inst.rs], regs[inst.rt]);
+}
 
 #undef R_SIMPLE
 
@@ -483,7 +483,7 @@ exec_func opcode_table[64] = {
 };
 
 void print_registers(uint32_t instr) {
-	printf("$pc: 0x%08x hi: 0x%08x lo: 0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
+	printf("$pc:    0x%08x    hi:    0x%08x lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
 	printf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
 	printf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
 	printf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -501,6 +501,21 @@ int init_cpu() {
   return 0;
 }
 
+void check_interrupt() {
+  if(cpu.cp0[CP0_COMPARE][0] == cpu.cp0[CP0_COUNT][0]) {
+	cpu.cp0[CP0_EPC][0] = cpu.pc;
+	cpu.pc = EXCEPTION_VECTOR_LOCATION - 4;
+
+	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+	status->EXL = 1;
+	status->IE = 0;
+
+	cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
+	cause->ExcCode = EXC_INTR;
+	cause->IP = 0x80;
+  }
+}
+
 void exec_wrapper(bool print_flag) {
   update_cp0_timer();
 
@@ -513,7 +528,9 @@ void exec_wrapper(bool print_flag) {
 
   opcode_table[inst.op](&cpu.pc, inst);
 
-  // print_registers(inst.val);
+  print_registers(inst.val);
+
+  check_interrupt();
 
   if (print_flag)
 	puts(asm_buf);
