@@ -1,6 +1,8 @@
 #include "cpu/exec.h"
 #include "monitor/monitor.h"
 
+#define EXCEPTION_VECTOR_LOCATION 0x10000020
+
 char asm_buf[80];
 char *asm_buf_p;
 
@@ -21,6 +23,25 @@ void inv(vaddr_t *pc, Inst inst) {
 typedef void (*exec_func) (vaddr_t *, Inst);
 
 // temporary strategy: store timer registers in C0
+void syscall(vaddr_t *pc, Inst inst) {
+  cpu.cp0[CP0_EPC][0] = cpu.pc;
+  cpu.pc = EXCEPTION_VECTOR_LOCATION - 4;
+
+  cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+  status->EXL = 1;
+  status->IE = 0;
+
+  cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
+  cause->ExcCode = EXC_SYSCALL;
+}
+
+void eret(vaddr_t *pc, Inst inst) {
+  cpu.pc = cpu.cp0[CP0_EPC][0] - 4;
+  cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+  status->EXL = 0;
+  status->IE = 1;
+}
+
 void mfc0(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
 }
@@ -347,7 +368,7 @@ exec_func special_table[64] = {
   /* 0x00 */    sll, inv, srl, sra,
   /* 0x04 */	sllv, inv, srlv, srav,
   /* 0x08 */	jr, jalr, movz, movn,
-  /* 0x0c */	inv, inv, inv, inv,
+  /* 0x0c */	syscall, inv, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	mult, multu, div, divu,
@@ -404,7 +425,7 @@ void exec_regimm(vaddr_t *pc, Inst inst) {
   regimm_table[inst.rt](pc, inst);
 }
 
-exec_func cop0_table[32] = {
+exec_func cop0_table_rs[32] = {
   /* 0x00 */    mfc0, inv, inv, inv,
   /* 0x04 */    mtc0, inv, inv, inv,
   /* 0x08 */    inv, inv, inv, inv,
@@ -415,8 +436,31 @@ exec_func cop0_table[32] = {
   /* 0x1c */    inv, inv, inv, inv,
 };
 
+exec_func cop0_table_func[64] = {
+  /* 0x00 */    inv, inv, inv, inv,
+  /* 0x04 */    inv, inv, inv, inv,
+  /* 0x08 */    inv, inv, inv, inv,
+  /* 0x0c */    inv, inv, inv, inv,
+  /* 0x10 */    inv, inv, inv, inv,
+  /* 0x14 */    inv, inv, inv, inv,
+  /* 0x18 */    eret, inv, inv, inv,
+  /* 0x1c */    inv, inv, inv, inv,
+
+  /* 0x20 */    inv, inv, inv, inv,
+  /* 0x24 */    inv, inv, inv, inv,
+  /* 0x28 */    inv, inv, inv, inv,
+  /* 0x2c */    inv, inv, inv, inv,
+  /* 0x30 */    inv, inv, inv, inv,
+  /* 0x34 */    inv, inv, inv, inv,
+  /* 0x38 */    inv, inv, inv, inv,
+  /* 0x3c */    inv, inv, inv, inv,
+};
+
 void exec_cop0(vaddr_t *pc, Inst inst) {
-  cop0_table[inst.rs](pc, inst);
+  if(inst.rs & 0x10)
+	cop0_table_func[inst.func](pc, inst);
+  else
+   	cop0_table_rs[inst.rs](pc, inst);
 }
 
 exec_func opcode_table[64] = {
@@ -448,6 +492,13 @@ void print_registers(uint32_t instr) {
 	printf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", cpu.gpr[20], cpu.gpr[21], cpu.gpr[22], cpu.gpr[23]);
 	printf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
 	printf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
+}
+
+int init_cpu() {
+  assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]));
+  assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]));
+  cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
+  return 0;
 }
 
 void exec_wrapper(bool print_flag) {

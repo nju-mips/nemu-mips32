@@ -60,7 +60,7 @@ void vaddr_write(vaddr_t addr, int len, uint32_t data) {
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
-#define DDR_SIZE (128 * 1024 * 1024)
+#define DDR_SIZE (256 * 1024 * 1024)
 
 uint8_t ddr[DDR_SIZE];
 
