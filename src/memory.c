@@ -110,17 +110,11 @@ static uint32_t uartlite_read(paddr_t addr, int len) {
   }
 }
 
-static FILE *serial = NULL;
-
 static void uartlite_write(paddr_t addr, int len, uint32_t data) {
   check_uartlite(addr, len);
   switch (addr) {
     case Tx:
-      if (!serial) {
-        serial = fopen("serial", "w");
-        Assert(serial, "Can not open serial file for writing");
-      }
-      fprintf(serial, "%c", (char)data);
+      putchar((char)data);
       break;
     default:
       Assert(false, "UARTLite: address(0x%08x) is not writable", addr);
@@ -158,11 +152,11 @@ static void gpio_write(paddr_t addr, int len, uint32_t data) {
 }
 
 static uint32_t invalid_read(paddr_t addr, int len) {
-  Assert(false, "invalid read at address(0x%08x)", addr);
+  Assert(false, "invalid read at address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
 }
 
 static void invalid_write(paddr_t addr, int len, uint32_t data) {
-  Assert(false, "invalid write at address(0x%08x)", addr);
+  Assert(false, "invalid write at address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
 }
 
 
