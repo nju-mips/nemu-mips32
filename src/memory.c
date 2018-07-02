@@ -46,7 +46,7 @@ uint32_t find_region(vaddr_t addr) {
       ret = i;
       break;
     }
-  Assert(ret != -1, "address(0x%08x) is out of bound", addr);
+  Assert(ret != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return ret;
 }
 

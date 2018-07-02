@@ -36,6 +36,78 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+int64_t strint(char **ps, bool *overflow) {
+	bool is_neg = false;
+	int base = 10;
+	int64_t ret = 0;
+	char *s = *ps;
+
+	if(*s == '0') {
+		s ++;
+		if(*s == 'x' || *s == 'X') {
+			s ++;
+			base = 16;
+		} else {
+			base = 8;
+		}
+	} else if(*s == '-') {
+		s ++;
+		is_neg = true;
+	}
+
+	while(*s) {
+		int ch = *s;
+
+		switch(base) {
+			case 16:
+				if('0' <= ch && ch <= '9')
+					ret = ret * 16 + ch - '0';
+				else if('a' <= ch && ch <= 'f')
+					ret = ret * 16 + ch + 10 - 'a';
+				else if('A' <= ch && ch <= 'F')
+					ret = ret * 16 + ch + 10 -'A';
+				else
+					goto exit_loop;
+				break;
+			case 8:
+			case 10:
+				if('0' <= ch && ch < '0' + base) {
+					ret = ret * base + ch - '0';
+				} else {
+					goto exit_loop;
+				}
+				break;
+		}
+
+		if(ret < 0 && (ret != 0x8000000000000000ll || !is_neg) && overflow)
+			*overflow = true;
+
+		s++;
+	}
+
+exit_loop:
+
+	if(is_neg) ret = -ret;
+
+	*ps = s;
+
+	return ret;
+}
+
+
+static int cmd_b(char *args) {
+  if(args == NULL) {
+	printf("usage: b addr\n");
+  } else {
+	char *p = args;
+	uint32_t addr = strint(&p, NULL);
+	while(cpu.pc != addr && nemu_state != NEMU_END) {
+		cpu_exec(1);
+	}
+  }
+  return 0;
+}
+
 static int cmd_si(char *args);
 int cmd_info(char *args);
 static int cmd_help(char *args);
@@ -48,6 +120,7 @@ static struct {
   { "help", "Display informations about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "b", "Break Point", cmd_b },
   { "si", "Single step", cmd_si}, 
   { "info", "Print information", cmd_info}
 };
@@ -97,20 +170,10 @@ static int cmd_si(char *args)
 int cmd_info(char *args)
 {
   char subcmd[5];
-  if(sscanf(args, "%4s", subcmd) > 0)
-  {
-    if(strcmp(subcmd, "r")==0)
-    {
-      // print pc
-      printf("$pc: 0x%08x hi: 0x%08x lo: 0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
-      // print in eight lines
-      for(int i = 0; i < 8; i++) {
-        for(int j = 0; j < 4; j++) {
-          int regno = 4 * i + j;
-          printf("$%-4s 0x%08x  ", regs[regno], cpu.gpr[regno]);
-        }
-        printf("\n");
-      }
+  if(sscanf(args, "%4s", subcmd) > 0) {
+    if(strcmp(subcmd, "r")==0) {
+      void print_registers();
+	  print_registers();
       return 0;
     }
   }
@@ -127,6 +190,11 @@ void ui_mainloop(int is_batch_mode) {
 
   while (1) {
     char *str = rl_gets();
+	if(str == NULL) {
+		printf("exit nemu\n");
+		exit(0);
+	}
+
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */

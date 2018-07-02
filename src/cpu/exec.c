@@ -25,7 +25,7 @@ typedef void (*exec_func) (vaddr_t *, Inst);
 // temporary strategy: store timer registers in C0
 void syscall(vaddr_t *pc, Inst inst) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
-  cpu.pc = EXCEPTION_VECTOR_LOCATION - 4;
+  *pc = EXCEPTION_VECTOR_LOCATION;
 
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 1;
@@ -33,26 +33,32 @@ void syscall(vaddr_t *pc, Inst inst) {
 
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   cause->ExcCode = EXC_SYSCALL;
+  sprintf(asm_buf_p, "syscall");
 }
 
 void eret(vaddr_t *pc, Inst inst) {
-  cpu.pc = cpu.cp0[CP0_EPC][0] - 4;
+  *pc = cpu.cp0[CP0_EPC][0];
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 0;
   status->IE = 1;
+  sprintf(asm_buf_p, "eret");
 }
 
 void mfc0(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
+  sprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
+		  inst.rd, inst.sel);
 }
 
 void mtc0(vaddr_t *pc, Inst inst) {
   cpu.cp0[inst.rd][inst.sel] = cpu.gpr[inst.rt];
+  sprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
+		  inst.rd, inst.sel);
 }
 
 void jr(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0 && inst.rd == 0);
-  cpu.pc = cpu.gpr[inst.rs];
+  *pc = cpu.gpr[inst.rs];
   sprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 }
 
@@ -68,7 +74,9 @@ void name(vaddr_t *pc, Inst inst) {                        \
 R_SIMPLE(or,   |, uint32_t)
 R_SIMPLE(xor,  ^, uint32_t)
 R_SIMPLE(and,  &, uint32_t)
+R_SIMPLE(add,  +, int32_t)
 R_SIMPLE(addu, +, uint32_t)
+R_SIMPLE(sub,  -, int32_t)
 R_SIMPLE(subu, -, uint32_t)
 R_SIMPLE(mul,  *, uint32_t)
 R_SIMPLE(slt,  <, int32_t)
@@ -316,6 +324,7 @@ void lhu(vaddr_t *pc, Inst inst) {
   sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
+
 void beq(vaddr_t *pc, Inst inst) {
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
 	*pc += inst.simm << 2;
@@ -353,6 +362,18 @@ void bgez(vaddr_t *pc, Inst inst) {
   sprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
+void bgezal(vaddr_t *pc, Inst inst) {
+  cpu.gpr[31] = *pc + 4;
+  if ((int32_t)cpu.gpr[inst.rs] >= 0)
+	*pc += inst.simm << 2;
+}
+
+void bltzal(vaddr_t *pc, Inst inst) {
+  cpu.gpr[31] = *pc + 4;
+  if ((int32_t)cpu.gpr[inst.rs] < 0)
+	*pc += inst.simm << 2;
+}
+
 void jal(vaddr_t *pc, Inst inst) {
   cpu.gpr[31] = *pc + 4;
   *pc = (*pc & 0xf0000000) | (inst.addr << 2);
@@ -373,7 +394,7 @@ exec_func special_table[64] = {
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	mult, multu, div, divu,
   /* 0x1c */	inv, inv, inv, inv,
-  /* 0x20 */	inv, addu, inv, subu,
+  /* 0x20 */	add, addu, sub, subu,
   /* 0x24 */	and, or, xor, nor,
   /* 0x28 */	inv, inv, slt, sltu,
   /* 0x2c */	inv, inv, inv, inv,
@@ -415,7 +436,7 @@ exec_func regimm_table[64] = {
   /* 0x04 */	inv, inv, inv, inv,
   /* 0x08 */	inv, inv, inv, inv,
   /* 0x0c */	inv, inv, inv, inv,
-  /* 0x10 */	inv, inv, inv, inv,
+  /* 0x10 */	bltzal, bgezal, inv, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
   /* 0x1c */	inv, inv, inv, inv,
@@ -528,9 +549,13 @@ void exec_wrapper(bool print_flag) {
 
   opcode_table[inst.op](&cpu.pc, inst);
 
+#ifdef DIFF
   print_registers(inst.val);
+#endif
 
+#ifdef INTR
   check_interrupt();
+#endif
 
   if (print_flag)
 	puts(asm_buf);
