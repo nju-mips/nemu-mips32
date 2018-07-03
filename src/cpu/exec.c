@@ -3,6 +3,8 @@
 
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
 
+extern int nemu_state;
+
 char asm_buf[80];
 char *asm_buf_p;
 
@@ -34,6 +36,11 @@ void syscall(vaddr_t *pc, Inst inst) {
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   cause->ExcCode = EXC_SYSCALL;
   sprintf(asm_buf_p, "syscall");
+}
+
+void breakpoint(vaddr_t *pc, Inst inst) {
+  *pc -= 4;
+  nemu_state = NEMU_STOP;
 }
 
 void eret(vaddr_t *pc, Inst inst) {
@@ -389,7 +396,7 @@ exec_func special_table[64] = {
   /* 0x00 */    sll, inv, srl, sra,
   /* 0x04 */	sllv, inv, srlv, srav,
   /* 0x08 */	jr, jalr, movz, movn,
-  /* 0x0c */	syscall, inv, inv, inv,
+  /* 0x0c */	syscall, breakpoint, inv, inv,
   /* 0x10 */	mfhi, inv, mflo, inv,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	mult, multu, div, divu,
@@ -500,7 +507,7 @@ exec_func opcode_table[64] = {
   /* 0x30 */	inv, inv, inv, inv,
   /* 0x34 */	inv, inv, inv, inv,
   /* 0x38 */	inv, inv, inv, inv,
-  /* 0x3c */	inv, inv, inv, inv
+  /* 0x3c */	inv, inv, inv, inv,
 };
 
 void print_registers(uint32_t instr) {
@@ -518,6 +525,7 @@ void print_registers(uint32_t instr) {
 int init_cpu() {
   assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]));
   assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]));
+  cpu.gpr[25] = 0x10000000;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
   return 0;
 }

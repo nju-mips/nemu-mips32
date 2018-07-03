@@ -43,7 +43,7 @@ $(OBJ_DIR)/%.o: src/%.c
 .PHONY: app run submit clean
 app: $(BINARY)
 
-ARGS ?= -l $(BUILD_DIR)/nemu-log.txt
+ARGS ?= -l $(BUILD_DIR)/nemu-log.txt -i $(BUILD_DIR)/nanos-mips32-npc.bin
 
 # Command to execute NEMU
 NEMU_EXEC := $(BINARY) $(ARGS)

@@ -12,7 +12,8 @@ void gdb_server_mainloop(int port);
 
 void start_gdb(int port) {
   char remote_s[100];
-  snprintf(remote_s, sizeof(remote_s), "target remote 127.0.0.1:%d", port);
+  snprintf(remote_s, sizeof(remote_s),
+		  "target remote 127.0.0.1:%d", port);
   const char *argv[] = {
 	"/usr/bin/gdb-multiarch",
 	"-ex", remote_s,
@@ -46,16 +47,16 @@ void start_bridge(int port, int serv_port) {
   }
 }
 
-void test() {
+void gdb_mainloop() {
   int serv_port = 1238;
   int gdb_port = serv_port + 1;
   if(fork() == 0) {
-	 if(fork() == 0) {
+	if(fork() == 0) {
 	  gdb_server_mainloop(serv_port);
-	 } else {
+	} else {
 	  usleep(1000);
 	  start_bridge(gdb_port, serv_port);
-	 }
+	}
   } else {
 	usleep(2000);
 	start_gdb(gdb_port);

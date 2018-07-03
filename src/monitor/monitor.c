@@ -85,7 +85,7 @@ int init_monitor(int argc, char *argv[]) {
   restart();
 
   /* Initialize devices. */
-  init_device();
+  // init_device();
 
   /* Display welcome message. */
   // when we are in batch mode, we are properly trying to do a diff,

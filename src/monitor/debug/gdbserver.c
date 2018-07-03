@@ -500,7 +500,26 @@ char *gdb_read_memory(char *args) {
 }
 
 char *gdb_write_memory(char *args) {
-  return NULL;
+  // M<addr>,len:<HEX>
+  uint32_t addr = 0, size = 0;
+  sscanf(args, "%x,%x:", &addr, &size);
+
+  char *hex = strchr(args, ':');
+  for(int i = 0; i < size; i++) {
+	if(find_region(addr + i) == -1) {
+	  // do nothing
+	} else if(hex != NULL) {
+	  int data = 0;
+	  sscanf(hex + 1, "%02x", &data);
+	  vaddr_write(addr + i, 1, data);
+
+	  if(hex[1] == 0 || hex[2] == 0)
+		hex = NULL;
+	  else
+		hex += 2;
+	}
+  }
+  return "OK";
 }
 
 char *gdb_read_register(char *args) {
@@ -508,7 +527,12 @@ char *gdb_read_register(char *args) {
 
   int reg_no = 0;
   sscanf(args, "%d", &reg_no);
-  snprintf(reg_value, sizeof(reg_value), "%08x", cpu.gpr[reg_no]);
+  if(reg_no < 32) {
+	snprintf(reg_value, sizeof(reg_value),
+		"%08x", htonl(cpu.gpr[reg_no]));
+  } else {
+	snprintf(reg_value, sizeof(reg_value), "%08x", cpu.pc);
+  }
   return reg_value;
 }
 
@@ -524,8 +548,29 @@ char *gdb_single_step(char *args) {
   return NULL;
 }
 
+char *gdb_detach(char *args) {
+  return "OK";
+}
+
 char *gdb_write_memory_hex(char *args) {
-  return NULL;
+  // X<addr>,len:<BIN>
+  uint32_t addr = 0, size = 0;
+  sscanf(args, "%x,%x:", &addr, &size);
+
+  char *hex = strchr(args, ':');
+  for(int i = 0; i < size; i++) {
+	if(find_region(addr + i) == -1) {
+	  // do nothing
+	} else if(hex != NULL) {
+	  vaddr_write(addr + i, 1, hex[1]);
+
+	  if(hex[1] == 0)
+		hex = NULL;
+	  else
+		hex += 1;
+	}
+  }
+  return "OK";
 }
 
 char *gdb_remove_break_point(char *args) {
@@ -545,6 +590,7 @@ static gdb_cmd_handler_t handlers[128] = {
 	['i'] = gdb_step,
 	['m'] = gdb_read_memory,
 	['M'] = gdb_write_memory,
+	['D'] = gdb_detach,
 	['p'] = gdb_read_register,
 	['P'] = gdb_write_register,
 	['q'] = gdb_general_query,
