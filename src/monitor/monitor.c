@@ -3,14 +3,7 @@
 
 #define ENTRY_START 0x10000000
 
-void init_difftest();
-void init_regex();
-void init_wp_pool();
 void init_device();
-
-void reg_test();
-void init_qemu_reg();
-bool gdb_memcpy_to_qemu(uint32_t, void *, int);
 
 FILE *log_fp = NULL;
 static char *log_file = NULL;
@@ -90,12 +83,6 @@ int init_monitor(int argc, char *argv[]) {
 
   /* Initialize this virtual computer system. */
   restart();
-
-  /* Compile the regular expressions. */
-  // init_regex();
-
-  /* Initialize the watchpoint pool. */
-  // init_wp_pool();
 
   /* Initialize devices. */
   init_device();
