@@ -504,7 +504,7 @@ exec_func opcode_table[64] = {
 };
 
 void print_registers(uint32_t instr) {
-	printf("$pc:    0x%08x    hi:    0x%08x lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
+      printf("$pc:    0x%08x    hi:    0x%08x    lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
 	printf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
 	printf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
 	printf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
