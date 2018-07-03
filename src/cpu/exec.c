@@ -39,7 +39,6 @@ void syscall(vaddr_t *pc, Inst inst) {
 }
 
 void breakpoint(vaddr_t *pc, Inst inst) {
-  *pc -= 4;
   nemu_state = NEMU_STOP;
 }
 
@@ -525,7 +524,7 @@ void print_registers(uint32_t instr) {
 int init_cpu() {
   assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]));
   assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]));
-  cpu.gpr[25] = 0x10000000;
+  cpu.gpr[29] = 0x18000000;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
   return 0;
 }

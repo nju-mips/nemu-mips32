@@ -6,8 +6,8 @@
 void init_device();
 
 FILE *log_fp = NULL;
-static char *log_file = NULL;
-static char *img_file = NULL;
+char *log_file = NULL;
+char *img_file = NULL;
 int is_batch_mode = false;
 int print_commit_log = false;
 

@@ -7,17 +7,28 @@
 
 #include "protocol.h"
 
+// #define ON_QEMU
+
+extern char *img_file;
 extern char **environ;
 void gdb_server_mainloop(int port);
 
 void start_gdb(int port) {
-  char remote_s[100];
+  char symbol_s[100], remote_s[100];
+
+  snprintf(symbol_s, sizeof(symbol_s), "symbol %s", img_file);
+  *strrchr(symbol_s, '.') = 0;
   snprintf(remote_s, sizeof(remote_s),
 		  "target remote 127.0.0.1:%d", port);
   const char *argv[] = {
+#ifdef ON_QEMU
+	"/usr/bin/gdb",
+#else
 	"/usr/bin/gdb-multiarch",
-	"-ex", remote_s,
 	"-ex", "set arch mips",
+	"-ex", symbol_s,
+#endif
+	"-ex", remote_s,
 	NULL,
   };
   execve(argv[0], (char **)argv, environ);
@@ -48,15 +59,20 @@ void start_bridge(int port, int serv_port) {
 }
 
 void gdb_mainloop() {
-  int serv_port = 1238;
+  int serv_port = 12345;
   int gdb_port = serv_port + 1;
   if(fork() == 0) {
+#ifdef ON_QEMU
+	  usleep(1000);
+	  start_bridge(gdb_port, serv_port);
+#else
 	if(fork() == 0) {
 	  gdb_server_mainloop(serv_port);
 	} else {
 	  usleep(1000);
 	  start_bridge(gdb_port, serv_port);
 	}
+#endif
   } else {
 	usleep(2000);
 	start_gdb(gdb_port);
