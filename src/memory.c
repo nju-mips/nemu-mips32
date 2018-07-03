@@ -29,7 +29,7 @@ struct mmap_region {
   read_func read;
   write_func write;
 } mmap_table [] = {
-  {0x00000000, 0x00001fff, invalid_read, invalid_write},
+  // {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {0x10000000, 0x1fffffff, ddr_read, ddr_write},
   {0x40000000, 0x40000fff, invalid_read, gpio_write},
   {0x40001000, 0x40001fff, uartlite_read, uartlite_write},
@@ -46,17 +46,18 @@ uint32_t find_region(vaddr_t addr) {
       ret = i;
       break;
     }
-  Assert(ret != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return ret;
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
   int idx = find_region(addr);
+  Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {
   int idx = find_region(addr);
+  Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
