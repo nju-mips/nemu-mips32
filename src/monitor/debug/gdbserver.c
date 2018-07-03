@@ -4,6 +4,7 @@
 #include "nemu.h"
 #include "protocol.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <malloc.h>
 #include <arpa/inet.h>
@@ -136,6 +137,8 @@ char *gdb_general_query(char *args, int arglen) {
 	return "m1";
   } else if(strcmp(kind, "sThreadInfo") == 0) {
 	return "l";
+  } else if(strcmp(kind, "Symbol") == 0) {
+	return "OK";
   } else if(strcmp(kind, "TStatus") == 0) {
 	return "";
   } else {
@@ -154,7 +157,7 @@ char *gdb_vCont_handler(char *args) {
 	  sscanf(args, "%c:%d", &action, &thread);
 
 	  switch(action) {
-		case 'c': cpu_exec(-1); cpu.pc -= 8; break;
+		case 'c': cpu_exec(-1); cpu.pc -= 4; break;
 		case 's': cpu_exec(1); break;
 	  }
 
@@ -313,15 +316,41 @@ char *gdb_write_memory_hex(char *args, int arglen) {
   return "OK";
 }
 
+#define NR_BREAK_POINTS 32
+
+struct break_point_t {
+  bool used;
+  uint32_t addr;
+  uint32_t value;
+} break_points[NR_BREAK_POINTS];
+
 char *gdb_remove_break_point(char *args, int arglen) {
+  int type = 0, addr = 0, kind = 0;
+  sscanf(args, "%x,%x,%x", &type, &addr, &kind);
+  // let gdb to maintain the breakpoints, :)
+  for(int i = 0; i < NR_BREAK_POINTS; i++) {
+	if(break_points[i].used && break_points[i].addr == addr) {
+	  break_points[i].used = false;
+	  vaddr_write(addr, 4, break_points[i].value);
+	  return "OK";
+	}
+  }
   return "";
 }
 
 char *gdb_insert_break_point(char *args, int arglen) {
   int type = 0, addr = 0, kind = 0;
   sscanf(args, "%x,%x,%x", &type, &addr, &kind);
-  vaddr_write(addr, 4, 0x0005000d);
   // let gdb to maintain the breakpoints, :)
+  for(int i = 0; i < NR_BREAK_POINTS; i++) {
+	if(!break_points[i].used) {
+	  break_points[i].addr = addr;
+	  break_points[i].value = vaddr_read(addr, 4);
+	  vaddr_write(addr, 4, 0x0005000d);
+	  break_points[i].used = true;
+	  return "OK";
+	}
+  }
   return "";
 }
 

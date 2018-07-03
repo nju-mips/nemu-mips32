@@ -59,7 +59,7 @@ void start_bridge(int port, int serv_port) {
 }
 
 void gdb_mainloop() {
-  int serv_port = 12345;
+  int serv_port = 1235;
   int gdb_port = serv_port + 1;
   if(fork() == 0) {
 #ifdef ON_QEMU
