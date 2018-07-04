@@ -1,7 +1,13 @@
 #include "cpu/exec.h"
 #include "monitor/monitor.h"
 
+#include <sys/stat.h>
+
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
+
+// #define dsprintf sprintf
+
+int dsprintf(char *buf, const char *fmt, ...) { return 0; }
 
 extern int nemu_state;
 
@@ -35,7 +41,7 @@ void syscall(vaddr_t *pc, Inst inst) {
 
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   cause->ExcCode = EXC_SYSCALL;
-  sprintf(asm_buf_p, "syscall");
+  dsprintf(asm_buf_p, "syscall");
 }
 
 void breakpoint(vaddr_t *pc, Inst inst) {
@@ -47,25 +53,25 @@ void eret(vaddr_t *pc, Inst inst) {
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 0;
   status->IE = 1;
-  sprintf(asm_buf_p, "eret");
+  dsprintf(asm_buf_p, "eret");
 }
 
 void mfc0(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
-  sprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
+  dsprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
 		  inst.rd, inst.sel);
 }
 
 void mtc0(vaddr_t *pc, Inst inst) {
   cpu.cp0[inst.rd][inst.sel] = cpu.gpr[inst.rt];
-  sprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
+  dsprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
 		  inst.rd, inst.sel);
 }
 
 void jr(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0 && inst.rd == 0);
   *pc = cpu.gpr[inst.rs];
-  sprintf(asm_buf_p, "jr %s", regs[inst.rs]);
+  dsprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 }
 
 #define R_SIMPLE(name, op, t)                              \
@@ -73,7 +79,7 @@ void name(vaddr_t *pc, Inst inst) {                        \
   assert(inst.shamt == 0);                                 \
   cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op                \
   (t)cpu.gpr[inst.rt];                                     \
-  sprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd],  \
+  dsprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd],  \
 	  regs[inst.rs], regs[inst.rt]);                       \
 }
 
@@ -91,7 +97,7 @@ R_SIMPLE(sltu, <, uint32_t)
 void nor(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   cpu.gpr[inst.rd] = ~(cpu.gpr[inst.rs] | cpu.gpr[inst.rt]);
-  sprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
+  dsprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
 	  regs[inst.rs], regs[inst.rt]);
 }
 
@@ -103,7 +109,7 @@ void mult(vaddr_t *pc, Inst inst) {
   int64_t prod = (int64_t)(int32_t)cpu.gpr[inst.rs] * (int64_t)(int32_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
-  sprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
 void multu(vaddr_t *pc, Inst inst) {
@@ -111,128 +117,128 @@ void multu(vaddr_t *pc, Inst inst) {
   uint64_t prod = (uint64_t)cpu.gpr[inst.rs] * (uint64_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
-  sprintf(asm_buf_p, "multu %s,%s", regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "multu %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
 void div(vaddr_t *pc, Inst inst) {
   assert(inst.rd == 0 && inst.shamt == 0);
   cpu.lo = (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
   cpu.hi = (int32_t)cpu.gpr[inst.rs] % (int32_t)cpu.gpr[inst.rt];
-  sprintf(asm_buf_p, "div %s,%s", regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "div %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
 void divu(vaddr_t *pc, Inst inst) {
   assert(inst.rd == 0 && inst.shamt == 0);
   cpu.lo = cpu.gpr[inst.rs] / cpu.gpr[inst.rt];
   cpu.hi = cpu.gpr[inst.rs] % cpu.gpr[inst.rt];
-  sprintf(asm_buf_p, "divu %s,%s", regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "divu %s,%s", regs[inst.rs], regs[inst.rt]);
 }
 
 
 void sll(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << inst.shamt;
-  sprintf(asm_buf_p, "sll %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
+  dsprintf(asm_buf_p, "sll %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
 void sllv(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << (cpu.gpr[inst.rs] & 0x1f);
-  sprintf(asm_buf_p, "sllv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
+  dsprintf(asm_buf_p, "sllv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
 void sra(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0);
   cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> inst.shamt;
-  sprintf(asm_buf_p, "sra %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
+  dsprintf(asm_buf_p, "sra %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
 void srav(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
-  sprintf(asm_buf_p, "srav %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
+  dsprintf(asm_buf_p, "srav %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
 void srl(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> inst.shamt;
-  sprintf(asm_buf_p, "srl %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
+  dsprintf(asm_buf_p, "srl %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 }
 
 void srlv(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
-  sprintf(asm_buf_p, "srlv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
+  dsprintf(asm_buf_p, "srlv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 }
 
 void movn(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   if (cpu.gpr[inst.rt] != 0)
 	cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
-  sprintf(asm_buf_p, "movn %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "movn %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 }
 
 void movz(vaddr_t *pc, Inst inst) {
   assert(inst.shamt == 0);
   if (cpu.gpr[inst.rt] == 0)
 	cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
-  sprintf(asm_buf_p, "movz %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
+  dsprintf(asm_buf_p, "movz %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 }
 
 void mfhi(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.hi;
-  sprintf(asm_buf_p, "mfhi %s", regs[inst.rd]);
+  dsprintf(asm_buf_p, "mfhi %s", regs[inst.rd]);
 }
 
 void mflo(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.lo;
-  sprintf(asm_buf_p, "mflo %s", regs[inst.rd]);
+  dsprintf(asm_buf_p, "mflo %s", regs[inst.rd]);
 }
 
 void jalr(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = *pc + 4;
   *pc = cpu.gpr[inst.rs];
-  sprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
+  dsprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
 }
 
 
 void lui(vaddr_t *pc, Inst inst) {
   assert(inst.rs == 0);
   cpu.gpr[inst.rt] = inst.uimm << 16;
-  sprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.uimm);
+  dsprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.uimm);
 }
 
 void addiu(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm;
-  sprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 void andi(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.uimm;
-  sprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
+  dsprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void ori(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.uimm;
-  sprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
+  dsprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void xori(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.uimm;
-  sprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
+  dsprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 }
 
 void sltiu(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.uimm;
-  sprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 void slti(vaddr_t *pc, Inst inst) {
   cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < inst.simm;
-  sprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 }
 
 
@@ -246,7 +252,7 @@ void swl(vaddr_t *pc, Inst inst) {
   uint32_t wdata = cpu.gpr[inst.rt] >> ((3 - idx) * 8);
 
   vaddr_write((waddr >> 2) << 2, len, wdata);
-  sprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void swr(vaddr_t *pc, Inst inst) {
@@ -255,25 +261,25 @@ void swr(vaddr_t *pc, Inst inst) {
   uint32_t wdata = cpu.gpr[inst.rt];
 
   vaddr_write(waddr, len, wdata);
-  sprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sw(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(4, cpu.gpr[inst.rs] + inst.simm);
   vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
-  sprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sh(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(2, cpu.gpr[inst.rs] + inst.simm);
   vaddr_write(cpu.gpr[inst.rs] + inst.simm, 2, cpu.gpr[inst.rt]);
-  sprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void sb(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(1, cpu.gpr[inst.rs] + inst.simm);
   vaddr_write(cpu.gpr[inst.rs] + inst.simm, 1, cpu.gpr[inst.rt]);
-  sprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lwl(vaddr_t *pc, Inst inst) {
@@ -285,7 +291,7 @@ void lwl(vaddr_t *pc, Inst inst) {
 	cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
   else
 	cpu.gpr[inst.rt] = rdata;
-  sprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lwr(vaddr_t *pc, Inst inst) {
@@ -297,75 +303,75 @@ void lwr(vaddr_t *pc, Inst inst) {
 	cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
   else
 	cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
-  sprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lw(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(4, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
-  sprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lb(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(1, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = (int32_t)(int8_t)vaddr_read(cpu.gpr[inst.rs] + inst.simm, 1);
-  sprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lbu(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(1, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 1);
-  sprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lh(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(2, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = (int32_t)(int16_t)vaddr_read(cpu.gpr[inst.rs] + inst.simm, 2);
-  sprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 void lhu(vaddr_t *pc, Inst inst) {
   CHECK_ALIGNED_ADDR(2, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 2);
-  sprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+  dsprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
 
 void beq(vaddr_t *pc, Inst inst) {
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
 void bne(vaddr_t *pc, Inst inst) {
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
 void blez(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0);
   if ((int32_t)cpu.gpr[inst.rs] <= 0)
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgtz(vaddr_t *pc, Inst inst) {
   if ((int32_t)cpu.gpr[inst.rs] > 0)
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bltz(vaddr_t *pc, Inst inst) {
   if ((int32_t)cpu.gpr[inst.rs] < 0)
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgez(vaddr_t *pc, Inst inst) {
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
 	*pc += inst.simm << 2;
-  sprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
+  dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgezal(vaddr_t *pc, Inst inst) {
@@ -383,12 +389,12 @@ void bltzal(vaddr_t *pc, Inst inst) {
 void jal(vaddr_t *pc, Inst inst) {
   cpu.gpr[31] = *pc + 4;
   *pc = (*pc & 0xf0000000) | (inst.addr << 2);
-  sprintf(asm_buf_p, "jal %x", *pc);
+  dsprintf(asm_buf_p, "jal %x", *pc);
 }
 
 void j(vaddr_t *pc, Inst inst) {
   *pc = (*pc & 0xf0000000) | (inst.addr << 2);
-  sprintf(asm_buf_p, "j %x", *pc);
+  dsprintf(asm_buf_p, "j %x", *pc);
 }
 
 exec_func special_table[64] = {
@@ -548,11 +554,11 @@ void exec_wrapper(bool print_flag) {
   update_cp0_timer();
 
   asm_buf_p = asm_buf;
-  asm_buf_p += sprintf(asm_buf_p, "%8x:    ", cpu.pc);
+  asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
 
   Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
 
-  asm_buf_p += sprintf(asm_buf_p, "%08x    ", inst.val);
+  asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
 
   opcode_table[inst.op](&cpu.pc, inst);
 
@@ -563,8 +569,4 @@ void exec_wrapper(bool print_flag) {
 #ifdef INTR
   check_interrupt();
 #endif
-
-  if (print_flag)
-	puts(asm_buf);
-  Log_write("%s\n", asm_buf);
 }

@@ -2,8 +2,9 @@
 #include <stdint.h>
 
 int init_cpu();
+void init_device();
 int init_monitor(int, char *[]);
-void gdb_mainloop(int);
+void gdb_mainloop();
 void cpu_exec(uint64_t);
 
 int main(int argc, char *argv[]) {
@@ -11,9 +12,10 @@ int main(int argc, char *argv[]) {
   init_cpu();
   int is_batch_mode = init_monitor(argc, argv);
   if(is_batch_mode) {
+	init_device();
 	cpu_exec(-1);
   } else {
-	gdb_mainloop(is_batch_mode);
+	gdb_mainloop();
   }
   return 0;
 }

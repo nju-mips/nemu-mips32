@@ -8,16 +8,17 @@
 #include "protocol.h"
 
 // #define ON_QEMU
+#define ON_MIPS
 
-extern char *img_file;
+extern char *elf_file;
 extern char **environ;
+void init_device();
 void gdb_server_mainloop(int port);
 
 void start_gdb(int port) {
   char symbol_s[100], remote_s[100];
 
-  snprintf(symbol_s, sizeof(symbol_s), "symbol %s", img_file);
-  *strrchr(symbol_s, '.') = 0;
+  snprintf(symbol_s, sizeof(symbol_s), "symbol %s", elf_file);
   snprintf(remote_s, sizeof(remote_s),
 		  "target remote 127.0.0.1:%d", port);
   const char *argv[] = {
@@ -59,14 +60,21 @@ void start_bridge(int port, int serv_port) {
 }
 
 void gdb_mainloop() {
-  int serv_port = 12347;
+#ifdef ON_MIPS
+  int serv_port = 1245;
   int gdb_port = serv_port;
+#else
+  int serv_port = 1234;
+  int gdb_port = serv_port + 1;
+#endif
+
   if(fork() == 0) {
-	  gdb_server_mainloop(serv_port);
-	  /*
 #ifdef ON_QEMU
-	  usleep(1000);
-	  start_bridge(gdb_port, serv_port);
+	usleep(1000);
+	start_bridge(gdb_port, serv_port);
+#elif defined ON_MIPS
+	init_device();
+	gdb_server_mainloop(serv_port);
 #else
 	if(fork() == 0) {
 	  gdb_server_mainloop(serv_port);
@@ -75,9 +83,8 @@ void gdb_mainloop() {
 	  start_bridge(gdb_port, serv_port);
 	}
 #endif
-*/
   } else {
-	usleep(2000);
+	usleep(20000);
 	start_gdb(gdb_port);
   }
 }

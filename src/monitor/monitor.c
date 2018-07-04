@@ -1,50 +1,86 @@
 #include "nemu.h"
+#include <elf.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
 #define ENTRY_START 0x10000000
 
-void init_device();
+char *elf_file = NULL;
+static char *img_file = NULL;
 
-FILE *log_fp = NULL;
-char *log_file = NULL;
-char *img_file = NULL;
 int is_batch_mode = false;
 int print_commit_log = false;
 
-static inline void init_log() {
-#ifdef DEBUG
-  if (log_file == NULL) return;
-  log_fp = fopen(log_file, "w");
-  Assert(log_fp, "Can not open '%s'", log_file);
-#endif
+void *ddr_map(uint32_t vaddr, uint32_t size);
+
+size_t get_file_size(const char *img_file) {
+  struct stat file_status;
+  lstat(img_file, &file_status);
+  return file_status.st_size;
 }
 
-static inline void welcome() {
-  printf("Welcome to NEMU!\n");
-  Log("Build time: %s, %s", __TIME__, __DATE__);
-  printf("For help, type \"help\"\n");
+void *read_file(const char *filename) {
+  size_t size = get_file_size(filename);
+  int fd = open(filename, O_RDONLY);
+  if(fd == -1) return NULL;
+
+  // malloc buf which should be freed by caller
+  void *buf = malloc(size);
+  int len = 0;
+  while(len < size) {
+	len += read(fd, buf, size - len);
+  }
+  return buf;
 }
+
+void load_elf() {
+  Assert(elf_file, "Need an elf file");
+  Log("The elf is %s", elf_file);
+
+  const uint32_t elf_magic = 0x464c457f;
+
+  void *buf = read_file(elf_file);
+  Assert(buf, "elf file '%s' cannot be opened for read\n", elf_file);
+
+  Elf32_Ehdr *elf = buf;
+
+  uint32_t *p_magic = buf;
+  assert(*p_magic == elf_magic);
+
+  for(int i = 0; i < elf->e_phnum; i++) {
+	  Elf32_Phdr *ph = (void*)buf + i * elf->e_phentsize + elf->e_phoff;
+	  if(ph->p_type != PT_LOAD) { continue; }
+
+	  void *p_vaddr = ddr_map(ph->p_vaddr, ph->p_memsz);
+	  memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
+	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+  }
+
+  cpu.pc = elf->e_entry;
+  free(buf);
+}
+
 
 static inline void load_img() {
-  long size;
   Assert(img_file, "Need an image file");
-  int ret;
-
-  FILE *fp = fopen(img_file, "rb");
-  Assert(fp, "Can not open '%s'", img_file);
-
   Log("The image is %s", img_file);
 
-  fseek(fp, 0, SEEK_END);
-  size = ftell(fp);
+  size_t size = get_file_size(img_file);
 
-  fseek(fp, 0, SEEK_SET);
   // load into ddr
   // be careful about memory mapping
-  ret = fread(ddr, size, 1, fp);
+  FILE *fp = fopen(img_file, "rb");
+  Assert(fp, "Can not open '%s'", img_file);
+  int ret = fread(ddr, size, 1, fp);
   assert(ret == 1);
-
   fclose(fp);
+
+  // assume img_file is xxx.bin and elf_file is xxx
+  *strrchr(img_file, '.') = 0;
+  elf_file = img_file;
 }
 
 static inline void restart() {
@@ -54,17 +90,24 @@ static inline void restart() {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bcl:i:")) != -1) {
+  while ( (o = getopt(argc, argv, "-bci:e:")) != -1) {
     switch (o) {
       case 'b': is_batch_mode = true; break;
-      case 'l': log_file = optarg; break;
       case 'c': print_commit_log = true; break;
+      case 'e':
+                if (elf_file != NULL)
+				  Log("too much argument '%s', ignored", optarg);
+                else
+				  elf_file = optarg;
+                break;
       case 'i':
-                if (img_file != NULL) Log("too much argument '%s', ignored", optarg);
-                else img_file = optarg;
+                if (img_file != NULL)
+				  Log("too much argument '%s', ignored", optarg);
+                else
+				  img_file = optarg;
                 break;
       default:
-                panic("Usage: %s [-b] [-c] [-l log_file] [-i img_file]", argv[0]);
+                panic("Usage: %s [-b] [-c] [-i img_file] [-e elf_file]", argv[0]);
     }
   }
 }
@@ -75,23 +118,15 @@ int init_monitor(int argc, char *argv[]) {
   /* Parse arguments. */
   parse_args(argc, argv);
 
-  /* Open the log file. */
-  init_log();
-
   /* Load the image to memory. */
-  load_img();
+  if(elf_file) {
+	load_elf();
+  } else {
+	load_img();
+  }
 
   /* Initialize this virtual computer system. */
   restart();
-
-  /* Initialize devices. */
-  // init_device();
-
-  /* Display welcome message. */
-  // when we are in batch mode, we are properly trying to do a diff,
-  // so do not print unnecessary lines
-  if (!is_batch_mode)
-    welcome();
 
   return is_batch_mode;
 }

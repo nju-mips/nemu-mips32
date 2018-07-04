@@ -18,6 +18,10 @@ static void vga_write(paddr_t addr, int len, uint32_t data);
 static uint32_t invalid_read(paddr_t addr, int len);
 static void invalid_write(paddr_t addr, int len, uint32_t data);
 
+
+#define DDR_BASE (0x10000000)
+#define DDR_SIZE (256 * 1024 * 1024)
+
 // the memory mapping of mips32-npc
 //0x00000000 - 0x00001fff: bram
 //0x10000000 - 0x1fffffff: ddr
@@ -30,7 +34,7 @@ struct mmap_region {
   write_func write;
 } mmap_table [] = {
   // {0x00000000, 0x00001fff, invalid_read, invalid_write},
-  {0x10000000, 0x1fffffff, ddr_read, ddr_write},
+  {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
   {0x40000000, 0x40000fff, invalid_read, gpio_write},
   {0x40001000, 0x40001fff, uartlite_read, uartlite_write},
   {0x40010000, 0x4001ffff, invalid_read, invalid_write},
@@ -61,8 +65,6 @@ void vaddr_write(vaddr_t addr, int len, uint32_t data) {
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
-#define DDR_SIZE (256 * 1024 * 1024)
-
 uint8_t ddr[DDR_SIZE];
 
 /* Memory accessing interfaces */
@@ -70,6 +72,12 @@ uint8_t ddr[DDR_SIZE];
 #define check_ddr(addr, len) \
   Assert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
       "address(0x%08x) is out side DDR", addr);
+
+void *ddr_map(uint32_t addr, uint32_t size) {
+  addr -= DDR_BASE;
+  assert(addr <= DDR_SIZE && addr + size <= DDR_SIZE);
+  return &ddr[addr];
+}
 
 static uint32_t ddr_read(paddr_t addr, int len) {
   check_ddr(addr, len);
