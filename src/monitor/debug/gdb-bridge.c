@@ -64,7 +64,7 @@ void gdb_mainloop() {
   int serv_port = 1245;
   int gdb_port = serv_port;
 #else
-  int serv_port = 1234;
+  int serv_port = 12345;
   int gdb_port = serv_port + 1;
 #endif
 

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-#define ENTRY_START 0x10000000
+static uint32_t entry_start = 0x10000000;
 
 char *elf_file = NULL;
 static char *img_file = NULL;
@@ -59,7 +59,7 @@ void load_elf() {
 	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }
 
-  cpu.pc = elf->e_entry;
+  entry_start = elf->e_entry;
   free(buf);
 }
 
@@ -85,7 +85,7 @@ static inline void load_img() {
 
 static inline void restart() {
   /* Set the initial instruction pointer. */
-  cpu.pc = ENTRY_START;
+  cpu.pc = entry_start;
 }
 
 static inline void parse_args(int argc, char *argv[]) {

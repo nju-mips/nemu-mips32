@@ -193,6 +193,18 @@ char *gdb_read_registers(char *args, int arglen) {
 	int value = htonl(cpu.gpr[i]);
 	len += snprintf(&regs[len], sizeof(regs) - len, "%08x", value);
   }
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_STATUS][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.lo);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.hi);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_BADVADDR][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_CAUSE][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.pc);
   return regs;
 }
 

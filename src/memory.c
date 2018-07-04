@@ -19,7 +19,7 @@ static uint32_t invalid_read(paddr_t addr, int len);
 static void invalid_write(paddr_t addr, int len, uint32_t data);
 
 
-#define DDR_BASE (0x10000000)
+#define DDR_BASE (0x1000000)
 #define DDR_SIZE (256 * 1024 * 1024)
 
 // the memory mapping of mips32-npc
@@ -293,5 +293,5 @@ void init_sdl() {
 //                       dev simulation                        //
 /////////////////////////////////////////////////////////////////
 void init_device() {
-  init_sdl();
+  // init_sdl();
 }

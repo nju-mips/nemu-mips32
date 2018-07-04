@@ -8,6 +8,7 @@
 // #define dsprintf sprintf
 
 int dsprintf(char *buf, const char *fmt, ...) { return 0; }
+void exec_delayslot();
 
 extern int nemu_state;
 
@@ -69,6 +70,7 @@ void mtc0(vaddr_t *pc, Inst inst) {
 }
 
 void jr(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   assert(inst.rt == 0 && inst.rd == 0);
   *pc = cpu.gpr[inst.rs];
   dsprintf(asm_buf_p, "jr %s", regs[inst.rs]);
@@ -199,6 +201,7 @@ void mflo(vaddr_t *pc, Inst inst) {
 
 void jalr(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0 && inst.shamt == 0);
+  exec_delayslot();
   cpu.gpr[inst.rd] = *pc + 4;
   *pc = cpu.gpr[inst.rs];
   dsprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
@@ -336,14 +339,99 @@ void lhu(vaddr_t *pc, Inst inst) {
   dsprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 }
 
+void ll(vaddr_t *pc, Inst inst) {
+  CHECK_ALIGNED_ADDR(4, cpu.gpr[inst.rs] + inst.simm);
+  cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
+  dsprintf(asm_buf_p, "ll %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+}
+
+void sc(vaddr_t *pc, Inst inst) {
+  CHECK_ALIGNED_ADDR(4, cpu.gpr[inst.rs] + inst.simm);
+  vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
+  cpu.gpr[inst.rt] = 1;
+  dsprintf(asm_buf_p, "sc %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+}
+
+void cache(vaddr_t *pc, Inst inst) {
+	// do nothing, since nemu has no need to simulate cache
+}
+
+
+void beql(vaddr_t *pc, Inst inst) {
+  if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt]) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+}
+
+void bnel(vaddr_t *pc, Inst inst) {
+  if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt]) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+}
+
+void blezl(vaddr_t *pc, Inst inst) {
+  assert(inst.rt == 0);
+  if ((int32_t)cpu.gpr[inst.rs] <= 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
+}
+
+void bgtzl(vaddr_t *pc, Inst inst) {
+  if ((int32_t)cpu.gpr[inst.rs] > 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
+}
+
+void bltzl(vaddr_t *pc, Inst inst) {
+  if ((int32_t)cpu.gpr[inst.rs] < 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
+}
+
+void bgezl(vaddr_t *pc, Inst inst) {
+  if ((int32_t)cpu.gpr[inst.rs] >= 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+  dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
+}
+
+void bgezall(vaddr_t *pc, Inst inst) {
+  cpu.gpr[31] = *pc + 4;
+  if ((int32_t)cpu.gpr[inst.rs] >= 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+}
+
+void bltzall(vaddr_t *pc, Inst inst) {
+  cpu.gpr[31] = *pc + 4;
+  if ((int32_t)cpu.gpr[inst.rs] < 0) {
+	exec_delayslot();
+	*pc += inst.simm << 2;
+  }
+}
+
 
 void beq(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 }
 
 void bne(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
@@ -351,48 +439,56 @@ void bne(vaddr_t *pc, Inst inst) {
 
 void blez(vaddr_t *pc, Inst inst) {
   assert(inst.rt == 0);
+  exec_delayslot();
   if ((int32_t)cpu.gpr[inst.rs] <= 0)
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgtz(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   if ((int32_t)cpu.gpr[inst.rs] > 0)
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bltz(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   if ((int32_t)cpu.gpr[inst.rs] < 0)
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgez(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
 	*pc += inst.simm << 2;
   dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 }
 
 void bgezal(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   cpu.gpr[31] = *pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
 	*pc += inst.simm << 2;
 }
 
 void bltzal(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   cpu.gpr[31] = *pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] < 0)
 	*pc += inst.simm << 2;
 }
 
 void jal(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   cpu.gpr[31] = *pc + 4;
   *pc = (*pc & 0xf0000000) | (inst.addr << 2);
   dsprintf(asm_buf_p, "jal %x", *pc);
 }
 
 void j(vaddr_t *pc, Inst inst) {
+  exec_delayslot();
   *pc = (*pc & 0xf0000000) | (inst.addr << 2);
   dsprintf(asm_buf_p, "j %x", *pc);
 }
@@ -444,11 +540,11 @@ void exec_special2(vaddr_t *pc, Inst inst) {
 }
 
 exec_func regimm_table[64] = {
-  /* 0x00 */    bltz, bgez, inv, inv,
+  /* 0x00 */    bltz, bgez, bltzl, bgezl,
   /* 0x04 */	inv, inv, inv, inv,
   /* 0x08 */	inv, inv, inv, inv,
   /* 0x0c */	inv, inv, inv, inv,
-  /* 0x10 */	bltzal, bgezal, inv, inv,
+  /* 0x10 */	bltzal, bgezal, bltzall, bgezall,
   /* 0x14 */	inv, inv, inv, inv,
   /* 0x18 */	inv, inv, inv, inv,
   /* 0x1c */	inv, inv, inv, inv,
@@ -502,16 +598,16 @@ exec_func opcode_table[64] = {
   /* 0x08 */	inv, addiu, slti, sltiu,
   /* 0x0c */	andi, ori, xori, lui,
   /* 0x10 */	exec_cop0, inv, inv, inv,
-  /* 0x14 */	inv, inv, inv, inv,
+  /* 0x14 */	beql, bnel, blezl, bgtzl,
   /* 0x18 */	inv, inv, inv, inv,
   /* 0x1c */	exec_special2, inv, inv, inv,
   /* 0x20 */	lb, lh, lwl, lw,
   /* 0x24 */	lbu, lhu, lwr, inv,
   /* 0x28 */	sb, sh, swl, sw,
-  /* 0x2c */	inv, inv, swr, inv,
-  /* 0x30 */	inv, inv, inv, inv,
+  /* 0x2c */	inv, inv, swr, cache,
+  /* 0x30 */	ll, inv, inv, inv,
   /* 0x34 */	inv, inv, inv, inv,
-  /* 0x38 */	inv, inv, inv, inv,
+  /* 0x38 */	sc, inv, inv, inv,
   /* 0x3c */	inv, inv, inv, inv,
 };
 
@@ -548,6 +644,13 @@ void check_interrupt() {
 	cause->ExcCode = EXC_INTR;
 	cause->IP = 0x80;
   }
+}
+
+void exec_delayslot() {
+  Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
+  cpu.pc -= 4;
+  // printf("exec delayslot in %08x:%08x\n", cpu.pc, inst.val);
+  opcode_table[inst.op](&cpu.pc, inst);
 }
 
 void exec_wrapper(bool print_flag) {
