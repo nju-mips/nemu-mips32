@@ -54,14 +54,14 @@ uint32_t find_region(vaddr_t addr) {
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  addr -= cpu.base; // segment
+  addr += cpu.base; // segment
   int idx = find_region(addr);
   Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  addr -= cpu.base; // segment
+  addr += cpu.base; // segment
   int idx = find_region(addr);
   Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
