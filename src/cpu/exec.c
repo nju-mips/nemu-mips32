@@ -30,17 +30,23 @@ void inv(vaddr_t *pc, Inst inst) {
 
 typedef void (*exec_func) (vaddr_t *, Inst);
 
-// temporary strategy: store timer registers in C0
-void syscall(vaddr_t *pc, Inst inst) {
+static inline void trigger_exception(int code) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
-  *pc = EXCEPTION_VECTOR_LOCATION;
+  cpu.pc = EXCEPTION_VECTOR_LOCATION;
+
+  cpu.base = cpu.cp0[CP0_BASE][0];
 
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 1;
   status->IE = 0;
 
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-  cause->ExcCode = EXC_SYSCALL;
+  cause->ExcCode = code;
+}
+
+// temporary strategy: store timer registers in C0
+void syscall(vaddr_t *pc, Inst inst) {
+  trigger_exception(EXC_SYSCALL);
   dsprintf(asm_buf_p, "syscall");
 }
 
@@ -53,6 +59,7 @@ void eret(vaddr_t *pc, Inst inst) {
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 0;
   status->IE = 1;
+  cpu.base = 0; // kernel seg start from zero
   dsprintf(asm_buf_p, "eret");
 }
 
@@ -537,16 +544,7 @@ int init_cpu() {
 
 void check_interrupt() {
   if(cpu.cp0[CP0_COMPARE][0] == cpu.cp0[CP0_COUNT][0]) {
-	cpu.cp0[CP0_EPC][0] = cpu.pc;
-	cpu.pc = EXCEPTION_VECTOR_LOCATION - 4;
-
-	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
-	status->EXL = 1;
-	status->IE = 0;
-
-	cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-	cause->ExcCode = EXC_INTR;
-	cause->IP = 0x80;
+	trigger_exception(EXC_INTR);
   }
 }
 
