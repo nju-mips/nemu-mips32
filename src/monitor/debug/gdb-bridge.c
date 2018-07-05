@@ -73,7 +73,6 @@ void gdb_mainloop() {
 	usleep(1000);
 	start_bridge(gdb_port, serv_port);
 #elif defined ON_MIPS
-	init_device();
 	gdb_server_mainloop(serv_port);
 #else
 	if(fork() == 0) {

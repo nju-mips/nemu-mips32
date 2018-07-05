@@ -34,7 +34,7 @@ static inline void trigger_exception(int code) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
-  cpu.base = cpu.cp0[CP0_BASE][0];
+  cpu.base = 0; // kernel base is zero
 
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 1;
@@ -59,7 +59,7 @@ void eret(vaddr_t *pc, Inst inst) {
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 0;
   status->IE = 1;
-  cpu.base = 0; // kernel seg start from zero
+  cpu.base = cpu.cp0[CP0_BASE][0]; // resume user base
   dsprintf(asm_buf_p, "eret");
 }
 
