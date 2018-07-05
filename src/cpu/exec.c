@@ -665,7 +665,9 @@ void exec_wrapper(bool print_flag) {
 
   opcode_table[inst.op](&cpu.pc, inst);
 
-#ifdef DIFF
+#ifdef PC_DIFF
+  printf("%08x\n", cpu.pc);
+#elif defined DIFF
   print_registers(inst.val);
 #endif
 
