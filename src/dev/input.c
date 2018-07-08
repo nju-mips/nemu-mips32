@@ -147,10 +147,9 @@ void keyboard_enqueue(SDL_KeyboardEvent *key) {
 }
 
 #define check_input(addr, len) \
-  Assert(addr >= 0 && addr <= STAT, \
-	  "address(0x%08x) is out side input", addr); \
-	  Assert(len == 1, \
-		  "input only allow byte read/write");
+  Assert(addr >= 0 && addr <= SCANCODE_STAT, \
+	  "input: address(0x%08x) is out side", addr); \
+	  Assert(len == 1 || len == 4, "input only allow byte read/write");
 
 uint32_t input_read(paddr_t addr, int len) {
   /* CTRL not yet implemented, only allow byte read/write */
