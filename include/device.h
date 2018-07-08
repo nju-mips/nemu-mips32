@@ -10,8 +10,8 @@ typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
 uint32_t ddr_read(paddr_t addr, int len);
 void ddr_write(paddr_t addr, int len, uint32_t data);
-uint32_t uartlite_read(paddr_t addr, int len);
-void uartlite_write(paddr_t addr, int len, uint32_t data);
+uint32_t input_read(paddr_t addr, int len);
+void input_write(paddr_t addr, int len, uint32_t data);
 void gpio_write(paddr_t addr, int len, uint32_t data);
 uint32_t vga_read(paddr_t addr, int len);
 void vga_write(paddr_t addr, int len, uint32_t data);

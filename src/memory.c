@@ -19,7 +19,7 @@ struct mmap_region {
   // {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
   {0x40000000, 0x40000fff, invalid_read, gpio_write},
-  {0x40001000, 0x40001fff, uartlite_read, uartlite_write},
+  {0x40001000, 0x40001fff, input_read, input_write},
   {0x40010000, 0x4001ffff, invalid_read, invalid_write},
   {0x50000000, 0x50100000, vga_read, vga_write},
 };
