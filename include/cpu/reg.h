@@ -11,6 +11,7 @@ typedef struct {
   vaddr_t base;
 } CPU_state;
 
+#define CP0_SERIAL   6  // for extra debug
 #define CP0_BASE     7
 #define CP0_BADVADDR 8
 #define CP0_COUNT    9

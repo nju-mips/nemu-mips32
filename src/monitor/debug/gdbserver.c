@@ -159,8 +159,8 @@ char *gdb_vCont_handler(char *args) {
 
 	  switch(action) {
 		case 'c': {
-			int instr = vaddr_read(cpu.pc, 4);
-			int ninstr = vaddr_read(cpu.pc + 4, 4);
+			int instr = vaddr_read_safe(cpu.pc, 4);
+			int ninstr = vaddr_read_safe(cpu.pc + 4, 4);
 			if(instr == 0x42000018 && ninstr == 0x0005000d) {
 			  printf("[NEMU] WARNING: continue at eret\n");
 			  cpu_exec(1);
@@ -231,7 +231,7 @@ char *gdb_read_memory(char *args, int arglen) {
 	if(find_region(addr) == -1) {
 	  len += snprintf(&mem[len], sizeof(mem) - len, "00");
 	} else {
-	  int data = vaddr_read(addr + i, 1);
+	  int data = vaddr_read_safe(addr + i, 1);
 	  len += snprintf(&mem[len], sizeof(mem) - len,
 		  "%02x", data & 0XFF);
 	}
@@ -251,7 +251,7 @@ char *gdb_write_memory(char *args, int arglen) {
 	} else if(hex != NULL) {
 	  int data = 0;
 	  sscanf(hex + 1, "%02x", &data);
-	  vaddr_write(addr + i, 1, data);
+	  vaddr_write_safe(addr + i, 1, data);
 
 	  if(hex[1] == 0 || hex[2] == 0)
 		hex = NULL;
@@ -318,7 +318,7 @@ char *gdb_write_memory_hex(char *args, int arglen) {
 	if(find_region(addr + i) == -1) {
 	  // do nothing
 	} else if(hex != NULL) {
-	  vaddr_write(addr + i, 1, hex[1]);
+	  vaddr_write_safe(addr + i, 1, hex[1]);
 
 	  if(hex > args + arglen)
 		hex = NULL;
@@ -344,7 +344,7 @@ char *gdb_remove_break_point(char *args, int arglen) {
   for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(break_points[i].used && break_points[i].addr == addr) {
 	  break_points[i].used = false;
-	  vaddr_write(addr, 4, break_points[i].value);
+	  vaddr_write_safe(addr, 4, break_points[i].value);
 	  return "OK";
 	}
   }
@@ -358,8 +358,8 @@ char *gdb_insert_break_point(char *args, int arglen) {
   for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(!break_points[i].used) {
 	  break_points[i].addr = addr;
-	  break_points[i].value = vaddr_read(addr, 4);
-	  vaddr_write(addr, 4, 0x0005000d);
+	  break_points[i].value = vaddr_read_safe(addr, 4);
+	  vaddr_write_safe(addr, 4, 0x0005000d);
 	  break_points[i].used = true;
 	  return "OK";
 	}
@@ -400,6 +400,7 @@ void gdb_server_mainloop(int port) {
 	  char *resp = handler(&data[1], size);
 	  // printf("[NEMU] Client request '%s'\n", data);
 	  if(resp) {
+		// printf("[NEMU] Server response '%s'\n", resp);
 		gdb_send(gdb, (void*)resp, strlen(resp));
 	  } else {
 		gdb_send(gdb, (void*)"", 0);
