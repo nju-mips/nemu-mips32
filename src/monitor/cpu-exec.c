@@ -11,6 +11,7 @@
 int nemu_state = NEMU_STOP;
 
 void exec_wrapper(bool);
+void print_registers();
 
 extern int print_commit_log;
 
@@ -29,20 +30,7 @@ void cpu_exec(uint64_t n) {
      * instruction decode, and the actual execution. */
     exec_wrapper(print_flag);
 
-    if (print_commit_log) {
-      extern int cmd_info(char *args);
-      cmd_info("r");
-    }
-
-#ifdef DEBUG
-    /* TODO: check watchpoints here. */
-
-#endif
-
-#ifdef HAS_IOE
-    extern void device_update();
-    device_update();
-#endif
+    if(print_commit_log) print_registers();
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
