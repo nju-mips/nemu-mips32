@@ -74,11 +74,14 @@ static inline void load_img() {
 
   // load into ddr
   // be careful about memory mapping
-  FILE *fp = fopen(img_file, "rb");
-  Assert(fp, "Can not open '%s'", img_file);
-  int ret = fread(ddr, size, 1, fp);
-  assert(ret == 1);
-  fclose(fp);
+  int fd = open(img_file, O_RDONLY);
+  Assert(fd > 0, "Can not open '%s'", img_file);
+  int ret = 0;
+  while(ret < size) {
+	ret += read(fd, (void *)ddr + ret, size - ret);
+  }
+  assert(ret == size);
+  close(fd);
 
   // assume img_file is xxx.bin and elf_file is xxx
   *strrchr(img_file, '.') = 0;
