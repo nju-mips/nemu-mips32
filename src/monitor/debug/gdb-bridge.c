@@ -69,19 +69,8 @@ void gdb_mainloop() {
 #endif
 
   if(fork() == 0) {
-#ifdef ON_QEMU
-	usleep(1000);
-	start_bridge(gdb_port, serv_port);
-#elif defined ON_MIPS
+	init_device();
 	gdb_server_mainloop(serv_port);
-#else
-	if(fork() == 0) {
-	  gdb_server_mainloop(serv_port);
-	} else {
-	  usleep(1000);
-	  start_bridge(gdb_port, serv_port);
-	}
-#endif
   } else {
 	usleep(20000);
 	start_gdb(gdb_port);

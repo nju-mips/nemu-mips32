@@ -101,7 +101,7 @@ char *gdb_xfer_handler(char *args) {
   char *category = args;
   if(!category || strcmp(category, "features") == 0) {
 	char *op = strtok(NULL, ":");
-	if(!op || strcmp(op, "read") != 0) return "";
+	if(!op || strcmp(op, "read") != 0) return NULL;
 	
 	char *file = strtok(NULL, ":");
 	char *offset_s = strtok(NULL, ":");
@@ -120,7 +120,7 @@ char *gdb_xfer_handler(char *args) {
 	  return "";
 	}
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -143,7 +143,7 @@ char *gdb_general_query(char *args, int arglen) {
   } else if(strcmp(kind, "TStatus") == 0) {
 	return "";
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -158,7 +158,18 @@ char *gdb_vCont_handler(char *args) {
 	  sscanf(args, "%c:%d", &action, &thread);
 
 	  switch(action) {
-		case 'c': cpu_exec(-1); cpu.pc -= 4; break;
+		case 'c': {
+			int instr = vaddr_read(cpu.pc, 4);
+			int ninstr = vaddr_read(cpu.pc + 4, 4);
+			if(instr == 0x42000018 && ninstr == 0x0005000d) {
+			  printf("[NEMU] WARNING: continue at eret\n");
+			  cpu_exec(1);
+			} else {
+			  cpu_exec(-1);
+			  cpu.pc -= 4;
+			}
+		  }
+		  break;
 		case 's': cpu_exec(1); break;
 	  }
 
@@ -166,7 +177,7 @@ char *gdb_vCont_handler(char *args) {
 	}
 	return "T05thread:01;";
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -178,12 +189,12 @@ char *gdb_extend_commands(char *args, int arglen) {
   } else if(strncmp(args, "File", 4) == 0) {
 	return "";
   } else {
-	return "";
+	return NULL;
   }
 }
 
 char *gdb_continue(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_read_registers(char *args, int arglen) {
@@ -197,7 +208,7 @@ char *gdb_read_registers(char *args, int arglen) {
 }
 
 char *gdb_write_registers(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_set_thread(char *args, int arglen) {
@@ -205,7 +216,7 @@ char *gdb_set_thread(char *args, int arglen) {
 }
 
 char *gdb_step(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_read_memory(char *args, int arglen) {
@@ -277,15 +288,15 @@ char *gdb_read_register(char *args, int arglen) {
 }
 
 char *gdb_write_register(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_reset(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_single_step(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_detach(char *args, int arglen) {
@@ -387,6 +398,7 @@ void gdb_server_mainloop(int port) {
 	gdb_cmd_handler_t handler = handlers[(int)data[0]];
 	if(handler) {
 	  char *resp = handler(&data[1], size);
+	  // printf("[NEMU] Client request '%s'\n", data);
 	  if(resp) {
 		gdb_send(gdb, (void*)resp, strlen(resp));
 	  } else {
@@ -394,6 +406,7 @@ void gdb_server_mainloop(int port) {
 	  }
 	  free(data);
 	} else {
+	  printf("[NEMU] WARNING: Unsupport gdb request '%s'\n", data);
 	  gdb_send(gdb, (void*)"", 0);
 	  free(data);
 	}

@@ -1,10 +1,12 @@
 #include "nemu.h"
+#include "monitor/monitor.h"
 #include <elf.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #define ENTRY_START 0x10000000
 
@@ -88,6 +90,10 @@ static inline void restart() {
   cpu.pc = ENTRY_START;
 }
 
+void sigint_handler(int no) {
+  nemu_state = NEMU_STOP;
+}
+
 static inline void parse_args(int argc, char *argv[]) {
   int o;
   while ( (o = getopt(argc, argv, "-bci:e:")) != -1) {
@@ -124,6 +130,8 @@ int init_monitor(int argc, char *argv[]) {
   } else {
 	load_img();
   }
+
+  if(!is_batch_mode) signal(SIGINT, sigint_handler);
 
   /* Initialize this virtual computer system. */
   restart();
