@@ -80,8 +80,11 @@ static inline void load_img() {
   close(fd);
 
   // assume img_file is xxx.bin and elf_file is xxx
-  *strrchr(img_file, '.') = 0;
-  elf_file = img_file;
+  char *end = strrchr(img_file, '.');
+  if(end) {
+	  *end = 0;
+	  elf_file = img_file;
+  }
 }
 
 static inline void restart() {
