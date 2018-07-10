@@ -560,9 +560,9 @@ void exec_wrapper(bool print_flag) {
 
   opcode_table[inst.op](&cpu.pc, inst);
 
-#ifdef DIFF
-  print_registers(inst.val);
-#endif
+  extern int print_commit_log;
+  if (print_commit_log)
+    print_registers(inst.val);
 
 #ifdef INTR
   check_interrupt();

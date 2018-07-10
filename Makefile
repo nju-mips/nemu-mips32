@@ -12,10 +12,6 @@ LD = gcc
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
-ifdef DIFF
-CFLAGS += -DDIFF
-endif
-
 ifdef INTR
 CFLAGS += -DINTR
 endif
