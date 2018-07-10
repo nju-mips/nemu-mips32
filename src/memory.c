@@ -36,6 +36,20 @@ uint32_t find_region(vaddr_t addr) {
   return ret;
 }
 
+uint32_t vaddr_read_safe(vaddr_t addr, int len) {
+  addr += cpu.base; // segment
+  int idx = find_region(addr);
+  if(idx == -1) return 0;
+  return mmap_table[idx].read(addr - mmap_table[idx].start, len);
+}
+
+void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
+  addr += cpu.base; // segment
+  int idx = find_region(addr);
+  if(idx == -1) return;
+  return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
+}
+
 uint32_t vaddr_read(vaddr_t addr, int len) {
   addr += cpu.base; // segment
   int idx = find_region(addr);

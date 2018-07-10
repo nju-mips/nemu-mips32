@@ -1,5 +1,6 @@
 #include "nemu.h"
 #include "monitor/monitor.h"
+#include "device.h"
 #include <elf.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -70,19 +71,20 @@ static inline void load_img() {
   Assert(img_file, "Need an image file");
   Log("The image is %s", img_file);
 
-  size_t size = get_file_size(img_file);
-
   // load into ddr
   // be careful about memory mapping
-  FILE *fp = fopen(img_file, "rb");
-  Assert(fp, "Can not open '%s'", img_file);
-  int ret = fread(ddr, size, 1, fp);
-  assert(ret == 1);
-  fclose(fp);
+  int fd = open(img_file, O_RDONLY);
+  Assert(fd > 0, "Can not open '%s'", img_file);
+  int ret = read(fd, ddr, DDR_SIZE);
+  Assert(ret > 0, "read fails\n");
+  close(fd);
 
   // assume img_file is xxx.bin and elf_file is xxx
-  *strrchr(img_file, '.') = 0;
-  elf_file = img_file;
+  char *end = strrchr(img_file, '.');
+  if(end) {
+	  *end = 0;
+	  elf_file = img_file;
+  }
 }
 
 static inline void restart() {
