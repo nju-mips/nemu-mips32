@@ -33,10 +33,11 @@ static char mips_32bit_xml[] = \
 "\n"
 "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">\n"
 "<feature name=\"org.gnu.gdb.mips.32bit\">\n"
-"  <xi:include href=\"mips-32bit-core.xml\"/>\n"
+"  <xi:include href=\"mips-32bit-cpu.xml\"/>\n"
+"  <xi:include href=\"mips-32bit-cp0.xml\"/>\n"
 "</feature>";
 
-static char mips_32bit_core_xml[] =
+static char mips_32bit_cpu_xml[] =
 "l<?xml version=\"1.0\"?>\n"
 "<!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.\n"
 "\n"
@@ -45,7 +46,7 @@ static char mips_32bit_core_xml[] =
 "     notice and this notice are preserved.  -->\n"
 "\n"
 "<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">\n"
-"<feature name=\"org.gnu.gdb.mips.core\">\n"
+"<feature name=\"org.gnu.gdb.mips.cpu\">\n"
 "  <reg name=\"zero\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"at\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"v0\" bitsize=\"32\" type=\"int32\"/>\n"
@@ -78,7 +79,18 @@ static char mips_32bit_core_xml[] =
 "  <reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
 "  <reg name=\"fp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
 "  <reg name=\"ra\" bitsize=\"32\" type=\"int32\"/>\n"
+"</feature>\n";
 
+static char mips_32bit_cp0_xml[] =
+"l<?xml version=\"1.0\"?>\n"
+"<!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.\n"
+"\n"
+"     Copying and distribution of this file, with or without modification,\n"
+"     are permitted in any medium without royalty provided the copyright\n"
+"     notice and this notice are preserved.  -->\n"
+"\n"
+"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">\n"
+"<feature name=\"org.gnu.gdb.mips.cp0\">\n"
 "  <reg name=\"sr\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"lo\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"hi\" bitsize=\"32\" type=\"int32\"/>\n"
@@ -86,6 +98,7 @@ static char mips_32bit_core_xml[] =
 "  <reg name=\"cause\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "  <reg name=\"epc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
+"  <reg name=\"base\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "</feature>\n"
 ;
 
@@ -114,8 +127,10 @@ char *gdb_xfer_handler(char *args) {
 	  return &target_xml[offset];
 	} else if(strcmp(file, "mips-32bit.xml") == 0) {
 	  return &mips_32bit_xml[offset];
-	} else if(strcmp(file, "mips-32bit-core.xml") == 0) {
-	  return &mips_32bit_core_xml[offset];
+	} else if(strcmp(file, "mips-32bit-cpu.xml") == 0) {
+	  return &mips_32bit_cpu_xml[offset];
+	} else if(strcmp(file, "mips-32bit-cp0.xml") == 0) {
+	  return &mips_32bit_cp0_xml[offset];
 	} else {
 	  return "";
 	}
@@ -280,6 +295,7 @@ char *gdb_read_register(char *args, int arglen) {
 	  case 0x24: value = cpu.cp0[CP0_CAUSE][0]; break;
 	  case 0x25: value = cpu.pc; break;
 	  case 0x26: value = cpu.cp0[CP0_EPC][0]; break;
+	  case 0x27: value = cpu.cp0[CP0_BASE][0]; break;
 	  default: value = 0; break;
 	}
 	snprintf(reg_value, sizeof(reg_value), "%08x", htonl(value));
