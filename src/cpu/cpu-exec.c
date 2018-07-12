@@ -11,9 +11,17 @@
 int nemu_state = NEMU_STOP;
 extern int print_commit_log;
 
+static uint64_t nemu_start_time = 0;
+
 char asm_buf[80];
 char *asm_buf_p;
 
+// 1s = 10^3 ms = 10^6 us
+static uint64_t get_current_time() { // in us
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return t.tv_sec * 1000000 + t.tv_usec - nemu_start_time;
+}
 
 static int dsprintf(char *buf, const char *fmt, ...) {
   if(!print_commit_log) return 0;
@@ -43,6 +51,7 @@ void print_registers() {
 
 
 int init_cpu() {
+  nemu_start_time = get_current_time();
   assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]));
   assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]));
   cpu.gpr[29] = 0x18000000;

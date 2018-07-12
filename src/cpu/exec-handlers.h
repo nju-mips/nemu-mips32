@@ -32,7 +32,7 @@ static const void * special2_table[64] = {
   /* 0x14 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x18 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x1c */	&&inv, &&inv, &&inv, &&inv,
-  /* 0x20 */	&&inv, &&inv, &&inv, &&inv,
+  /* 0x20 */	&&clz, &&inv, &&inv, &&inv,
   /* 0x24 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x28 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x2c */	&&inv, &&inv, &&inv, &&inv,
@@ -160,13 +160,12 @@ make_exec_handler(eret) ({
 
 make_exec_handler(mfc0) ({
   if(inst.rd == CP0_COUNT) {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-    uint32_t fuck = t.tv_sec * 1000000 + t.tv_usec;
+    union { struct { uint32_t lo, hi; }; uint64_t val; } us;
+    us.val = get_current_time() * 50; // for 50 MHZ
 	if(inst.sel == 0) {
-      cpu.gpr[inst.rt] = fuck * 50; // for 50 MHZ
+      cpu.gpr[inst.rt] = us.lo;
 	} else if(inst.sel == 1) {
-      cpu.gpr[inst.rt] = fuck * 50 / (1ul << 31); // for 50 MHZ
+      cpu.gpr[inst.rt] = us.hi;
 	} else {
 	  assert(0);
 	}
@@ -219,6 +218,10 @@ make_exec_handler(nor) ({
 
 #undef R_SIMPLE
 
+make_exec_handler(clz) ({
+  cpu.gpr[inst.rd] = __builtin_clz(cpu.gpr[inst.rs]);
+  dsprintf(asm_buf_p, "clz %s,%s", regs[inst.rd], regs[inst.rs]);
+});
 
 make_exec_handler(mult) ({
   assert(inst.rd == 0 && inst.shamt == 0);
