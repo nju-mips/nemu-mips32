@@ -133,7 +133,7 @@ struct {
 };
 
 void keyboard_enqueue(SDL_KeyboardEvent *key) {
-  if(key->keysym.sym > SDLK_LAST) return;
+  if(key->keysym.sym >= SDLK_LAST) return;
   int scancode = key->type == SDL_KEYUP ?
 	SDLK_to_scancode[key->keysym.sym].upcode :
 	SDLK_to_scancode[key->keysym.sym].downcode;
