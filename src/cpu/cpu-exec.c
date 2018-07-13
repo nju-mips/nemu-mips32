@@ -71,14 +71,38 @@ static inline uint32_t instr_fetch(uint32_t addr) {
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE))
-	return ddr_read(addr - DDR_BASE, len);
+  extern uint8_t ddr[];
+  if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
+	addr -= DDR_BASE;
+	switch(len) {
+	  case 1: return ddr[addr];
+	  case 2: return (ddr[addr + 1] << 8) | ddr[addr];
+	  case 3: return (ddr[addr + 2] << 16) | (ddr[addr + 1] << 8) | ddr[addr];
+	  case 4: return (ddr[addr + 3] << 24) | (ddr[addr + 2] << 16) | (ddr[addr + 1] << 8) | ddr[addr];
+	}
+  }
   return vaddr_read(addr, len);
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
+  extern uint8_t ddr[];
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
-	ddr_write(addr - DDR_BASE, len, data);
+	addr -= DDR_BASE;
+	switch(len) {
+	  case 1: ddr[addr] = data; return;
+	  case 2: ddr[addr] = data & 0xFF;
+			  ddr[addr + 1] = (data >> 8) & 0xFF;
+			  return;
+	  case 3: ddr[addr] = data & 0xFF;
+			  ddr[addr + 1] = (data >> 8) & 0xFF;
+			  ddr[addr + 2] = (data >> 16) & 0xFF;
+			  return;
+	  case 4: ddr[addr] = data & 0xFF;
+			  ddr[addr + 1] = (data >> 8) & 0xFF;
+			  ddr[addr + 2] = (data >> 16) & 0xFF;
+			  ddr[addr + 3] = (data >> 24) & 0xFF;
+			  return;
+	}
   } else {
     vaddr_write(addr, len, data);
   }
