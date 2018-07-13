@@ -1,8 +1,11 @@
 #include <sys/time.h>
 
 #include "nemu.h"
-#include "cpu/exec.h"
+#include "device.h"
 #include "monitor/monitor.h"
+
+
+#define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
 
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
@@ -59,6 +62,28 @@ int init_cpu() {
   return 0;
 }
 
+static inline uint32_t instr_fetch(uint32_t addr) {
+  extern uint8_t ddr[];
+  addr -= DDR_BASE;
+  assert(addr < DDR_SIZE && (addr & 3) == 0);
+  cpu.pc += 4;
+  return ((uint32_t*)ddr)[addr >> 2];
+}
+
+static inline uint32_t load_mem(vaddr_t addr, int len) {
+  if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE))
+	return ddr_read(addr - DDR_BASE, len);
+  return vaddr_read(addr, len);
+}
+
+static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
+  if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
+	ddr_write(addr - DDR_BASE, len, data);
+  } else {
+    vaddr_write(addr, len, data);
+  }
+}
+
 static inline void trigger_exception(int code) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
@@ -98,7 +123,7 @@ void cpu_exec(uint64_t n) {
     asm_buf_p = asm_buf;
     asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
 
-    Inst inst = { .val = instr_fetch(&cpu.pc, 4) };
+    Inst inst = { .val = instr_fetch(cpu.pc) };
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
 
