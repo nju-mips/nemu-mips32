@@ -159,9 +159,6 @@ make_exec_handler(eret) ({
 });
 
 make_exec_handler(mfc0) ({
-  cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
-
-  /*
   if(inst.rd == CP0_COUNT) {
     union { struct { uint32_t lo, hi; }; uint64_t val; } us;
     us.val = get_current_time() * 50; // for 50 MHZ
@@ -175,7 +172,6 @@ make_exec_handler(mfc0) ({
   } else {
     cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
   }
-  */
   dsprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
 	  inst.rd, inst.sel);
 });
@@ -355,7 +351,7 @@ make_exec_handler(xori) ({
 });
 
 make_exec_handler(sltiu) ({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.uimm;
+  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.simm;
   dsprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
