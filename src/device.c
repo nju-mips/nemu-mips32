@@ -30,7 +30,12 @@ static void device_update(int signum) {
 	  serial_enqueue(event.key.keysym.sym);
 	  keyboard_enqueue(&(event.key));
 	  break;
-	case SDL_QUIT: exit(0);
+	case SDL_QUIT:
+	  printf("[NEMU] receive SDL_QUIT, exit(0)\n");
+	  exit(0);
+	default:
+	  // do nothing
+	  break;
   }
 
   int ret = setitimer(ITIMER_VIRTUAL, &it, NULL);

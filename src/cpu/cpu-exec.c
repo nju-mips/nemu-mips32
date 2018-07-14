@@ -130,7 +130,12 @@ void check_interrupt() {
 }
 
 void update_cp0_timer() {
-  cpu.cp0[CP0_COUNT][0] += 5; // add 5 cycles
+  union { struct { uint32_t lo, hi; }; uint64_t val; } cycles;
+  cycles.lo = cpu.cp0[CP0_COUNT][0];
+  cycles.hi = cpu.cp0[CP0_COUNT][1];
+  cycles.val += 5; // add 5 cycles
+  cpu.cp0[CP0_COUNT][0] = cycles.lo;
+  cpu.cp0[CP0_COUNT][1] = cycles.hi;
 }
 
 /* Simulate how the CPU works. */
