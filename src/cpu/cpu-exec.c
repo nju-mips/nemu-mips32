@@ -40,6 +40,14 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 
 
 void print_registers() {
+  uint32_t ret = 0;
+  for(int i = 0; i < 32; i++) {
+	ret = ret ^ cpu.gpr[i];
+  }
+  ret = ret ^ cpu.hi ^ cpu.lo;
+  printf("$pc :0x%08x  $gpr:0x%08x\n", cpu.pc, ret);
+  return;
+
   // printf("$base:     0x%08x\n", cpu.base);
   printf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
   printf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
@@ -142,7 +150,7 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n --) {
-	// update_cp0_timer();
+	update_cp0_timer();
 	
     asm_buf_p = asm_buf;
     asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
