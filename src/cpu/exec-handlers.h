@@ -88,7 +88,7 @@ static const void * cop0_table_func[64] = {
 static const void * opcode_table[64] = {
   /* 0x00 */    &&exec_special, &&exec_regimm, &&j, &&jal,
   /* 0x04 */	&&beq, &&bne, &&blez, &&bgtz,
-  /* 0x08 */	&&inv, &&addiu, &&slti, &&sltiu,
+  /* 0x08 */	&&addi, &&addiu, &&slti, &&sltiu,
   /* 0x0c */	&&andi, &&ori, &&xori, &&lui,
   /* 0x10 */	&&exec_cop0, &&inv, &&inv, &&inv,
   /* 0x14 */	&&inv, &&inv, &&inv, &&inv,
@@ -333,6 +333,12 @@ make_exec_handler(lui) ({
   assert(inst.rs == 0);
   cpu.gpr[inst.rt] = inst.uimm << 16;
   dsprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.uimm);
+});
+
+make_exec_handler(addi) ({
+  // should throw exception
+  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm;
+  dsprintf(asm_buf_p, "addi %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(addiu) ({

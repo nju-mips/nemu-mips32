@@ -63,7 +63,6 @@ int init_cpu() {
 }
 
 static inline uint32_t instr_fetch(uint32_t addr) {
-  extern uint8_t ddr[];
   addr = addr - DDR_BASE + cpu.base;
   assert(addr < DDR_SIZE && (addr & 3) == 0);
   cpu.pc += 4;
@@ -71,7 +70,6 @@ static inline uint32_t instr_fetch(uint32_t addr) {
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  extern uint8_t ddr[];
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
     addr = addr - DDR_BASE + cpu.base;
 	switch(len) {
@@ -85,7 +83,6 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
-  extern uint8_t ddr[];
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
     addr = addr - DDR_BASE + cpu.base;
 	switch(len) {
