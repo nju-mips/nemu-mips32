@@ -58,13 +58,15 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 }
 
 
+static uint32_t oldpc = 0;
+
 void print_registers() {
   // print registers to stderr, so that will not mixed with uart output
   // =============================================================
   // eprintf("cpu.base:     0x%08x,   $base: %08x\n", cpu.base, cpu.cp0[CP0_BASE][0]);
   // eprintf("$count:%08x,  $compare:%08x,  $status:%08x,  $cause:%08x\n", cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
   // =============================================================
-  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
+  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", oldpc, cpu.hi, cpu.lo);
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -186,6 +188,8 @@ void cpu_exec(uint64_t n) {
   for (; n > 0; n --) {
 	update_cp0_timer();
 	
+	oldpc = cpu.pc;
+
     asm_buf_p = asm_buf;
     asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
 

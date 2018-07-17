@@ -229,7 +229,11 @@ make_exec_handler(nor) ({
 #undef R_SIMPLE
 
 make_exec_handler(clz) ({
-  cpu.gpr[inst.rd] = __builtin_clz(cpu.gpr[inst.rs]);
+  if(cpu.gpr[inst.rs] == 0) {
+	cpu.gpr[inst.rd] = 32;
+  } else {
+	cpu.gpr[inst.rd] = __builtin_clz(cpu.gpr[inst.rs]);
+  }
   dsprintf(asm_buf_p, "clz %s,%s", regs[inst.rd], regs[inst.rs]);
 });
 

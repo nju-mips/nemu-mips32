@@ -21,10 +21,10 @@ extern int is_batch_mode;
 void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);
   if ((unsigned char)data == 0) {
-	printf(ANSI_WIDTHOR_GREEN "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);
+	eprintf(ANSI_WIDTHOR_GREEN "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);
   }
   else
-	printf(ANSI_WIDTHOR_RED "HIT BAD TRAP code: %d\n" ANSI_WIDTHOR_RESET, (unsigned char)data == 0);
+	eprintf(ANSI_WIDTHOR_RED "HIT BAD TRAP code: %d\n" ANSI_WIDTHOR_RESET, (unsigned char)data == 0);
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more commit log
   // which makes it easier for crosschecking.
