@@ -65,6 +65,8 @@ typedef struct {
 	uint32_t BD : 1;
 } cp0_cause_t;
 
+#define CAUSE_IP_TIMER 0x80
+
 #define EXC_INTR    0
 #define EXC_TLB     1
 #define EXC_TLBL    2

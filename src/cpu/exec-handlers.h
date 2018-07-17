@@ -154,7 +154,12 @@ make_exec_handler(eret) ({
   status->EXL = 0;
   status->IE = 1;
   cpu.base = cpu.cp0[CP0_BASE][0]; // resume user base
-  // printf("[NEMU] NOTE: eret to user space, base at %08x\n", cpu.base);
+
+  /*
+  printf("[NEMU] NOTE: eret to user space, base at %08x, pc at %08x\n", cpu.base, cpu.pc);
+  print_registers();
+  diff_common_registers();
+  */
   dsprintf(asm_buf_p, "eret");
 });
 
