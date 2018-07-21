@@ -192,7 +192,9 @@ void cpu_exec(uint64_t n) {
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
 	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+#ifdef INTR
 	bool ie = !(status->EXL) && status->IE;
+#endif
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
 
