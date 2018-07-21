@@ -257,10 +257,8 @@ uint32_t input_read(paddr_t addr, int len) {
   check_input(addr, len);
   switch (addr) {
 	case SCANCODE_STAT:
-	  assert(0);
 	  return keyboard_f == keyboard_r ? 0 : 1;
 	case SCANCODE: {
-	  assert(0);
 	  uint32_t code = keyboard_queue[keyboard_f];
 	  keyboard_f = (keyboard_f + 1) % KEYBOARD_QUEUE_LEN;
 	  return code;
