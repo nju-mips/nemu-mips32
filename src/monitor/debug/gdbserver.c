@@ -33,10 +33,11 @@ static char mips_32bit_xml[] = \
 "\n"
 "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">\n"
 "<feature name=\"org.gnu.gdb.mips.32bit\">\n"
-"  <xi:include href=\"mips-32bit-core.xml\"/>\n"
+"  <xi:include href=\"mips-32bit-cpu.xml\"/>\n"
+"  <xi:include href=\"mips-32bit-cp0.xml\"/>\n"
 "</feature>";
 
-static char mips_32bit_core_xml[] =
+static char mips_32bit_cpu_xml[] =
 "l<?xml version=\"1.0\"?>\n"
 "<!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.\n"
 "\n"
@@ -45,7 +46,7 @@ static char mips_32bit_core_xml[] =
 "     notice and this notice are preserved.  -->\n"
 "\n"
 "<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">\n"
-"<feature name=\"org.gnu.gdb.mips.core\">\n"
+"<feature name=\"org.gnu.gdb.mips.cpu\">\n"
 "  <reg name=\"zero\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"at\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"v0\" bitsize=\"32\" type=\"int32\"/>\n"
@@ -78,7 +79,18 @@ static char mips_32bit_core_xml[] =
 "  <reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
 "  <reg name=\"fp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
 "  <reg name=\"ra\" bitsize=\"32\" type=\"int32\"/>\n"
+"</feature>\n";
 
+static char mips_32bit_cp0_xml[] =
+"l<?xml version=\"1.0\"?>\n"
+"<!-- Copyright (C) 2010-2015 Free Software Foundation, Inc.\n"
+"\n"
+"     Copying and distribution of this file, with or without modification,\n"
+"     are permitted in any medium without royalty provided the copyright\n"
+"     notice and this notice are preserved.  -->\n"
+"\n"
+"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">\n"
+"<feature name=\"org.gnu.gdb.mips.cp0\">\n"
 "  <reg name=\"sr\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"lo\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"hi\" bitsize=\"32\" type=\"int32\"/>\n"
@@ -86,6 +98,7 @@ static char mips_32bit_core_xml[] =
 "  <reg name=\"cause\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "  <reg name=\"epc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
+"  <reg name=\"base\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "</feature>\n"
 ;
 
@@ -101,7 +114,7 @@ char *gdb_xfer_handler(char *args) {
   char *category = args;
   if(!category || strcmp(category, "features") == 0) {
 	char *op = strtok(NULL, ":");
-	if(!op || strcmp(op, "read") != 0) return "";
+	if(!op || strcmp(op, "read") != 0) return NULL;
 	
 	char *file = strtok(NULL, ":");
 	char *offset_s = strtok(NULL, ":");
@@ -114,13 +127,15 @@ char *gdb_xfer_handler(char *args) {
 	  return &target_xml[offset];
 	} else if(strcmp(file, "mips-32bit.xml") == 0) {
 	  return &mips_32bit_xml[offset];
-	} else if(strcmp(file, "mips-32bit-core.xml") == 0) {
-	  return &mips_32bit_core_xml[offset];
+	} else if(strcmp(file, "mips-32bit-cpu.xml") == 0) {
+	  return &mips_32bit_cpu_xml[offset];
+	} else if(strcmp(file, "mips-32bit-cp0.xml") == 0) {
+	  return &mips_32bit_cp0_xml[offset];
 	} else {
 	  return "";
 	}
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -143,7 +158,7 @@ char *gdb_general_query(char *args, int arglen) {
   } else if(strcmp(kind, "TStatus") == 0) {
 	return "";
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -158,7 +173,18 @@ char *gdb_vCont_handler(char *args) {
 	  sscanf(args, "%c:%d", &action, &thread);
 
 	  switch(action) {
-		case 'c': cpu_exec(-1); cpu.pc -= 4; break;
+		case 'c': {
+			int instr = vaddr_read_safe(cpu.pc, 4);
+			int ninstr = vaddr_read_safe(cpu.pc + 4, 4);
+			if(instr == 0x42000018 && ninstr == 0x0005000d) {
+			  printf("[NEMU] WARNING: continue at eret\n");
+			  cpu_exec(1);
+			} else {
+			  cpu_exec(-1);
+			  cpu.pc -= 4;
+			}
+		  }
+		  break;
 		case 's': cpu_exec(1); break;
 	  }
 
@@ -166,7 +192,7 @@ char *gdb_vCont_handler(char *args) {
 	}
 	return "T05thread:01;";
   } else {
-	return "";
+	return NULL;
   }
 }
 
@@ -178,12 +204,12 @@ char *gdb_extend_commands(char *args, int arglen) {
   } else if(strncmp(args, "File", 4) == 0) {
 	return "";
   } else {
-	return "";
+	return NULL;
   }
 }
 
 char *gdb_continue(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_read_registers(char *args, int arglen) {
@@ -209,7 +235,7 @@ char *gdb_read_registers(char *args, int arglen) {
 }
 
 char *gdb_write_registers(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_set_thread(char *args, int arglen) {
@@ -217,7 +243,7 @@ char *gdb_set_thread(char *args, int arglen) {
 }
 
 char *gdb_step(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_read_memory(char *args, int arglen) {
@@ -232,7 +258,7 @@ char *gdb_read_memory(char *args, int arglen) {
 	if(find_region(addr) == -1) {
 	  len += snprintf(&mem[len], sizeof(mem) - len, "00");
 	} else {
-	  int data = vaddr_read(addr + i, 1);
+	  int data = vaddr_read_safe(addr + i, 1);
 	  len += snprintf(&mem[len], sizeof(mem) - len,
 		  "%02x", data & 0XFF);
 	}
@@ -252,7 +278,7 @@ char *gdb_write_memory(char *args, int arglen) {
 	} else if(hex != NULL) {
 	  int data = 0;
 	  sscanf(hex + 1, "%02x", &data);
-	  vaddr_write(addr + i, 1, data);
+	  vaddr_write_safe(addr + i, 1, data);
 
 	  if(hex[1] == 0 || hex[2] == 0)
 		hex = NULL;
@@ -281,6 +307,7 @@ char *gdb_read_register(char *args, int arglen) {
 	  case 0x24: value = cpu.cp0[CP0_CAUSE][0]; break;
 	  case 0x25: value = cpu.pc; break;
 	  case 0x26: value = cpu.cp0[CP0_EPC][0]; break;
+	  case 0x27: value = cpu.cp0[CP0_BASE][0]; break;
 	  default: value = 0; break;
 	}
 	snprintf(reg_value, sizeof(reg_value), "%08x", htonl(value));
@@ -289,15 +316,15 @@ char *gdb_read_register(char *args, int arglen) {
 }
 
 char *gdb_write_register(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_reset(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_single_step(char *args, int arglen) {
-  return "";
+  return NULL;
 }
 
 char *gdb_detach(char *args, int arglen) {
@@ -319,7 +346,7 @@ char *gdb_write_memory_hex(char *args, int arglen) {
 	if(find_region(addr + i) == -1) {
 	  // do nothing
 	} else if(hex != NULL) {
-	  vaddr_write(addr + i, 1, hex[1]);
+	  vaddr_write_safe(addr + i, 1, hex[1]);
 
 	  if(hex > args + arglen)
 		hex = NULL;
@@ -345,7 +372,7 @@ char *gdb_remove_break_point(char *args, int arglen) {
   for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(break_points[i].used && break_points[i].addr == addr) {
 	  break_points[i].used = false;
-	  vaddr_write(addr, 4, break_points[i].value);
+	  vaddr_write_safe(addr, 4, break_points[i].value);
 	  return "OK";
 	}
   }
@@ -359,8 +386,8 @@ char *gdb_insert_break_point(char *args, int arglen) {
   for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(!break_points[i].used) {
 	  break_points[i].addr = addr;
-	  break_points[i].value = vaddr_read(addr, 4);
-	  vaddr_write(addr, 4, 0x0005000d);
+	  break_points[i].value = vaddr_read_safe(addr, 4);
+	  vaddr_write_safe(addr, 4, 0x0005000d);
 	  break_points[i].used = true;
 	  return "OK";
 	}
@@ -399,13 +426,16 @@ void gdb_server_mainloop(int port) {
 	gdb_cmd_handler_t handler = handlers[(int)data[0]];
 	if(handler) {
 	  char *resp = handler(&data[1], size);
+	  // printf("[NEMU] Client request '%s'\n", data);
 	  if(resp) {
+		// printf("[NEMU] Server response '%s'\n", resp);
 		gdb_send(gdb, (void*)resp, strlen(resp));
 	  } else {
 		gdb_send(gdb, (void*)"", 0);
 	  }
 	  free(data);
 	} else {
+	  printf("[NEMU] WARNING: Unsupport gdb request '%s'\n", data);
 	  gdb_send(gdb, (void*)"", 0);
 	  free(data);
 	}

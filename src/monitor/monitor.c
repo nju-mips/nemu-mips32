@@ -1,10 +1,13 @@
 #include "nemu.h"
+#include "monitor/monitor.h"
+#include "device.h"
 #include <elf.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <signal.h>
 
 static uint32_t entry_start = 0x10000000;
 
@@ -68,24 +71,29 @@ static inline void load_img() {
   Assert(img_file, "Need an image file");
   Log("The image is %s", img_file);
 
-  size_t size = get_file_size(img_file);
-
   // load into ddr
   // be careful about memory mapping
-  FILE *fp = fopen(img_file, "rb");
-  Assert(fp, "Can not open '%s'", img_file);
-  int ret = fread(ddr, size, 1, fp);
-  assert(ret == 1);
-  fclose(fp);
+  int fd = open(img_file, O_RDONLY);
+  Assert(fd > 0, "Can not open '%s'", img_file);
+  int ret = read(fd, ddr, DDR_SIZE);
+  Assert(ret > 0, "read fails\n");
+  close(fd);
 
   // assume img_file is xxx.bin and elf_file is xxx
-  *strrchr(img_file, '.') = 0;
-  elf_file = img_file;
+  char *end = strrchr(img_file, '.');
+  if(end) {
+	  *end = 0;
+	  elf_file = img_file;
+  }
 }
 
 static inline void restart() {
   /* Set the initial instruction pointer. */
   cpu.pc = entry_start;
+}
+
+void sigint_handler(int no) {
+  nemu_state = NEMU_STOP;
 }
 
 static inline void parse_args(int argc, char *argv[]) {
@@ -124,6 +132,8 @@ int init_monitor(int argc, char *argv[]) {
   } else {
 	load_img();
   }
+
+  if(!is_batch_mode) signal(SIGINT, sigint_handler);
 
   /* Initialize this virtual computer system. */
   restart();
