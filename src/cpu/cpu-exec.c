@@ -62,10 +62,6 @@ static uint32_t oldpc = 0;
 
 void print_registers() {
   // print registers to stderr, so that will not mixed with uart output
-  // =============================================================
-  // eprintf("cpu.base:     0x%08x,   $base: %08x\n", cpu.base, cpu.cp0[CP0_BASE][0]);
-  // eprintf("$count:%08x,  $compare:%08x,  $status:%08x,  $cause:%08x\n", cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
-  // =============================================================
   eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", oldpc, cpu.hi, cpu.lo);
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
@@ -75,6 +71,11 @@ void print_registers() {
   eprintf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", cpu.gpr[20], cpu.gpr[21], cpu.gpr[22], cpu.gpr[23]);
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
+  // =============================================================
+    eprintf("$base:%08x,    $count0:%08x,    $count1:%08x\n", cpu.cp0[CP0_BASE][0], cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COUNT][1]);
+    // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
+    eprintf("$epc:%08x\n", cpu.cp0[CP0_EPC][0]);
+  // =============================================================
 }
 
 
@@ -131,12 +132,6 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 }
 
 static inline void trigger_exception(int code) {
-  /*
-  printf("[NEMU] trigger exception, code:%x, base at %08x\n", code, cpu.base);
-  print_registers();
-  save_common_registers(code);
-  */
-
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
@@ -151,18 +146,9 @@ static inline void trigger_exception(int code) {
 }
 
 
-void check_interrupt() {
+void check_interrupt(bool ie) {
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-  cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
-
-  uint32_t compare = cpu.cp0[CP0_COMPARE][0];
-  uint32_t count = cpu.cp0[CP0_COUNT][0];
-  if(count <= compare && compare < count + 5) {
-    cause->IP |= CAUSE_IP_TIMER;
-	// printf("[NEMU] set cause->IP to %x\n", CAUSE_IP_TIMER);
-  }
-
-  if(!(status->EXL) && status->IE && cause->IP) {
+  if(ie && cause->IP) {
 	// printf("[NEMU] trigger irq timer, base:%08x\n", cpu.base);
 	trigger_exception(EXC_INTR);
   }
@@ -175,6 +161,16 @@ void update_cp0_timer() {
   cycles.val += 5; // add 5 cycles
   cpu.cp0[CP0_COUNT][0] = cycles.lo;
   cpu.cp0[CP0_COUNT][1] = cycles.hi;
+
+  // update IP
+  cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
+
+  uint32_t compare = cpu.cp0[CP0_COMPARE][0];
+  uint32_t count = cpu.cp0[CP0_COUNT][0];
+  if(count == compare) {
+    cause->IP |= CAUSE_IP_TIMER;
+	// printf("[NEMU] set cause->IP to %x\n", CAUSE_IP_TIMER);
+  }
 }
 
 /* Simulate how the CPU works. */
@@ -195,6 +191,9 @@ void cpu_exec(uint64_t n) {
 
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
+	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+	bool ie = !(status->EXL) && status->IE;
+
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
 
 #include "exec-handlers.h"
@@ -202,7 +201,7 @@ void cpu_exec(uint64_t n) {
     if(print_commit_log) print_registers();
 
 #ifdef INTR
-    check_interrupt();
+    check_interrupt(ie);
 #endif
 
     if (nemu_state != NEMU_RUNNING) { return; }

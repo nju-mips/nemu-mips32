@@ -10,7 +10,7 @@ SDL_Surface *screen;
 static uint64_t jiffy = 0;
 static struct itimerval it;
 
-extern void serial_enqueue(char);
+extern void serial_enqueue(SDL_EventType, char);
 extern void keyboard_enqueue(SDL_KeyboardEvent *evt);
 extern void update_screen();
 
@@ -27,7 +27,7 @@ static void device_update(int signum) {
 	// If a key was pressed
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	  serial_enqueue(event.key.keysym.sym);
+	  serial_enqueue(event.type, event.key.keysym.sym);
 	  keyboard_enqueue(&(event.key));
 	  break;
 	case SDL_QUIT:
