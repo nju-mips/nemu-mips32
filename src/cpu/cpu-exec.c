@@ -88,7 +88,6 @@ int init_cpu(vaddr_t entry) {
   nemu_start_time = get_current_time();
 
   cpu.pc = entry;
-  cpu.gpr[29] = 0x18000000;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
   return 0;
 }

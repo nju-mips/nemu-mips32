@@ -5,6 +5,8 @@
 #include "common.h"
 #include "protocol.h"
 
+/* only for debug, print the packets */
+/*
 #define CAT(a, b) CAT_IMPL(a, b)
 #define CAT_IMPL(a, b) a ## b
 
@@ -17,6 +19,9 @@
   printf("recv:'%s'\n", (char *)CAT(s, __LINE__)); \
   (uint8_t*)CAT(s, __LINE__); \
   })
+*/
+
+void cpu_exec(uint64_t);
 
 static struct gdb_conn *conn;
 
@@ -161,36 +166,47 @@ void qemu_continue() {
   free(reply);
 }
 
+void print_qemu_registers(gdb_regs_t *regs) {
+  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", regs->pc - 4, regs->hi, regs->lo);
+  eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", regs->gpr[0], regs->gpr[1], regs->gpr[2], regs->gpr[3]);
+  eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", regs->gpr[4], regs->gpr[5], regs->gpr[6], regs->gpr[7]);
+  eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", regs->gpr[8], regs->gpr[9], regs->gpr[10], regs->gpr[11]);
+  eprintf("$t4:0x%08x  $t5:0x%08x  $t6:0x%08x  $t7:0x%08x\n", regs->gpr[12], regs->gpr[13], regs->gpr[14], regs->gpr[15]);
+  eprintf("$s0:0x%08x  $s1:0x%08x  $s2:0x%08x  $s3:0x%08x\n", regs->gpr[16], regs->gpr[17], regs->gpr[18], regs->gpr[19]);
+  eprintf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", regs->gpr[20], regs->gpr[21], regs->gpr[22], regs->gpr[23]);
+  eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", regs->gpr[24], regs->gpr[25], regs->gpr[26], regs->gpr[27]);
+  eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", regs->gpr[28], regs->gpr[29], regs->gpr[30], regs->gpr[31]);
+}
+
 void qemu_diff() {
   int port = 1234;
   int ppid_before_fork = getpid();
 
   if(fork() != 0) {
+	gdb_regs_t regs;
+
     gdb_connect_qemu(port);
 
 	qemu_break(entry_start);
 	qemu_continue();
 	qemu_remove_breakpoint(entry_start);
 
-	for(int i = 0; i < 3; i ++) {
-	  qemu_single_step();
+	for(int i = 0; i < 32; i++) regs.gpr[i] = 0;
+	regs.pc = entry_start;
+	qemu_setregs(&regs);
 
-	  gdb_regs_t regs;
+	for(int i = 0; i < 30; i ++) {
+	  qemu_single_step();
 	  qemu_getregs(&regs);
 	  // diff
+	  cpu_exec(1);
 
-eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", regs.pc, regs.hi, regs.lo);
-eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", regs.gpr[0], regs.gpr[1], regs.gpr[2], regs.gpr[3]);
-eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", regs.gpr[4], regs.gpr[5], regs.gpr[6], regs.gpr[7]);
-eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", regs.gpr[8], regs.gpr[9], regs.gpr[10], regs.gpr[11]);
-eprintf("$t4:0x%08x  $t5:0x%08x  $t6:0x%08x  $t7:0x%08x\n", regs.gpr[12], regs.gpr[13], regs.gpr[14], regs.gpr[15]);
-eprintf("$s0:0x%08x  $s1:0x%08x  $s2:0x%08x  $s3:0x%08x\n", regs.gpr[16], regs.gpr[17], regs.gpr[18], regs.gpr[19]);
-eprintf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", regs.gpr[20], regs.gpr[21], regs.gpr[22], regs.gpr[23]);
-eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", regs.gpr[24], regs.gpr[25], regs.gpr[26], regs.gpr[27]);
-eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", regs.gpr[28], regs.gpr[29], regs.gpr[30], regs.gpr[31]);
-
+	  printf("==============================\n");
+	  print_qemu_registers(&regs);
+	  printf("------------------------------\n");
+	  print_registers();
+	  printf("==============================\n");
 	}
-	while(1);
   } else {
     // install a parent death signal in the chlid
     int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
