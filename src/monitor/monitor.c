@@ -87,11 +87,6 @@ static inline void load_img() {
   }
 }
 
-static inline void restart() {
-  /* Set the initial instruction pointer. */
-  cpu.pc = entry_start;
-}
-
 void sigint_handler(int no) {
   nemu_state = NEMU_STOP;
 }
@@ -136,7 +131,7 @@ int init_monitor(int argc, char *argv[]) {
   if(!is_batch_mode) signal(SIGINT, sigint_handler);
 
   /* Initialize this virtual computer system. */
-  restart();
+  init_cpu(entry_start);
 
   return is_batch_mode;
 }

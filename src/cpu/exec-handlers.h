@@ -1,7 +1,19 @@
-#define make_entry()
+/* @{{
+ *   `cpu.pc' for jmp instruction
+ *   `oldpc'  for delayslot
+ *   `instr'  for special table
+ * @}}
+ */
+
+
+#define make_entry() // exec_entry:
 #define make_exec_handler(name) name: make_exec_wrapper
 #define make_exec_wrapper(...) __VA_ARGS__; goto eoe;
 #define make_eoe() eoe:;
+
+#define exec_delayslot() \
+	inst.val = instr_fetch(oldpc + 4); \
+	goto exec_entry;
 
 static const void * special_table[64] = {
   /* 0x00 */    &&sll, &&inv, &&srl, &&sra,
@@ -153,18 +165,12 @@ make_exec_handler(eret) ({
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 0;
   status->IE = 1;
-  cpu.base = cpu.cp0[CP0_BASE][0]; // resume user base
 
-  /*
-  printf("[NEMU] NOTE: eret to user space, base at %08x, pc at %08x\n", cpu.base, cpu.pc);
-  print_registers();
-  diff_common_registers();
-  */
   dsprintf(asm_buf_p, "eret");
 });
 
 make_exec_handler(mfc0) ({
-#if 1
+#if 0
   cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
 #else
   // only for microbench

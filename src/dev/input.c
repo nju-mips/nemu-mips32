@@ -2,7 +2,10 @@
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
-/* serial port */
+/////////////////////////////////////////////////////////////////
+//                      serial simulation                      //
+/////////////////////////////////////////////////////////////////
+
 #define SERIAL_PORT ((volatile char *)0x40001000)
 #define Rx 0x0
 #define Tx 0x04
@@ -121,7 +124,9 @@ void serial_enqueue(SDL_EventType type, char ch) {
 
 
 
-
+/////////////////////////////////////////////////////////////////
+//                     keyboard simulation                     //
+/////////////////////////////////////////////////////////////////
 
 #define KEYBOARD_QUEUE_LEN 1024
 static int keyboard_queue[KEYBOARD_QUEUE_LEN];

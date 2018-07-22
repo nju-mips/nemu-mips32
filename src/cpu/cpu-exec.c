@@ -4,9 +4,16 @@
 #include "device.h"
 #include "monitor/monitor.h"
 
+CPU_state cpu;
+
+const char *regs[32] = {
+  "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
+  "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+  "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+  "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"
+};
 
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
-
 
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
 #define MAX_INSTR_TO_PRINT 10
@@ -72,32 +79,31 @@ void print_registers() {
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
   // =============================================================
-    eprintf("$base:%08x,    $count0:%08x,    $count1:%08x\n", cpu.cp0[CP0_BASE][0], cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COUNT][1]);
+    eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COUNT][1]);
     // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
     eprintf("$epc:%08x\n", cpu.cp0[CP0_EPC][0]);
   // =============================================================
 }
 
 
-int init_cpu() {
+int init_cpu(vaddr_t entry) {
   nemu_start_time = get_current_time();
-  assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]));
-  assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]));
+
+  cpu.pc = entry;
   cpu.gpr[29] = 0x18000000;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
   return 0;
 }
 
 static inline uint32_t instr_fetch(uint32_t addr) {
-  addr = addr - DDR_BASE + cpu.base;
+  addr = addr - DDR_BASE;
   assert(addr < DDR_SIZE && (addr & 3) == 0);
-  cpu.pc += 4;
   return ((uint32_t*)ddr)[addr >> 2];
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
-    addr = addr - DDR_BASE + cpu.base;
+    addr = addr - DDR_BASE;
 	switch(len) {
 	  case 1: return ddr[addr];
 	  case 2: return (ddr[addr + 1] << 8) | ddr[addr];
@@ -110,7 +116,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
-    addr = addr - DDR_BASE + cpu.base;
+    addr = addr - DDR_BASE;
 	switch(len) {
 	  case 1: ddr[addr] = data; return;
 	  case 2: ddr[addr] = data & 0xFF;
@@ -135,8 +141,6 @@ static inline void trigger_exception(int code) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
-  cpu.base = 0; // kernel base is zero
-
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 1;
   status->IE = 0;
@@ -149,7 +153,6 @@ static inline void trigger_exception(int code) {
 void check_interrupt(bool ie) {
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   if(ie && cause->IP) {
-	// printf("[NEMU] trigger irq timer, base:%08x\n", cpu.base);
 	trigger_exception(EXC_INTR);
   }
 }
@@ -169,7 +172,6 @@ void update_cp0_timer() {
   uint32_t count = cpu.cp0[CP0_COUNT][0];
   if(count == compare) {
     cause->IP |= CAUSE_IP_TIMER;
-	// printf("[NEMU] set cause->IP to %x\n", CAUSE_IP_TIMER);
   }
 }
 
@@ -182,17 +184,23 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n --) {
+#ifdef INTR
 	update_cp0_timer();
+#endif
 	
 	oldpc = cpu.pc;
 
+#if 0
     asm_buf_p = asm_buf;
     asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
+#endif
 
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
-	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
+	cpu.pc += 4;
+
 #ifdef INTR
+	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
 	bool ie = !(status->EXL) && status->IE;
 #endif
 

@@ -8,11 +8,9 @@ typedef struct {
   uint32_t cp0[32][8];
   uint32_t hi, lo;
   vaddr_t pc;
-  vaddr_t base;
 } CPU_state;
 
-#define CP0_SERIAL   6  // for extra debug
-#define CP0_BASE     7
+#define CP0_SERIAL   7  // for extra debug
 #define CP0_BADVADDR 8
 #define CP0_COUNT    9
 #define CP0_COMPARE  11
@@ -117,6 +115,11 @@ typedef struct {
 	};
 } Inst; // Instruction
 
-extern const char *regs[];
 extern CPU_state cpu;
+int init_cpu(vaddr_t entry);
+
+_Static_assert(sizeof(Inst) == sizeof(uint32_t), "assertion of sizeof(Inst) failed");
+_Static_assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]), "assertion of sizeof(cp0_status_t) failed");
+_Static_assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]), "assertion of sizeof(cp0_cause_t) failed");
+
 #endif
