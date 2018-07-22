@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <SDL/SDL.h>
 #include "nemu.h"
-#include "monitor/monitor.h"
+#include "monitor.h"
 #include "device.h"
 
 

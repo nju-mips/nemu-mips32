@@ -1,5 +1,5 @@
 #include "nemu.h"
-#include "monitor/monitor.h"
+#include "monitor.h"
 #include "device.h"
 #include <elf.h>
 #include <unistd.h>
@@ -14,8 +14,7 @@ static uint32_t entry_start = 0x10000000;
 char *elf_file = NULL;
 static char *img_file = NULL;
 
-int is_batch_mode = false;
-int print_commit_log = false;
+work_mode_t work_mode = MODE_GDB;
 
 void *ddr_map(uint32_t vaddr, uint32_t size);
 
@@ -93,10 +92,11 @@ void sigint_handler(int no) {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bci:e:")) != -1) {
+  while ( (o = getopt(argc, argv, "-bcdi:e:")) != -1) {
     switch (o) {
-      case 'b': is_batch_mode = true; break;
-      case 'c': print_commit_log = true; break;
+	  case 'd': work_mode |= MODE_DIFF; break;
+      case 'b': work_mode |= MODE_BATCH; break;
+      case 'c': work_mode |= MODE_LOG; break;
       case 'e':
                 if (elf_file != NULL)
 				  Log("too much argument '%s', ignored", optarg);
@@ -110,12 +110,12 @@ static inline void parse_args(int argc, char *argv[]) {
 				  img_file = optarg;
                 break;
       default:
-                panic("Usage: %s [-b] [-c] [-i img_file] [-e elf_file]", argv[0]);
+                panic("Usage: %s [-b] [-c] [-d] [-i img_file] [-e elf_file]", argv[0]);
     }
   }
 }
 
-int init_monitor(int argc, char *argv[]) {
+work_mode_t init_monitor(int argc, char *argv[]) {
   /* Perform some global initialization. */
 
   /* Parse arguments. */
@@ -128,10 +128,11 @@ int init_monitor(int argc, char *argv[]) {
 	load_img();
   }
 
-  if(!is_batch_mode) signal(SIGINT, sigint_handler);
+  if(!(work_mode & MODE_BATCH))
+	signal(SIGINT, sigint_handler);
 
   /* Initialize this virtual computer system. */
   init_cpu(entry_start);
 
-  return is_batch_mode;
+  return work_mode;
 }

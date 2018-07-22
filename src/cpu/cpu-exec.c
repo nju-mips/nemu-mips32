@@ -2,7 +2,7 @@
 
 #include "nemu.h"
 #include "device.h"
-#include "monitor/monitor.h"
+#include "monitor.h"
 
 CPU_state cpu;
 
@@ -18,8 +18,7 @@ const char *regs[32] = {
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
 #define MAX_INSTR_TO_PRINT 10
 
-int nemu_state = NEMU_STOP;
-extern int print_commit_log;
+nemu_state_t nemu_state = NEMU_STOP;
 
 static uint64_t nemu_start_time = 0;
 
@@ -53,7 +52,6 @@ static uint64_t get_current_time() { // in us
 }
 
 static int dsprintf(char *buf, const char *fmt, ...) {
-  if(!print_commit_log) return 0;
 #if 0
   va_list ap;
   va_start(ap, fmt);
@@ -184,7 +182,7 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n --) {
-#ifdef INTR
+#ifdef ENABLE_INTR
 	update_cp0_timer();
 #endif
 	
@@ -199,7 +197,7 @@ void cpu_exec(uint64_t n) {
 
 	cpu.pc += 4;
 
-#ifdef INTR
+#ifdef ENABLE_INTR
 	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
 	bool ie = !(status->EXL) && status->IE;
 #endif
@@ -208,9 +206,9 @@ void cpu_exec(uint64_t n) {
 
 #include "exec-handlers.h"
 
-    if(print_commit_log) print_registers();
+    if(work_mode == MODE_LOG) print_registers();
 
-#ifdef INTR
+#ifdef ENABLE_INTR
     check_interrupt(ie);
 #endif
 

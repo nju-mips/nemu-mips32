@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include "nemu.h"
-#include "monitor/monitor.h"
+#include "monitor.h"
 
 
 #define check_gpio(addr, len) \
@@ -16,7 +16,6 @@
 #define ANSI_WIDTHOR_CYAN    "\x1b[36m"
 #define ANSI_WIDTHOR_RESET   "\x1b[0m"
 
-extern int is_batch_mode;
 
 void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);
@@ -28,5 +27,5 @@ void gpio_write(paddr_t addr, int len, uint32_t data) {
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more commit log
   // which makes it easier for crosschecking.
-  if(is_batch_mode) exit(0);
+  if(work_mode & MODE_BATCH) exit(0);
 }

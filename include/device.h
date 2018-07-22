@@ -19,7 +19,12 @@ uint32_t invalid_read(paddr_t addr, int len);
 void invalid_write(paddr_t addr, int len, uint32_t data);
 
 // DDR
+#ifdef __ARCH_MIPS32_NPC__
 #define DDR_BASE (0x10000000)
+#else
+#define DDR_BASE (0x1000000)
+#endif
+
 #define DDR_SIZE (256 * 1024 * 1024)
 
 // VGA

@@ -1,6 +1,4 @@
-#include "monitor/monitor.h"
-#include "monitor/expr.h"
-#include "monitor/watchpoint.h"
+#include "monitor.h"
 #include "nemu.h"
 #include "protocol.h"
 

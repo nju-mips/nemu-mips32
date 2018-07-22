@@ -12,10 +12,12 @@ LD = gcc
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
-# INTR = 0
+INTR = 1
+CFLAGS += -D__ARCH_MIPS32_NPC__
+CFLAGS += -DENABLE_DELAYSLOT
 
 ifdef INTR
-CFLAGS += -DINTR
+CFLAGS += -DENABLE_INTR
 endif
 
 ifdef DBG
