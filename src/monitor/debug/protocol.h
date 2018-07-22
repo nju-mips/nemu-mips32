@@ -19,16 +19,18 @@
 
 #include <stdint.h>
 
-union gdb_regs {
+typedef union {
   struct {
-    uint32_t eax, ecx, edx, ebx, esp, ebp, esi, edi;
-    uint32_t eip, eflags;
-    uint32_t cs, ss, ds, es, fs, gs;
+	uint32_t zero, at, v0, v1, a0, a1, a2, a3;
+	uint32_t t0, t1, t2, t3, t4, t5, t6, t7;
+	uint32_t s0, s1, s2, s3, s4, s5, s6, s7;
+	uint32_t t8, t9, k0, k1, gp, sp, s8, ra;
+	uint32_t sr, lo, hi, bad, cause, pc;
+	uint32_t fsr, fir;
   };
-  struct {
-    uint32_t array[77];
-  };
-};
+  struct { uint32_t array[40]; };
+  struct { uint32_t gpr[32]; };
+} gdb_regs_t;
 
 struct gdb_conn;
 

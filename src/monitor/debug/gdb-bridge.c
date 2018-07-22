@@ -105,16 +105,3 @@ void gdb_mainloop() {
   }
 }
 
-void qemu_diff() {
-  /*
-  start_qemu();
-  qemu_break(entry_start);
-  qemu_continue();
-  for(int i = 0; i < 100; i ++) {
-	CPU_state cpu;
-	qemu_get_registers(&cpu);
-	// diff
-  }
-  */
-}
-
