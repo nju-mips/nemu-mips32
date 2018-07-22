@@ -38,8 +38,11 @@ extern void print_registers();
     } \
   } while (0)
 
-#define panic(format, ...) \
-  Assert(0, format, ## __VA_ARGS__)
+#define panic(fmt, ...) do { \
+	eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt "\e[0m\n", \
+			__FILE__, __LINE__, __func__, ## __VA_ARGS__); \
+	abort(); \
+  } while(0)
 
 #define TODO() panic("please implement me")
 
