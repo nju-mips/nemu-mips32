@@ -5,6 +5,7 @@
 void init_device();
 int init_monitor(int, char *[]);
 void gdb_mainloop();
+void qemu_diff();
 void cpu_exec(uint64_t);
 
 int main(int argc, char *argv[]) {
@@ -13,7 +14,7 @@ int main(int argc, char *argv[]) {
   if(mode & MODE_BATCH) {
 	init_device();
 	if(mode == MODE_DIFF) {
-	  // gdb_diff();
+	  qemu_diff();
 	} else {
 	  cpu_exec(-1);
 	}

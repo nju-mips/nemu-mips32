@@ -8,36 +8,28 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/signal.h>
 #include <unistd.h>
 
 #include "debug.h"
 #include "protocol.h"
 
 extern char *elf_file;
-extern char **environ;
 
 void init_device();
 void gdb_server_mainloop(int port);
 
-void start_gdb(int port) {
+int start_gdb(int port) {
   char symbol_s[100], remote_s[100];
+  const char *exec = "gdb-multiarch";
 
   snprintf(symbol_s, sizeof(symbol_s), "symbol %s", elf_file);
-  snprintf(remote_s, sizeof(remote_s),
-		  "target remote 127.0.0.1:%d", port);
-  const char *argv[] = {
-#ifdef ON_QEMU
-	"/usr/bin/gdb",
-#else
-	"/usr/bin/gdb-multiarch",
-	"-ex", "set arch mips",
-	"-ex", symbol_s,
-#endif
-	"-ex", remote_s,
-	NULL,
-  };
-  execve(argv[0], (char **)argv, environ);
-  assert(0);
+  snprintf(remote_s, sizeof(remote_s), "target remote 127.0.0.1:%d", port);
+  execlp(exec, exec, "-ex", "set arch mips",
+	  "-ex", symbol_s, "-ex", remote_s, NULL);
+
+  return -1;
 }
 
 void start_bridge(int port, int serv_port) {
@@ -99,13 +91,30 @@ void gdb_mainloop() {
   int servfd = get_free_servfd();
   int port = get_port_of_servfd(servfd);
 
-  if(fork() == 0) {
+  int pid = fork();
+  if(pid == 0) {
 	init_device();
 	gdb_server_mainloop(servfd);
   } else {
     close(servfd);
 	usleep(20000);
-	start_gdb(port);
+	if(start_gdb(port) < 0) {
+	  kill(pid, SIGKILL);
+	}
+	panic("Please install `gdb-multiarch' firstly\n");
   }
+}
+
+void qemu_diff() {
+  /*
+  start_qemu();
+  qemu_break(entry_start);
+  qemu_continue();
+  for(int i = 0; i < 100; i ++) {
+	CPU_state cpu;
+	qemu_get_registers(&cpu);
+	// diff
+  }
+  */
 }
 

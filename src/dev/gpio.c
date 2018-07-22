@@ -4,9 +4,9 @@
 
 
 #define check_gpio(addr, len) \
-  Assert(addr == 0, \
+  CPUAssert(addr == 0, \
 	  "address(0x%08x) is out side GPIO", addr); \
-	  Assert(len == 1, "GPIO only allow byte read/write");
+	  CPUAssert(len == 1, "GPIO only allow byte read/write");
 
 #define ANSI_WIDTHOR_RED     "\x1b[31m"
 #define ANSI_WIDTHOR_GREEN   "\x1b[32m"

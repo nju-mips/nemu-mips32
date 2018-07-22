@@ -253,9 +253,9 @@ void keyboard_enqueue(SDL_KeyboardEvent *key) {
 }
 
 #define check_input(addr, len) \
-  Assert(addr >= 0 && addr <= SCANCODE_STAT, \
+  CPUAssert(addr >= 0 && addr <= SCANCODE_STAT, \
 	  "input: address(0x%08x) is out side", addr); \
-	  Assert(len == 1 || len == 4, "input only allow byte read/write");
+  CPUAssert(len == 1 || len == 4, "input only allow byte read/write");
 
 uint32_t input_read(paddr_t addr, int len) {
   /* CTRL not yet implemented, only allow byte read/write */
@@ -276,7 +276,7 @@ uint32_t input_read(paddr_t addr, int len) {
 	case STAT:
 	  return serial_f == serial_r ? 0 : 1;
 	default:
-	  Assert(false, "input: address(0x%08x) is not readable", addr);
+	  CPUAssert(false, "input: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;
@@ -289,7 +289,7 @@ void input_write(paddr_t addr, int len, uint32_t data) {
 	  putchar((char)data);
 	  break;
 	default:
-	  Assert(false, "input: address(0x%08x) is not writable", addr);
+	  CPUAssert(false, "input: address(0x%08x) is not writable", addr);
 	  break;
   }
 }

@@ -246,7 +246,7 @@ void slti(vaddr_t *pc, Inst inst) {
 
 
 #define CHECK_ALIGNED_ADDR(align, addr) \
-  Assert(((addr) & (align - 1)) == 0, "address(0x%08x) is unaligned, pc=%08x\n", (addr), cpu.pc)
+  CPUAssert(((addr) & (align - 1)) == 0, "address(0x%08x) is unaligned, pc=%08x\n", (addr), cpu.pc)
 
 void swl(vaddr_t *pc, Inst inst) {
   uint32_t waddr = cpu.gpr[inst.rs] + inst.simm;

@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-static uint32_t entry_start = 0x10000000;
+uint32_t entry_start = 0x10000000;
 
 char *elf_file = NULL;
 static char *img_file = NULL;

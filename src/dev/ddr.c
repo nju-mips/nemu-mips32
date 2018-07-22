@@ -7,7 +7,7 @@ uint8_t ddr[DDR_SIZE];
 /* Memory accessing interfaces */
 
 #define check_ddr(addr, len) \
-  Assert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
+  CPUAssert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
 	  "address(0x%08x) is out side DDR", addr);
 
 void *ddr_map(uint32_t addr, uint32_t size) {

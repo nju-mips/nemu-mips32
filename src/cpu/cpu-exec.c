@@ -40,7 +40,7 @@ void diff_common_registers() {
   for(int i = 0; i < 32; i++) {
 	if(i == 26 || i == 27) continue;
 	if(saved_exception_code == EXC_SYSCALL && i == 2) continue;
-	Assert(common_registers[i] == cpu.gpr[i], "registers differ at %d, %08x <> %08x\n", i, common_registers[i], cpu.gpr[i]);
+	CPUAssert(common_registers[i] == cpu.gpr[i], "registers differ at %d, %08x <> %08x\n", i, common_registers[i], cpu.gpr[i]);
   }
 }
 

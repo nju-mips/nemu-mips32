@@ -21,6 +21,15 @@ extern void print_registers();
     if (!(cond)) { \
 	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
 			  __FILE__, __LINE__, __func__, #cond); \
+      eprintf("\33[1;31m" fmt "\33[0m\n", ## __VA_ARGS__); \
+	  abort(); \
+    } \
+  } while (0)
+
+#define CPUAssert(cond, fmt, ...) do { \
+    if (!(cond)) { \
+	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
+			  __FILE__, __LINE__, __func__, #cond); \
 	  eprintf("=========== dump registers =========\n"); \
 	  print_registers(); \
 	  eprintf("=========== dump    end =========\n"); \
