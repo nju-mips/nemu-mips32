@@ -101,7 +101,7 @@ void gdb_mainloop() {
 
   if(fork() == 0) {
 	init_device();
-	gdb_server_mainloop(port);
+	gdb_server_mainloop(servfd);
   } else {
     close(servfd);
 	usleep(20000);
