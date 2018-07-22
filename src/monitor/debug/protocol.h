@@ -38,6 +38,7 @@ uint64_t gdb_decode_hex_str(uint8_t *bytes);
 uint8_t hex_encode(uint8_t digit);
 
 struct gdb_conn *gdb_server_start(uint16_t port);
+struct gdb_conn *gdb_begin_server(int fd); // work at given fd
 struct gdb_conn *gdb_begin_inet(const char *addr, uint16_t port);
 
 void gdb_end(struct gdb_conn *conn);

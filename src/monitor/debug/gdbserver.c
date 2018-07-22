@@ -413,8 +413,8 @@ static gdb_cmd_handler_t handlers[128] = {
 	['Z'] = gdb_insert_break_point,
 };
 
-void gdb_server_mainloop(int port) {
-  struct gdb_conn *gdb = gdb_server_start(port);
+void gdb_server_mainloop(int servfd) {
+  struct gdb_conn *gdb = gdb_begin_server(servfd);
   while(1) {
 	size_t size = 0;
 	char *data = (void*)gdb_recv(gdb, &size);

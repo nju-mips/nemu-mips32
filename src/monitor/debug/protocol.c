@@ -101,21 +101,8 @@ static struct gdb_conn* gdb_begin(int fd) {
   return conn;
 }
 
-struct gdb_conn *gdb_server_start(uint16_t port) {
-  // fill the socket information
-  struct sockaddr_in sa = {
-    .sin_family = AF_INET,
-    .sin_port = htons(port),
-	.sin_addr.s_addr = htonl(INADDR_ANY),
-  };
 
-  // open the socket and start the tcp connection
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
-  if(bind(fd, (const struct sockaddr *)&sa, sizeof(sa)) != 0) {
-	close(fd);
-	return NULL;
-  }
-
+struct gdb_conn *gdb_begin_server(int fd) {
   // accept user connect
   listen(fd, 5);
 
@@ -130,6 +117,54 @@ struct gdb_conn *gdb_server_start(uint16_t port) {
   struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
   if (conn == NULL)
     err(1, "calloc");
+
+  conn->ack = true;
+
+  // duplicate the handle to separate read/write state
+  int connfd2 = dup(connfd);
+  if (connfd2 < 0)
+    err(1, "dup");
+
+  // open a FILE* for reading
+  conn->in = fdopen(connfd, "rb");
+  if (conn->in == NULL)
+    err(1, "fdopen");
+
+  // open a FILE* for writing
+  conn->out = fdopen(connfd2, "wb");
+  if (conn->out == NULL)
+    err(1, "fdopen");
+  return conn;
+}
+
+
+// this function maybe nouse
+struct gdb_conn *gdb_server_start(uint16_t port) {
+  // fill the socket information
+  struct sockaddr_in sa = {
+    .sin_family = AF_INET,
+    .sin_port = port,
+	.sin_addr.s_addr = htonl(INADDR_ANY),
+  };
+
+  // open the socket and start the tcp connection
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if(bind(fd, (const struct sockaddr *)&sa, sizeof(sa)) != 0) {
+	close(fd);
+	return NULL;
+  }
+  
+  // accept user connect
+  listen(fd, 5);
+
+  struct sockaddr_in client_addr;
+  socklen_t length = sizeof(client_addr);
+  int connfd = accept(fd, (struct sockaddr*)&client_addr, &length);
+
+  if(connfd < 0) { err(1, "accept"); }
+
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
+  if (conn == NULL) err(1, "calloc");
 
   conn->ack = true;
 

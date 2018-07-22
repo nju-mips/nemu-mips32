@@ -12,7 +12,11 @@ int main(int argc, char *argv[]) {
   work_mode_t mode = init_monitor(argc, argv);
   if(mode & MODE_BATCH) {
 	init_device();
-	cpu_exec(-1);
+	if(mode == MODE_DIFF) {
+	  // gdb_diff();
+	} else {
+	  cpu_exec(-1);
+	}
   } else {
 	gdb_mainloop();
   }

@@ -1,17 +1,21 @@
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <assert.h>
+#include <malloc.h>
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
-#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
+#include "debug.h"
 #include "protocol.h"
-
-// #define ON_QEMU
-#define ON_MIPS
 
 extern char *elf_file;
 extern char **environ;
+
 void init_device();
 void gdb_server_mainloop(int port);
 
@@ -59,21 +63,49 @@ void start_bridge(int port, int serv_port) {
   }
 }
 
+int get_free_servfd() {
+  // fill the socket information
+  struct sockaddr_in sa = {
+    .sin_family = AF_INET,
+    .sin_port = 0,
+	.sin_addr.s_addr = htonl(INADDR_ANY),
+  };
+
+  // open the socket and start the tcp connection
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if(bind(fd, (const struct sockaddr *)&sa, sizeof(sa)) != 0) {
+	close(fd);
+	panic("bind");
+  }
+  return fd;
+}
+
+int get_port_of_servfd(int fd) {
+  struct sockaddr_in serv_addr;
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = 0;
+
+  socklen_t len = sizeof(serv_addr);
+  if (getsockname(fd, (struct sockaddr *)&serv_addr, &len) == -1) {
+	  perror("getsockname");
+	  return -1;
+  }
+  return ntohs(serv_addr.sin_port);
+}
+
 void gdb_mainloop() {
-#ifdef ON_MIPS
-  int serv_port = 1245;
-  int gdb_port = serv_port;
-#else
-  int serv_port = 12345;
-  int gdb_port = serv_port + 1;
-#endif
+  int servfd = get_free_servfd();
+  int port = get_port_of_servfd(servfd);
 
   if(fork() == 0) {
 	init_device();
-	gdb_server_mainloop(serv_port);
+	gdb_server_mainloop(port);
   } else {
+    close(servfd);
 	usleep(20000);
-	start_gdb(gdb_port);
+	start_gdb(port);
   }
 }
 
