@@ -5,6 +5,19 @@
 #include "common.h"
 #include "protocol.h"
 
+#define CAT(a, b) CAT_IMPL(a, b)
+#define CAT_IMPL(a, b) a ## b
+
+#define gdb_send(conn, buf, size) ({ \
+  printf("send:'%s'\n", (char *)buf); \
+  gdb_send(conn, buf, size); })
+
+#define gdb_recv(conn, size) ({\
+  char * CAT(s, __LINE__) = (void*)gdb_recv(conn, size); \
+  printf("recv:'%s'\n", (char *)CAT(s, __LINE__)); \
+  (uint8_t*)CAT(s, __LINE__); \
+  })
+
 static struct gdb_conn *conn;
 
 extern char *elf_file;
@@ -112,7 +125,6 @@ bool qemu_single_step(void) {
   gdb_send(conn, (const uint8_t *)buf, strlen(buf));
   size_t size;
   uint8_t *reply = gdb_recv(conn, &size);
-  printf("single_step reply: '%s'\n", (char *)buf);
   free(reply);
   return true;
 }
@@ -124,6 +136,16 @@ void qemu_exit(void) {
 void qemu_break(uint32_t entry) {
   char buf[32];
   snprintf(buf, sizeof(buf), "Z0,%08x,4", entry);
+  gdb_send(conn, (const uint8_t *)buf, strlen(buf));
+
+  size_t size;
+  uint8_t *reply = gdb_recv(conn, &size);
+  free(reply);
+}
+
+void qemu_remove_breakpoint(uint32_t entry) {
+  char buf[32];
+  snprintf(buf, sizeof(buf), "z0,%08x,4", entry);
   gdb_send(conn, (const uint8_t *)buf, strlen(buf));
 
   size_t size;
@@ -148,7 +170,9 @@ void qemu_diff() {
 
 	qemu_break(entry_start);
 	qemu_continue();
-	for(int i = 0; i < 10; i ++) {
+	qemu_remove_breakpoint(entry_start);
+
+	for(int i = 0; i < 3; i ++) {
 	  qemu_single_step();
 
 	  gdb_regs_t regs;
