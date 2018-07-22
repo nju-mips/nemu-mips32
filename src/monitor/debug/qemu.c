@@ -1,6 +1,8 @@
-#include "common.h"
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/prctl.h>
+#include <signal.h>
+#include "common.h"
 #include "protocol.h"
 
 static struct gdb_conn *conn;
@@ -18,9 +20,9 @@ int start_qemu(int port) {
   return -1;
 }
 
-bool gdb_connect_qemu(void) {
+bool gdb_connect_qemu(int port) {
   // connect to gdbserver on localhost port 1234
-  while ((conn = gdb_begin_inet("127.0.0.1", 1234)) == NULL) {
+  while ((conn = gdb_begin_inet("127.0.0.1", port)) == NULL) {
     usleep(1);
   }
 
@@ -110,6 +112,7 @@ bool qemu_single_step(void) {
   gdb_send(conn, (const uint8_t *)buf, strlen(buf));
   size_t size;
   uint8_t *reply = gdb_recv(conn, &size);
+  printf("single_step reply: '%s'\n", (char *)buf);
   free(reply);
   return true;
 }
@@ -137,11 +140,17 @@ void qemu_continue() {
 }
 
 void qemu_diff() {
-  if(fork() == 0) {
-	usleep(20000);
+  int port = 1234;
+  int ppid_before_fork = getpid();
+
+  if(fork() != 0) {
+    gdb_connect_qemu(port);
+
 	qemu_break(entry_start);
 	qemu_continue();
 	for(int i = 0; i < 10; i ++) {
+	  qemu_single_step();
+
 	  gdb_regs_t regs;
 	  qemu_getregs(&regs);
 	  // diff
@@ -155,8 +164,20 @@ eprintf("$s0:0x%08x  $s1:0x%08x  $s2:0x%08x  $s3:0x%08x\n", regs.gpr[16], regs.g
 eprintf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", regs.gpr[20], regs.gpr[21], regs.gpr[22], regs.gpr[23]);
 eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", regs.gpr[24], regs.gpr[25], regs.gpr[26], regs.gpr[27]);
 eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", regs.gpr[28], regs.gpr[29], regs.gpr[30], regs.gpr[31]);
+
 	}
+	while(1);
   } else {
-	start_qemu(1234);
+    // install a parent death signal in the chlid
+    int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
+    if (r == -1) { panic("prctl error"); }
+
+    if (getppid() != ppid_before_fork) {
+      panic("parent has died");
+    }
+
+    close(0); // close STDIN
+
+	start_qemu(port);
   }
 }
