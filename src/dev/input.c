@@ -2,7 +2,10 @@
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
-/* serial port */
+/////////////////////////////////////////////////////////////////
+//                      serial simulation                      //
+/////////////////////////////////////////////////////////////////
+
 #define SERIAL_PORT ((volatile char *)0x40001000)
 #define Rx 0x0
 #define Tx 0x04
@@ -14,6 +17,7 @@
 #define SERIAL_QUEUE_LEN 1024
 static int serial_queue[SERIAL_QUEUE_LEN];
 static int serial_f = 0, serial_r = 0;
+
 
 // wait to be completed
 const char *SDLK_to_ascii[SDLK_LAST] = {
@@ -98,7 +102,7 @@ const char *SDLK_to_ascii[SDLK_LAST] = {
 };
 
 void serial_enqueue(SDL_EventType type, SDLKey key) {
-  if(key >= SDLK_LAST) return;
+  if(key < 0 || key >= SDLK_LAST) return;
 
   static bool sdlk_state[SDLK_LAST];
   // bool shift = false;
@@ -128,7 +132,9 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 
 
 
-
+/////////////////////////////////////////////////////////////////
+//                     keyboard simulation                     //
+/////////////////////////////////////////////////////////////////
 
 #define KEYBOARD_QUEUE_LEN 1024
 static int keyboard_queue[KEYBOARD_QUEUE_LEN];
@@ -239,11 +245,10 @@ struct {
 	[SDLK_KP_ENTER]	= { 0xE05A, 0xE0F05A },
 };
 
-void keyboard_enqueue(SDL_KeyboardEvent *key) {
-  if(key->keysym.sym >= SDLK_LAST) return;
-  int scancode = key->type == SDL_KEYUP ?
-	SDLK_to_scancode[key->keysym.sym].upcode :
-	SDLK_to_scancode[key->keysym.sym].downcode;
+void keyboard_enqueue(SDL_EventType type, SDLKey key) {
+  if(key < 0 || key >= SDLK_LAST) return;
+  int scancode = type == SDL_KEYUP ?
+	SDLK_to_scancode[key].upcode : SDLK_to_scancode[key].downcode;
 
   if(scancode == 0) return;
 
@@ -255,9 +260,9 @@ void keyboard_enqueue(SDL_KeyboardEvent *key) {
 }
 
 #define check_input(addr, len) \
-  Assert(addr >= 0 && addr <= SCANCODE_STAT, \
+  CPUAssert(addr >= 0 && addr <= SCANCODE_STAT, \
 	  "input: address(0x%08x) is out side", addr); \
-	  Assert(len == 1 || len == 4, "input only allow byte read/write");
+  CPUAssert(len == 1 || len == 4, "input only allow byte read/write");
 
 uint32_t input_read(paddr_t addr, int len) {
   /* CTRL not yet implemented, only allow byte read/write */
@@ -278,7 +283,7 @@ uint32_t input_read(paddr_t addr, int len) {
 	case STAT:
 	  return serial_f == serial_r ? 0 : 1;
 	default:
-	  Assert(false, "input: address(0x%08x) is not readable", addr);
+	  CPUAssert(false, "input: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;
@@ -291,7 +296,7 @@ void input_write(paddr_t addr, int len, uint32_t data) {
 	  putchar((char)data);
 	  break;
 	default:
-	  Assert(false, "input: address(0x%08x) is not writable", addr);
+	  CPUAssert(false, "input: address(0x%08x) is not writable", addr);
 	  break;
   }
 }

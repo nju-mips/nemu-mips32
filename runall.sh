@@ -17,7 +17,7 @@ else
   exit
 fi
 
-files=`ls $AM_HOME/tests/cputest/build/*-mips32-npc.bin`
+files=`ls $AM_HOME/tests/cputest/build/*-mips32-npc`
 ori_log="build/nemu-log.txt"
 
 for file in $files; do
@@ -25,7 +25,7 @@ for file in $files; do
   printf "[%14s] " $base
   logfile=$base-log.txt
 #  $nemu -b -l $ori_log -i $file &> $logfile
-  $nemu -b -i $file &> $logfile
+  $nemu -b -e $file &> $logfile
 
   if (grep 'HIT GOOD TRAP' $logfile > /dev/null) then
     echo -e "\033[1;32mPASS!\033[0m"

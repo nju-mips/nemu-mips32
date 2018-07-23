@@ -1,39 +1,35 @@
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <assert.h>
+#include <malloc.h>
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
-#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/signal.h>
+#include <unistd.h>
 
+#include "debug.h"
 #include "protocol.h"
 
-// #define ON_QEMU
-#define ON_MIPS
-
 extern char *elf_file;
-extern char **environ;
+
 void init_device();
 void gdb_server_mainloop(int port);
 
-void start_gdb(int port) {
+int start_gdb(int port) {
   char symbol_s[100], remote_s[100];
+  const char *exec = "gdb-multiarch";
 
   snprintf(symbol_s, sizeof(symbol_s), "symbol %s", elf_file);
-  snprintf(remote_s, sizeof(remote_s),
-		  "target remote 127.0.0.1:%d", port);
-  const char *argv[] = {
-#ifdef ON_QEMU
-	"/usr/bin/gdb",
-#else
-	"/usr/bin/gdb-multiarch",
-	"-ex", "set arch mips",
-	"-ex", symbol_s,
-#endif
-	"-ex", remote_s,
-	NULL,
-  };
-  execve(argv[0], (char **)argv, environ);
-  assert(0);
+  snprintf(remote_s, sizeof(remote_s), "target remote 127.0.0.1:%d", port);
+  execlp(exec, exec, "-ex", "set arch mips",
+	  "-ex", symbol_s, "-ex", remote_s, NULL);
+
+  return -1;
 }
 
 void start_bridge(int port, int serv_port) {
@@ -59,21 +55,53 @@ void start_bridge(int port, int serv_port) {
   }
 }
 
-void gdb_mainloop() {
-#ifdef ON_MIPS
-  int serv_port = 1245;
-  int gdb_port = serv_port;
-#else
-  int serv_port = 1234;
-  int gdb_port = serv_port + 1;
-#endif
+int get_free_servfd() {
+  // fill the socket information
+  struct sockaddr_in sa = {
+    .sin_family = AF_INET,
+    .sin_port = 0,
+	.sin_addr.s_addr = htonl(INADDR_ANY),
+  };
 
-  if(fork() == 0) {
+  // open the socket and start the tcp connection
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if(bind(fd, (const struct sockaddr *)&sa, sizeof(sa)) != 0) {
+	close(fd);
+	panic("bind");
+  }
+  return fd;
+}
+
+int get_port_of_servfd(int fd) {
+  struct sockaddr_in serv_addr;
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = 0;
+
+  socklen_t len = sizeof(serv_addr);
+  if (getsockname(fd, (struct sockaddr *)&serv_addr, &len) == -1) {
+	  perror("getsockname");
+	  return -1;
+  }
+  return ntohs(serv_addr.sin_port);
+}
+
+void gdb_mainloop() {
+  int servfd = get_free_servfd();
+  int port = get_port_of_servfd(servfd);
+
+  int pid = fork();
+  if(pid == 0) {
 	init_device();
-	gdb_server_mainloop(serv_port);
+	gdb_server_mainloop(servfd);
   } else {
+    close(servfd);
 	usleep(20000);
-	start_gdb(gdb_port);
+	if(start_gdb(port) < 0) {
+	  kill(pid, SIGKILL);
+	}
+	panic("Please install `gdb-multiarch' firstly\n");
   }
 }
 

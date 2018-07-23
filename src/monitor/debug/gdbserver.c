@@ -1,6 +1,4 @@
-#include "monitor/monitor.h"
-#include "monitor/expr.h"
-#include "monitor/watchpoint.h"
+#include "monitor.h"
 #include "nemu.h"
 #include "protocol.h"
 
@@ -98,7 +96,6 @@ static char mips_32bit_cp0_xml[] =
 "  <reg name=\"cause\" bitsize=\"32\" type=\"int32\"/>\n"
 "  <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "  <reg name=\"epc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
-"  <reg name=\"base\" bitsize=\"32\" type=\"code_ptr\"/>\n"
 "</feature>\n"
 ;
 
@@ -219,6 +216,18 @@ char *gdb_read_registers(char *args, int arglen) {
 	int value = htonl(cpu.gpr[i]);
 	len += snprintf(&regs[len], sizeof(regs) - len, "%08x", value);
   }
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_STATUS][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.lo);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.hi);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_BADVADDR][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.cp0[CP0_CAUSE][0]);
+  len += snprintf(&regs[len], sizeof(regs) - len,
+	  "%08x", cpu.pc);
   return regs;
 }
 
@@ -295,7 +304,6 @@ char *gdb_read_register(char *args, int arglen) {
 	  case 0x24: value = cpu.cp0[CP0_CAUSE][0]; break;
 	  case 0x25: value = cpu.pc; break;
 	  case 0x26: value = cpu.cp0[CP0_EPC][0]; break;
-	  case 0x27: value = cpu.cp0[CP0_BASE][0]; break;
 	  default: value = 0; break;
 	}
 	snprintf(reg_value, sizeof(reg_value), "%08x", htonl(value));
@@ -405,8 +413,8 @@ static gdb_cmd_handler_t handlers[128] = {
 	['Z'] = gdb_insert_break_point,
 };
 
-void gdb_server_mainloop(int port) {
-  struct gdb_conn *gdb = gdb_server_start(port);
+void gdb_server_mainloop(int servfd) {
+  struct gdb_conn *gdb = gdb_begin_server(servfd);
   while(1) {
 	size_t size = 0;
 	char *data = (void*)gdb_recv(gdb, &size);

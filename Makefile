@@ -12,15 +12,17 @@ LD = gcc
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
-INTR = 1
+# ddr start at 0x10000000 or 0x1000000
+CFLAGS += -D__ARCH_MIPS32_NPC__ 
 
-ifdef INTR
-CFLAGS += -DINTR
-endif
+CFLAGS += -DENABLE_DELAYSLOT
+CFLAGS += -DENABLE_SEGMENT
 
-ifdef DBG
-CFLAGS += -DDEBUG
-endif
+# enable interrupt will lose about 400 marks
+CFLAGS += -DENABLE_INTR
+
+# no action indeed
+# CFLAGS += -DDEBUG
 
 
 # Files to be compiled
@@ -41,7 +43,8 @@ $(OBJ_DIR)/%.o: src/%.c
 .PHONY: app run submit clean
 app: $(BINARY)
 
-ARGS ?= -l $(BUILD_DIR)/nemu-log.txt -i $(BUILD_DIR)/nanos-mips32-npc.bin
+# ARGS ?= -l $(BUILD_DIR)/nemu-log.txt -i $(BUILD_DIR)/nanos-mips32-npc.bin
+ARGS ?= -b -e $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
 
 # Command to execute NEMU
 NEMU_EXEC := $(BINARY) $(ARGS)

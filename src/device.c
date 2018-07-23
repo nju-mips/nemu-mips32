@@ -11,7 +11,7 @@ static uint64_t jiffy = 0;
 static struct itimerval it;
 
 extern void serial_enqueue(SDL_EventType, SDLKey);
-extern void keyboard_enqueue(SDL_KeyboardEvent *evt);
+extern void keyboard_enqueue(SDL_EventType, SDLKey);
 extern void update_screen();
 
 static void device_update(int signum) {
@@ -28,7 +28,7 @@ static void device_update(int signum) {
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
 	  serial_enqueue(event.type, event.key.keysym.sym);
-	  keyboard_enqueue(&(event.key));
+	  keyboard_enqueue(event.type, event.key.keysym.sym);
 	  break;
 	case SDL_QUIT:
 	  printf("[NEMU] receive SDL_QUIT, exit(0)\n");

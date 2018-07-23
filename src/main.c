@@ -1,19 +1,23 @@
 #include <stdio.h>
 #include <stdint.h>
+#include "monitor.h"
 
-int init_cpu();
 void init_device();
 int init_monitor(int, char *[]);
 void gdb_mainloop();
+void qemu_diff();
 void cpu_exec(uint64_t);
 
 int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
-  init_cpu();
-  int is_batch_mode = init_monitor(argc, argv);
-  if(is_batch_mode) {
+  work_mode_t mode = init_monitor(argc, argv);
+  if(mode & MODE_BATCH) {
 	init_device();
-	cpu_exec(-1);
+	if(mode == MODE_DIFF) {
+	  qemu_diff();
+	} else {
+	  cpu_exec(-1);
+	}
   } else {
 	gdb_mainloop();
   }
