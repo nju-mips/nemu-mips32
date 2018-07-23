@@ -5,6 +5,9 @@
 #include "common.h"
 #include "protocol.h"
 
+#include "cpu/reg.h"
+#include "memory/memory.h"
+
 /* only for debug, print the packets */
 /*
 #define CAT(a, b) CAT_IMPL(a, b)
@@ -178,6 +181,26 @@ void print_qemu_registers(gdb_regs_t *regs) {
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", regs->gpr[28], regs->gpr[29], regs->gpr[30], regs->gpr[31]);
 }
 
+static bool is_branch_inst(vaddr_t pc) {
+  Inst inst = { .val = vaddr_read_safe(pc, 4) };
+  if(0x3 <= inst.op && inst.op <= 0x7) return true;
+  if(0x14 <= inst.op && inst.op <= 0x17) return true;
+
+  if(inst.op == 0x00) { // special table
+	if(inst.func == 0x08 || inst.func == 0x0c)
+	  return true;
+	return false;
+  }
+
+  if(inst.op == 0x01) { // regimm table
+	if(0x00 <= inst.rt && inst.rt <= 0x03) return true;
+	if(0x10 <= inst.rt && inst.rt <= 0x13) return true;
+	return false;
+  }
+
+  return false;
+}
+
 void qemu_diff() {
   int port = 1234;
   int ppid_before_fork = getpid();
@@ -195,17 +218,29 @@ void qemu_diff() {
 	regs.pc = entry_start;
 	qemu_setregs(&regs);
 
-	for(int i = 0; i < 30; i ++) {
-	  qemu_single_step();
-	  qemu_getregs(&regs);
-	  // diff
+	while(1) {
 	  cpu_exec(1);
 
-	  printf("==============================\n");
-	  print_qemu_registers(&regs);
-	  printf("------------------------------\n");
-	  print_registers();
-	  printf("==============================\n");
+	  if(nemu_state == NEMU_END) break;
+
+	  qemu_single_step();
+	  qemu_getregs(&regs);
+
+	  if(is_branch_inst(cpu.pc)) {
+		continue;
+	  }
+
+	  // diff
+	  CPUAssert(regs.pc == cpu.pc, "differ at pc:{%08x <> %08x}\n", cpu.pc, regs.pc);
+
+	  // diff general registers
+	  for(int i = 0; i < 32; i++) {
+		CPUAssert(regs.gpr[i] == cpu.gpr[i], "differ at %08x, gpr[%d]:{%08x <> %08x}\n", cpu.pc, i, regs.gpr[i], cpu.gpr[i]);
+	  }
+
+	  CPUAssert(regs.hi == cpu.hi, "differ at %08x, hi:{%08x <> %08x}\n", cpu.pc, regs.hi, cpu.hi);
+
+	  CPUAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
 	}
   } else {
     // install a parent death signal in the chlid
