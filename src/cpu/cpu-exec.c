@@ -90,6 +90,21 @@ int init_cpu(vaddr_t entry) {
 
   cpu.pc = entry;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
+  cpu.cp0[CP0_PRID][0] = 0x00018000; //MIPS32 4Kc
+  cpu.cp0[CP0_CONFIG][0] = 0x80000000;
+
+  cpu.cp0[CP0_CONFIG][1] = 0x00000000;
+  cp0_config1_t *config1 = (cp0_config1_t*)&(cpu.cp0[CP0_CONFIG][1]);
+  config1->DA = 2; // 4=2^(2) ways dcache
+  config1->DL = 2; // 8=2^(2 + 1) bytes per line
+  config1->DS = 0; // 64=2^(0 + 8) sets
+
+  config1->IA = 2; // 4=2^(2) ways dcache
+  config1->IL = 2; // 8=2^(2 + 1) bytes per line
+  config1->IS = 0; // 64=2^(0 + 8) sets
+
+  config1->MMU_size = 63; // 64 TLB entries
+
   return 0;
 }
 
