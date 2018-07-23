@@ -94,7 +94,8 @@ int init_cpu(vaddr_t entry) {
 
 static inline uint32_t instr_fetch(uint32_t addr) {
   addr = addr - DDR_BASE;
-  assert(addr < DDR_SIZE && (addr & 3) == 0);
+  Assert(addr < DDR_SIZE && (addr & 3) == 0,
+		  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
   return ((uint32_t*)ddr)[addr >> 2];
 }
 

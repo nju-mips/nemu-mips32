@@ -21,7 +21,6 @@
 #ifdef ENABLE_DELAYSLOT
 #define exec_delayslot() \
 	inst.val = instr_fetch(oldpc + 4); \
-	printf("[NEMU] exec delayslot %08x:%08x\n", oldpc + 4, inst.val); \
 	goto exec_entry;
 #else
 #define exec_delayslot()

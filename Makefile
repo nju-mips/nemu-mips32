@@ -12,17 +12,16 @@ LD = gcc
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
-INTR = 1
-# CFLAGS += -D__ARCH_MIPS32_NPC__ # ddr start at 0x10000000 or 0x1000000
+# ddr start at 0x10000000 or 0x1000000
+# CFLAGS += -D__ARCH_MIPS32_NPC__ 
+
 CFLAGS += -DENABLE_DELAYSLOT
 
-ifdef INTR
-CFLAGS += -DENABLE_INTR
-endif
+# enable interrupt will lose about 400 marks
+# CFLAGS += -DENABLE_INTR
 
-ifdef DBG
-CFLAGS += -DDEBUG
-endif
+# no action indeed
+# CFLAGS += -DDEBUG
 
 
 # Files to be compiled
