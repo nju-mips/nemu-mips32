@@ -177,6 +177,10 @@ make_exec_handler(eret) ({
   status->EXL = 0;
   status->IE = 1;
 
+#ifdef ENABLE_SEGMENT
+  cpu.base = cpu.cp0[CP0_RESERVED][CP0_RESERVED_BASE];
+#endif
+
   dsprintf(asm_buf_p, "eret");
 });
 
@@ -205,7 +209,10 @@ make_exec_handler(mfc0) ({
 
 make_exec_handler(mtc0) ({
   cpu.cp0[inst.rd][inst.sel] = cpu.gpr[inst.rt];
-  if(inst.rd == CP0_SERIAL) putchar(cpu.gpr[inst.rt]);
+  // this serial is for debugging,
+  // please don't use it in real codes
+  if(inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_SERIAL)
+    putchar(cpu.gpr[inst.rt]);
   dsprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
 	  inst.rd, inst.sel);
 });

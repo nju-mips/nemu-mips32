@@ -3,6 +3,7 @@
 #include "nemu.h"
 #include "device.h"
 #include "monitor.h"
+#include "memory.h"
 
 CPU_state cpu;
 
@@ -93,7 +94,7 @@ int init_cpu(vaddr_t entry) {
 }
 
 static inline uint32_t instr_fetch(uint32_t addr) {
-  addr = addr - DDR_BASE;
+  addr = prot_addr(addr) - DDR_BASE;
   Assert(addr < DDR_SIZE && (addr & 3) == 0,
 		  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
   return ((uint32_t*)ddr)[addr >> 2];
@@ -101,7 +102,7 @@ static inline uint32_t instr_fetch(uint32_t addr) {
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
-    addr = addr - DDR_BASE;
+    addr = prot_addr(addr) - DDR_BASE;
 	switch(len) {
 	  case 1: return ddr[addr];
 	  case 2: return (ddr[addr + 1] << 8) | ddr[addr];
@@ -114,7 +115,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   if(LIKELY(DDR_BASE <= addr && addr < DDR_BASE + DDR_SIZE)) {
-    addr = addr - DDR_BASE;
+    addr = prot_addr(addr) - DDR_BASE;
 	switch(len) {
 	  case 1: ddr[addr] = data; return;
 	  case 2: ddr[addr] = data & 0xFF;
@@ -138,6 +139,10 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 static inline void trigger_exception(int code) {
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
+
+#ifdef ENABLE_SEGMENT
+  cpu.base = 0; // kernel segment base is zero
+#endif
 
   cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
   status->EXL = 1;

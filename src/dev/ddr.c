@@ -12,7 +12,8 @@ uint8_t ddr[DDR_SIZE];
 
 void *ddr_map(uint32_t addr, uint32_t size) {
   addr -= DDR_BASE;
-  assert(addr <= DDR_SIZE && addr + size <= DDR_SIZE);
+  Assert(addr <= DDR_SIZE && addr + size <= DDR_SIZE,
+	  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
   return &ddr[addr];
 }
 

@@ -6,7 +6,7 @@
 #include "protocol.h"
 
 #include "cpu/reg.h"
-#include "memory/memory.h"
+#include "memory.h"
 
 /* only for debug, print the packets */
 /*

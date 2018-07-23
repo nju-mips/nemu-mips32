@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "device.h"
-#include "memory/memory.h"
+#include "memory.h"
 
 typedef uint32_t (*read_func) (paddr_t addr, int len);
 typedef void (*write_func)(paddr_t addr, int len, uint32_t data);

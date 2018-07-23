@@ -8,9 +8,18 @@ typedef struct {
   uint32_t cp0[32][8];
   uint32_t hi, lo;
   vaddr_t pc;
+#ifdef ENABLE_SEGMENT
+  vaddr_t base;
+#endif
 } CPU_state;
 
-#define CP0_SERIAL   7  // for extra debug
+#ifdef ENABLE_SEGMENT
+#define CP0_RESERVED_BASE 0   // for segment
+#endif
+
+#define CP0_RESERVED_SERIAL 1
+
+#define CP0_RESERVED 7  // for extra debug
 #define CP0_BADVADDR 8
 #define CP0_COUNT    9
 #define CP0_COMPARE  11
