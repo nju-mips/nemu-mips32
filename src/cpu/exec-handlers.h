@@ -185,7 +185,7 @@ make_exec_handler(eret) ({
 });
 
 make_exec_handler(mfc0) ({
-#if 0
+#ifdef ENABLE_INTR
   cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
 #else
   // only for microbench
