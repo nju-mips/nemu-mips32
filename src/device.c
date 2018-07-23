@@ -10,7 +10,7 @@ SDL_Surface *screen;
 static uint64_t jiffy = 0;
 static struct itimerval it;
 
-extern void serial_enqueue(SDL_EventType, char);
+extern void serial_enqueue(SDL_EventType, SDLKey);
 extern void keyboard_enqueue(SDL_KeyboardEvent *evt);
 extern void update_screen();
 
