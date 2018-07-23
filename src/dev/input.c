@@ -18,7 +18,6 @@
 static int serial_queue[SERIAL_QUEUE_LEN];
 static int serial_f = 0, serial_r = 0;
 
-static bool ascii_state[256] = {0};
 
 // wait to be completed
 const char *SDLK_to_ascii[SDLK_LAST] = {
@@ -102,23 +101,32 @@ const char *SDLK_to_ascii[SDLK_LAST] = {
 	[SDLK_KP_ENTER]	= "\n",
 };
 
-void serial_enqueue(SDL_EventType type, char ch) {
+void serial_enqueue(SDL_EventType type, SDLKey key) {
+  if(key < 0 || key >= SDLK_LAST) return;
+
+  static bool sdlk_state[SDLK_LAST];
   // bool shift = false;
   if(type == SDL_KEYDOWN) {
-	if(ascii_state[(int)ch])
+	if(sdlk_state[(int)key])
 	  return;
-	ascii_state[(int)ch] = true;
+	sdlk_state[(int)key] = true;
   }
 
   if(type == SDL_KEYUP) {
-	ascii_state[(int)ch] = false;
+	sdlk_state[(int)key] = false;
 	return;
   }
 
-  int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
-  if(next != serial_f) { // if not full
-	serial_queue[serial_r] = ch;
-	serial_r = next;
+  const char *p = SDLK_to_ascii[key];
+  while(p && *p) {
+	int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
+	if(next != serial_f) { // if not full
+	  serial_queue[serial_r] = *p;
+	  serial_r = next;
+	} else {
+	  break;
+	}
+	p ++;
   }
 }
 
@@ -237,11 +245,10 @@ struct {
 	[SDLK_KP_ENTER]	= { 0xE05A, 0xE0F05A },
 };
 
-void keyboard_enqueue(SDL_KeyboardEvent *key) {
-  if(key->keysym.sym >= SDLK_LAST) return;
-  int scancode = key->type == SDL_KEYUP ?
-	SDLK_to_scancode[key->keysym.sym].upcode :
-	SDLK_to_scancode[key->keysym.sym].downcode;
+void keyboard_enqueue(SDL_EventType type, SDLKey key) {
+  if(key < 0 || key >= SDLK_LAST) return;
+  int scancode = type == SDL_KEYUP ?
+	SDLK_to_scancode[key].upcode : SDLK_to_scancode[key].downcode;
 
   if(scancode == 0) return;
 
