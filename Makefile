@@ -40,22 +40,24 @@ $(OBJ_DIR)/%.o: src/%.c
 
 # Some convinient rules
 
-.PHONY: app run submit clean
+.PHONY: app run debug submit clean
 app: $(BINARY)
 
-# ARGS ?= -l $(BUILD_DIR)/nemu-log.txt -i $(BUILD_DIR)/nanos-mips32-npc.bin
-# ARGS ?= -b -e $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
-ARGS ?= -e ~/linux-4.11.4/vmlinux-mips
+# IMG ?= $(BUILD_DIR)/nanos-mips32-npc
+# IMG ?= $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
+IMG = ~/linux-4.11.4/vmlinux-mips
 
 # Command to execute NEMU
-NEMU_EXEC := $(BINARY) $(ARGS)
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
 	@$(LD) -O2 -o $@ $^ -lSDL -lreadline
 
 run: $(BINARY)
-	$(NEMU_EXEC)
+	$(BINARY) -b -e $(IMG)
+
+debug: $(BINARY)
+	$(BINARY) -e $(IMG)
 
 gdb: $(BINARY)
 	gdb -s $(BINARY) --args $(NEMU_EXEC)
