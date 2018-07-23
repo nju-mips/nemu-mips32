@@ -39,8 +39,8 @@ static const void * special_table[64] = {
   /* 0x24 */	&&and, &&or, &&xor, &&nor,
   /* 0x28 */	&&inv, &&inv, &&slt, &&sltu,
   /* 0x2c */	&&inv, &&inv, &&inv, &&inv,
-  /* 0x30 */	&&inv, &&inv, &&inv, &&inv,
-  /* 0x34 */	&&inv, &&inv, &&inv, &&inv,
+  /* 0x30 */	&&tge, &&tgeu, &&tlt, &&tltu,
+  /* 0x34 */	&&teq, &&inv, &&tne, &&inv,
   /* 0x38 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x3c */	&&inv, &&inv, &&inv, &&inv,
 };
@@ -68,8 +68,8 @@ static const void * special2_table[64] = {
 static const void * regimm_table[64] = {
   /* 0x00 */    &&bltz, &&bgez, &&bltzl, &&bgezl,
   /* 0x04 */	&&inv, &&inv, &&inv, &&inv,
-  /* 0x08 */	&&inv, &&inv, &&inv, &&inv,
-  /* 0x0c */	&&inv, &&inv, &&inv, &&inv,
+  /* 0x08 */	&&tgei, &&tgeiu, &&tlti, &&tltiu,
+  /* 0x0c */	&&teqi, &&inv, &&tnei, &&inv,
   /* 0x10 */	&&bltzal, &&bgezal, &&bltzall, &&bgezall,
   /* 0x14 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x18 */	&&inv, &&inv, &&inv, &&inv,
@@ -216,6 +216,93 @@ make_exec_handler(mtc0) ({
   dsprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
 	  inst.rd, inst.sel);
 });
+
+
+
+make_exec_handler(teq) ({
+  if((int32_t)cpu.gpr[inst.rs] == (int32_t)cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "teq $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(teqi) ({
+  if((int32_t)cpu.gpr[inst.rs] == inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "teqi $%s, %d", regs[inst.rs], inst.simm);
+});
+
+make_exec_handler(tge) ({
+  if((int32_t)cpu.gpr[inst.rs] >= (int32_t)cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tge $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(tgei) ({
+  if((int32_t)cpu.gpr[inst.rs] >= inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tgei $%s, %d", regs[inst.rs], inst.simm);
+});
+
+make_exec_handler(tgeiu) ({
+  if(cpu.gpr[inst.rs] >= inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tgeiu $%s, %u", regs[inst.rs], inst.simm);
+});
+
+make_exec_handler(tgeu) ({
+  if(cpu.gpr[inst.rs] >= cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tgeu $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(tlt) ({
+  if((int32_t)cpu.gpr[inst.rs] < (int32_t)cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tlt $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(tlti) ({
+  if((int32_t)cpu.gpr[inst.rs] < inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tlti $%s, %d", regs[inst.rs], inst.simm);
+});
+
+make_exec_handler(tltiu) ({
+  if(cpu.gpr[inst.rs] < inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tltiu $%s, %u", regs[inst.rs], inst.simm);
+});
+
+make_exec_handler(tltu) ({
+  if(cpu.gpr[inst.rs] < cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tltu $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(tne) ({
+  if((int32_t)cpu.gpr[inst.rs] != (int32_t)cpu.gpr[inst.rt]) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tne $%s, $%s", regs[inst.rs], regs[inst.rt]);
+});
+
+make_exec_handler(tnei) ({
+  if((int32_t)cpu.gpr[inst.rs] != inst.simm) {
+    trigger_exception(EXC_TRAP);
+  }
+  dsprintf(asm_buf_p, "tnei $%s, %d", regs[inst.rs], inst.simm);
+});
+
 
 make_exec_handler(jr) ({
   assert(inst.rt == 0 && inst.rd == 0);

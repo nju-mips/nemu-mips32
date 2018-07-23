@@ -2,6 +2,7 @@
 #include "nemu.h"
 #include "protocol.h"
 
+#include <setjmp.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -10,6 +11,7 @@
 uint32_t find_region(vaddr_t addr);
 void cpu_exec(uint64_t);
 
+jmp_buf gdb_mode_top_caller;
 
 static char target_xml[] =
 "l<?xml version=\"1.0\"?>"

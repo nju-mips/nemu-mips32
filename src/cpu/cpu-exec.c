@@ -91,7 +91,13 @@ int init_cpu(vaddr_t entry) {
   cpu.pc = entry;
   cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
   cpu.cp0[CP0_PRID][0] = 0x00018000;   // MIPS32 4Kc
-  cpu.cp0[CP0_CONFIG][0] = 0x80000000; // config1 present
+
+  // init cp0 config 0
+  cpu.cp0[CP0_CONFIG][0] = 0x00000000; // config1 present
+  cp0_config_t *config = (cp0_config_t*)&(cpu.cp0[CP0_CONFIG][0]);
+  config->MT = 1; // standard MMU
+  config->BE = 0; // little endian
+  config->M  = 1; // config1 present
 
   // init cp0 config 1
   cpu.cp0[CP0_CONFIG][1] = 0x00000000;
@@ -153,6 +159,11 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 }
 
 static inline void trigger_exception(int code) {
+  if(code == EXC_TRAP) {
+	eprintf("\e[31mHIT BAD TRAP txx\e0m\n");
+	exit(0);
+  }
+
   cpu.cp0[CP0_EPC][0] = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
@@ -196,6 +207,13 @@ void update_cp0_timer() {
 
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
+  if(work_mode == MODE_GDB && nemu_state != NEMU_END) {
+	/* exception handler */
+	extern jmp_buf gdb_mode_top_caller;
+	int code = setjmp(gdb_mode_top_caller);
+	if(code != 0) nemu_state = NEMU_END;
+  }
+
   if (nemu_state == NEMU_END) {
     printf("Program execution has ended. To restart the program, exit NEMU and run again.\n");
     return;

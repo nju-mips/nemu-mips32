@@ -5,12 +5,23 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <setjmp.h>
 
 #include "monitor.h"
 
 extern void print_registers();
 
 #define eprintf(...) fprintf(stderr, ## __VA_ARGS__)
+
+#define Abort() do { \
+  extern jmp_buf gdb_mode_top_caller; \
+  if(work_mode == MODE_GDB) { \
+	nemu_state = NEMU_END; \
+	longjmp(gdb_mode_top_caller, 1); \
+  } else { \
+	abort(); \
+  } \
+} while(0)
 
 // we are properly doing diff testing in batch_mode, so do not Log in batch_mode
 #define Log(format, ...) \
@@ -26,7 +37,7 @@ extern void print_registers();
 	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
 			  __FILE__, __LINE__, __func__, #cond); \
       eprintf("\e[1;31m" fmt "\e[0m\n", ## __VA_ARGS__); \
-	  abort(); \
+	  Abort(); \
     } \
   } while (0)
 
@@ -38,14 +49,14 @@ extern void print_registers();
 	  print_registers(); \
 	  eprintf("=========== dump    end =========\n"); \
       eprintf("\e[1;31m" fmt "\e[0m\n", ## __VA_ARGS__); \
-	  abort(); \
+	  Abort(); \
     } \
   } while (0)
 
 #define panic(fmt, ...) do { \
 	eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt "\e[0m\n", \
 			__FILE__, __LINE__, __func__, ## __VA_ARGS__); \
-	abort(); \
+	Abort(); \
   } while(0)
 
 #define TODO() panic("please implement me")
