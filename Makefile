@@ -45,7 +45,8 @@ app: $(BINARY)
 
 # IMG ?= $(BUILD_DIR)/nanos-mips32-npc
 # IMG ?= $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
-IMG = ~/linux-4.11.4/vmlinux-mips
+# IMG = ~/linux-4.11.4/vmlinux-mips
+IMG = ~/u-boot/u-boot
 
 # Command to execute NEMU
 

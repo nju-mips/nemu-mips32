@@ -1,135 +1,8 @@
-#include "nemu.h"
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
-/////////////////////////////////////////////////////////////////
-//                      serial simulation                      //
-/////////////////////////////////////////////////////////////////
-
-#define SERIAL_PORT ((volatile char *)0x40001000)
-#define Rx 0x0
-#define Tx 0x04
-#define STAT 0x08
-#define CTRL 0x0c
-#define SCANCODE 0x10
-#define SCANCODE_STAT 0x14
-
-#define SERIAL_QUEUE_LEN 1024
-static int serial_queue[SERIAL_QUEUE_LEN];
-static int serial_f = 0, serial_r = 0;
-
-
-// wait to be completed
-const char *SDLK_to_ascii[SDLK_LAST] = {
-	[SDLK_ESCAPE]	= "\e",
-	[SDLK_F1]	= "\eOP", [SDLK_F2]	= "\eOQ",
-	[SDLK_F3]	= "\eOR", [SDLK_F4]	= "\eOS",
-	[SDLK_F5]	= "\e[15~", [SDLK_F6]	= "\e[17~",
-	[SDLK_F7]	= "\e[18~", [SDLK_F8]	= "\e[19~",
-	[SDLK_F9]	= "\e[20~", [SDLK_F10]	= "\e[21~",
-	[SDLK_F11]	= "\e[22~", [SDLK_F12]	= "\e[24~",
-	[SDLK_BACKQUOTE]	= "`",
-	[SDLK_1]	= "1", [SDLK_2]	= "2", [SDLK_3]	= "3",
-	[SDLK_4]	= "4", [SDLK_5]	= "5", [SDLK_6]	= "6",
-	[SDLK_7]	= "7", [SDLK_8]	= "8", [SDLK_9]	= "9",
-	[SDLK_0]	= "0",
-	[SDLK_MINUS]	= "-",
-	[SDLK_EQUALS]	= "=",
-	[SDLK_BACKSPACE]	= "\x8",
-	[SDLK_TAB]	= "\t",
-	[SDLK_q]	= "q",
-	[SDLK_w]	= "w",
-	[SDLK_e]	= "e",
-	[SDLK_r]	= "r",
-	[SDLK_t]	= "t",
-	[SDLK_y]	= "y",
-	[SDLK_u]	= "u",
-	[SDLK_i]	= "i",
-	[SDLK_o]	= "o",
-	[SDLK_p]	= "p",
-	[SDLK_LEFTBRACKET]	= "{",
-	[SDLK_RIGHTBRACKET]	= "}",
-	[SDLK_SLASH]	= "\\",
-	[SDLK_a]	= "a",
-	[SDLK_s]	= "s",
-	[SDLK_d]	= "d",
-	[SDLK_f]	= "f",
-	[SDLK_g]	= "g",
-	[SDLK_h]	= "h",
-	[SDLK_j]	= "j",
-	[SDLK_k]	= "k",
-	[SDLK_l]	= "l",
-	[SDLK_SEMICOLON]	= ";",
-	[SDLK_QUOTE]	= "'",
-	[SDLK_RETURN]	= "\n",
-	[SDLK_LSHIFT]	= "", // cannot be escaped
-	[SDLK_z]	= "z",
-	[SDLK_x]	= "x",
-	[SDLK_c]	= "c",
-	[SDLK_v]	= "v",
-	[SDLK_b]	= "b",
-	[SDLK_n]	= "n",
-	[SDLK_m]	= "m",
-	[SDLK_COMMA]	= ",",
-	[SDLK_PERIOD]	= ".",
-	[SDLK_BACKSLASH]	= "/",
-	[SDLK_RSHIFT]	= "", // cannot be escaped
-	[SDLK_LCTRL]	= "", // cannot be escaped
-	[SDLK_LALT]	= "", // cannot be escaped
-	[SDLK_SPACE]	= " ",
-	[SDLK_RALT]	= "", // cannot be escaped
-	[SDLK_RCTRL]	= "", // cannot be escaped
-	[SDLK_INSERT]	= "\e[2~",
-	[SDLK_HOME]	= "\e[1~",
-	[SDLK_PAGEUP]	= "\e[5~",
-	[SDLK_DELETE]	= "\x7f",
-	[SDLK_END]	= "\e[4~",
-	[SDLK_PAGEDOWN]	= "\e[6~",
-	[SDLK_UP]	= "\e[A",
-	[SDLK_LEFT]	= "\e[D",
-	[SDLK_DOWN]	= "\e[B",
-	[SDLK_RIGHT]	= "\e[C",
-	[SDLK_KP_DIVIDE]	= "/",
-	[SDLK_KP_MULTIPLY]	= "*",
-	[SDLK_KP_MINUS]	= "-",
-	[SDLK_KP_PLUS]	= "+",
-	[SDLK_KP7]	= "7", [SDLK_KP8]	= "8", [SDLK_KP9]	= "9",
-	[SDLK_KP4]	= "4", [SDLK_KP5]	= "5", [SDLK_KP6]	= "6",
-	[SDLK_KP1]	= "1", [SDLK_KP2]	= "2", [SDLK_KP3]	= "3",
-	[SDLK_KP0]	= "0",
-	[SDLK_KP_EQUALS]	= "=",
-	[SDLK_KP_ENTER]	= "\n",
-};
-
-void serial_enqueue(SDL_EventType type, SDLKey key) {
-  if(key < 0 || key >= SDLK_LAST) return;
-
-  static bool sdlk_state[SDLK_LAST];
-  // bool shift = false;
-  if(type == SDL_KEYDOWN) {
-	if(sdlk_state[(int)key])
-	  return;
-	sdlk_state[(int)key] = true;
-  }
-
-  if(type == SDL_KEYUP) {
-	sdlk_state[(int)key] = false;
-	return;
-  }
-
-  const char *p = SDLK_to_ascii[key];
-  while(p && *p) {
-	int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
-	if(next != serial_f) { // if not full
-	  serial_queue[serial_r] = *p;
-	  serial_r = next;
-	} else {
-	  break;
-	}
-	p ++;
-  }
-}
-
+#include "nemu.h"
+#include "device.h"
 
 
 /////////////////////////////////////////////////////////////////
@@ -260,44 +133,25 @@ void keyboard_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 #define check_input(addr, len) \
-  CPUAssert(addr >= 0 && addr <= SCANCODE_STAT, \
+  CPUAssert(addr >= 0 && addr <= KB_STAT, \
 	  "input: address(0x%08x) is out side", addr); \
-  CPUAssert(len == 1 || len == 4, "input only allow byte read/write");
+  CPUAssert(len == 4, "input only allow byte read/write");
 
-uint32_t input_read(paddr_t addr, int len) {
+uint32_t kb_read(paddr_t addr, int len) {
   /* CTRL not yet implemented, only allow byte read/write */
   check_input(addr, len);
   switch (addr) {
-	case SCANCODE_STAT:
+	case KB_STAT:
 	  return keyboard_f == keyboard_r ? 0 : 1;
-	case SCANCODE: {
+	case KB_CODE: {
 	  uint32_t code = keyboard_queue[keyboard_f];
 	  keyboard_f = (keyboard_f + 1) % KEYBOARD_QUEUE_LEN;
 	  return code;
 	}
-	case Rx: {
-	  char ch = serial_queue[serial_f];
-	  serial_f = (serial_f + 1) % SERIAL_QUEUE_LEN;
-	  return ch;
-	}
-	case STAT:
-	  return serial_f == serial_r ? 0 : 1;
 	default:
-	  CPUAssert(false, "input: address(0x%08x) is not readable", addr);
+	  CPUAssert(false, "keyboard: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;
-}
-
-void input_write(paddr_t addr, int len, uint32_t data) {
-  check_input(addr, len);
-  switch (addr) {
-	case Tx:
-	  putchar((char)data);
-	  break;
-	default:
-	  CPUAssert(false, "input: address(0x%08x) is not writable", addr);
-	  break;
-  }
 }
 

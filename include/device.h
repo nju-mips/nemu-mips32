@@ -10,13 +10,14 @@ typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
 uint32_t ddr_read(paddr_t addr, int len);
 void ddr_write(paddr_t addr, int len, uint32_t data);
-uint32_t input_read(paddr_t addr, int len);
-void input_write(paddr_t addr, int len, uint32_t data);
+uint32_t uartlite_read(paddr_t addr, int len);
+void uartlite_write(paddr_t addr, int len, uint32_t data);
 void gpio_write(paddr_t addr, int len, uint32_t data);
 uint32_t vga_read(paddr_t addr, int len);
 void vga_write(paddr_t addr, int len, uint32_t data);
 uint32_t invalid_read(paddr_t addr, int len);
 void invalid_write(paddr_t addr, int len, uint32_t data);
+uint32_t kb_read(paddr_t addr, int len);
 
 // DDR
 #ifdef __ARCH_MIPS32_NPC__
@@ -27,6 +28,20 @@ void invalid_write(paddr_t addr, int len, uint32_t data);
 #endif
 
 #define DDR_SIZE (256 * 1024 * 1024)
+
+// UART
+#define UARTLITE_ADDR 0xbfd03000
+#define UARTLITE_Rx     0x0
+#define UARTLITE_Tx     0x4
+#define UARTLITE_STAT   0x8
+#define UARTLITE_CTRL   0xC
+#define UARTLITE_SIZE   0x10
+
+// KEYBOARD
+#define KB_ADDR 0xbfd04000
+#define KB_CODE 0x0
+#define KB_STAT 0x4
+#define KB_SIZE 0x10
 
 // VGA
 #define SCR_W 400

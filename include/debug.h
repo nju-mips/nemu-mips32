@@ -16,7 +16,6 @@ extern void print_registers();
 #define Abort() do { \
   extern jmp_buf gdb_mode_top_caller; \
   if(work_mode == MODE_GDB) { \
-	nemu_state = NEMU_END; \
 	longjmp(gdb_mode_top_caller, 1); \
   } else { \
 	abort(); \
