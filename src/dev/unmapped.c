@@ -6,7 +6,7 @@ uint8_t unmapped[UNMAPPED_SIZE];
 
 #define check_unmapped(addr, len) \
   CPUAssert(addr >= 0 && addr < UNMAPPED_SIZE && addr + len <= UNMAPPED_SIZE, \
-	  "address(0x%08x) is out side DDR", addr);
+	  "address(0x%08x) is out side UNMAPPED", addr);
 
 void *unmapped_map(uint32_t addr, uint32_t size) {
   addr -= UNMAPPED_BASE;

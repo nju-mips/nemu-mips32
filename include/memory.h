@@ -30,7 +30,7 @@
 
 #define UNMAPPED_BASE 0x80000000
 #define UNMAPPED_END  0xC0000000
-#define UNMAPPED_SIZE (4 * 1024 * 1024) /* only support 4 MB */
+#define UNMAPPED_SIZE (16 * 1024 * 1024) /* only support 16 MB */
 
 static inline bool is_unmapped(uint32_t addr) {
   return UNMAPPED_BASE <= addr && addr < UNMAPPED_END;
@@ -50,7 +50,7 @@ static inline vaddr_t prot_addr(uint32_t addr) {
 #ifdef ENABLE_SEGMENT
   return addr + cpu.base;
 #elif defined ENABLE_PAGING
-  if(UNMAPPED_BASE <= addr && addr < UNMAPPED_END) {
+  if(is_unmapped(addr)) {
 	return addr;
   } else {
 	return page_translate(addr);

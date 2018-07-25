@@ -149,30 +149,31 @@ typedef struct {
 } cp0_config1_t;
 
 typedef struct {
-  uint32_t vpn : 19;
-  uint32_t _0   : 1;
   uint32_t asid : 8;
+  uint32_t _0   : 1;
+  uint32_t vpn : 19;
 } cp0_entry_hi_t;
 
 typedef struct {
-  uint32_t _0  : 2;
-  uint32_t pfn : 25;
-  uint32_t c   : 2;
-  uint32_t d   : 1;
-  uint32_t v   : 1;
   uint32_t g   : 1;
+  uint32_t v   : 1;
+  uint32_t d   : 1;
+  uint32_t c   : 2;
+  uint32_t pfn : 25;
+  uint32_t _0  : 2;
 } cp0_entry_lo_t;
 
 typedef struct {
-  uint32_t _0 : 2;
+  uint32_t _0   : 13;
   uint32_t mask : 16;
+  uint32_t _1   : 3;
 } cp0_page_mask_t;
 
 typedef uint32_t cp0_wired_t;
 
 typedef struct {
-  uint32_t p   : 1;
   uint32_t idx : 31;
+  uint32_t p   : 1;
 } cp0_index_t;
 
 typedef union {
