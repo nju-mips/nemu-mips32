@@ -13,11 +13,11 @@ INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
 # ddr start at 0x10000000 or 0x1000000
-# CFLAGS += -D__ARCH_MIPS32_NPC__ 
+CFLAGS += -D__ARCH_MIPS32_NPC__ 
 
 CFLAGS += -DENABLE_DELAYSLOT
-# CFLAGS += -DENABLE_SEGMENT
-CFLAGS += -DENABLE_PAGING
+CFLAGS += -DENABLE_SEGMENT
+# CFLAGS += -DENABLE_PAGING
 
 # enable interrupt will lose about 400 marks
 CFLAGS += -DENABLE_INTR

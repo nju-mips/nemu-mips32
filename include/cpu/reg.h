@@ -3,15 +3,6 @@
 
 #include "common.h"
 
-typedef struct {
-  uint32_t gpr[32];
-  uint32_t cp0[32][8];
-  uint32_t hi, lo;
-  vaddr_t pc;
-#ifdef ENABLE_SEGMENT
-  vaddr_t base;
-#endif
-} CPU_state;
 
 #ifdef ENABLE_SEGMENT
 #define CP0_RESERVED_BASE 0   // for segment
@@ -23,8 +14,8 @@ typedef struct {
 #define CP0_RANDOM       1
 #define CP0_ENTRY_LO0    2
 #define CP0_ENTRY_LO1    3
-#define CP0_PAGE_CONTEXT 4  // maintained by kernel
-#define CP0_PAGE_MASK    5
+#define CP0_CONTEXT      4  // maintained by kernel
+#define CP0_PAGEMASK     5
 #define CP0_WIRED        6
 #define CP0_RESERVED     7  // for extra debug and segment
 #define CP0_BADVADDR     8
@@ -158,7 +149,7 @@ typedef struct {
 } cp0_config1_t;
 
 typedef struct {
-  uint32_t vpn2 : 19;
+  uint32_t vpn : 19;
   uint32_t _0   : 1;
   uint32_t asid : 8;
 } cp0_entry_hi_t;
@@ -177,8 +168,70 @@ typedef struct {
   uint32_t mask : 16;
 } cp0_page_mask_t;
 
+typedef uint32_t cp0_wired_t;
+
 typedef struct {
-} cp0_wired_t;
+  uint32_t p   : 1;
+  uint32_t idx : 31;
+} cp0_index_t;
+
+typedef union {
+  uint32_t cpr[32][8];
+
+  struct {
+	struct { cp0_index_t index;         uint32_t _0 [7]; };
+	struct { uint32_t random;           uint32_t _1 [7]; };
+	struct { cp0_entry_lo_t entry_lo0;  uint32_t _2 [7]; };
+	struct { cp0_entry_lo_t entry_lo1;  uint32_t _3 [7]; };
+	struct { uint32_t context;          uint32_t _4 [7]; };
+	struct { uint32_t pagemask;         uint32_t _5 [7]; };
+	struct { cp0_wired_t wired;         uint32_t _6 [7]; };
+	uint32_t reserved[8];                 /* reserved */
+	struct { uint32_t badvaddr;         uint32_t _8 [7]; };
+	struct { uint32_t count[2];         uint32_t _9 [6]; };
+	struct { cp0_entry_hi_t entry_hi;   uint32_t _10[7]; };
+	struct { uint32_t compare;          uint32_t _11[7]; };
+	struct { cp0_status_t status;       uint32_t _12[7]; };
+	struct { cp0_cause_t cause;         uint32_t _13[7]; };
+	struct { vaddr_t epc;               uint32_t _14[7]; };
+	struct { cp0_prid_t prid;           uint32_t _15[7]; };
+	struct {
+	  cp0_config_t config;
+	  cp0_config1_t config1;
+	  uint32_t _16[6];
+	};
+  };
+} cp0_t;
+
+#define OFFSET_OF(t, f) ((uintptr_t)&(((t*)NULL)->f))
+
+_Static_assert(OFFSET_OF(cp0_t, index) == OFFSET_OF(cp0_t, cpr[CP0_INDEX][0]), "index position error");
+_Static_assert(OFFSET_OF(cp0_t, random) == OFFSET_OF(cp0_t, cpr[CP0_RANDOM][0]), "index position error");
+_Static_assert(OFFSET_OF(cp0_t, entry_lo0) == OFFSET_OF(cp0_t, cpr[CP0_ENTRY_LO0][0]), "entry_lo0 position error");
+_Static_assert(OFFSET_OF(cp0_t, entry_lo1) == OFFSET_OF(cp0_t, cpr[CP0_ENTRY_LO1][0]), "entry_lo1 position error");
+_Static_assert(OFFSET_OF(cp0_t, context) == OFFSET_OF(cp0_t, cpr[CP0_CONTEXT][0]), "context position error");
+_Static_assert(OFFSET_OF(cp0_t, wired) == OFFSET_OF(cp0_t, cpr[CP0_WIRED][0]), "wired position error");
+_Static_assert(OFFSET_OF(cp0_t, badvaddr) == OFFSET_OF(cp0_t, cpr[CP0_BADVADDR][0]), "badvaddr position error");
+_Static_assert(OFFSET_OF(cp0_t, count[0]) == OFFSET_OF(cp0_t, cpr[CP0_COUNT][0]), "count0 position error");
+_Static_assert(OFFSET_OF(cp0_t, count[1]) == OFFSET_OF(cp0_t, cpr[CP0_COUNT][1]), "count1 position error");
+_Static_assert(OFFSET_OF(cp0_t, entry_hi) == OFFSET_OF(cp0_t, cpr[CP0_ENTRY_HI][0]), "entry_hi position error");
+_Static_assert(OFFSET_OF(cp0_t, compare) == OFFSET_OF(cp0_t, cpr[CP0_COMPARE][0]), "compare position error");
+_Static_assert(OFFSET_OF(cp0_t, status) == OFFSET_OF(cp0_t, cpr[CP0_STATUS][0]), "status position error");
+_Static_assert(OFFSET_OF(cp0_t, cause) == OFFSET_OF(cp0_t, cpr[CP0_CAUSE][0]), "cause position error");
+_Static_assert(OFFSET_OF(cp0_t, epc) == OFFSET_OF(cp0_t, cpr[CP0_EPC][0]), "epc position error");
+_Static_assert(OFFSET_OF(cp0_t, prid) == OFFSET_OF(cp0_t, cpr[CP0_PRID][0]), "prid position error");
+_Static_assert(OFFSET_OF(cp0_t, config) == OFFSET_OF(cp0_t, cpr[CP0_CONFIG][0]), "config0 position error");
+_Static_assert(OFFSET_OF(cp0_t, config1) == OFFSET_OF(cp0_t, cpr[CP0_CONFIG][1]), "config1 position error");
+
+typedef struct {
+  uint32_t gpr[32];
+  uint32_t hi, lo;
+  cp0_t cp0;
+  vaddr_t pc;
+#ifdef ENABLE_SEGMENT
+  vaddr_t base;
+#endif
+} CPU_state;
 
 
 #define CAUSE_IP_TIMER 0x80
@@ -237,11 +290,16 @@ typedef struct {
 extern CPU_state cpu;
 int init_cpu(vaddr_t entry);
 
+#define CPR_SIZE sizeof(cpu.cp0.cpr[0][0])
 _Static_assert(sizeof(Inst) == sizeof(uint32_t), "assertion of sizeof(Inst) failed");
-_Static_assert(sizeof(cp0_status_t) == sizeof(cpu.cp0[CP0_STATUS][0]), "assertion of sizeof(cp0_status_t) failed");
-_Static_assert(sizeof(cp0_cause_t) == sizeof(cpu.cp0[CP0_CAUSE][0]), "assertion of sizeof(cp0_cause_t) failed");
-_Static_assert(sizeof(cp0_prid_t) == sizeof(cpu.cp0[CP0_PRID][0]), "assertion of sizeof(cp0_prid_t) failed");
-_Static_assert(sizeof(cp0_config_t) == sizeof(cpu.cp0[CP0_CONFIG][0]), "assertion of sizeof(cp0_config_t) failed");
-_Static_assert(sizeof(cp0_config1_t) == sizeof(cpu.cp0[CP0_CONFIG][1]), "assertion of sizeof(cp0_config1_t) failed");
+_Static_assert(sizeof(cp0_status_t) == CPR_SIZE, "assertion of sizeof(cp0_status_t) failed");
+_Static_assert(sizeof(cp0_cause_t) == CPR_SIZE, "assertion of sizeof(cp0_cause_t) failed");
+_Static_assert(sizeof(cp0_prid_t) == CPR_SIZE, "assertion of sizeof(cp0_prid_t) failed");
+_Static_assert(sizeof(cp0_config_t) == CPR_SIZE, "assertion of sizeof(cp0_config_t) failed");
+_Static_assert(sizeof(cp0_config1_t) == CPR_SIZE, "assertion of sizeof(cp0_config1_t) failed");
+_Static_assert(sizeof(cp0_entry_hi_t) == CPR_SIZE, "assertion of sizeof(cp0_entry_hi_t) failed");
+_Static_assert(sizeof(cp0_entry_lo_t) == CPR_SIZE, "assertion of sizeof(cp0_entry_lo_t) failed");
+_Static_assert(sizeof(cp0_page_mask_t) == CPR_SIZE, "assertion of sizeof(cp0_page_mask_t) failed");
+_Static_assert(sizeof(cp0_wired_t) == CPR_SIZE, "assertion of sizeof(cp0_wired_t) failed");
 
 #endif

@@ -5,10 +5,13 @@
 #include "device.h"
 #include "monitor.h"
 #include "memory.h"
+#include "mmu.h"
 
 CPU_state cpu;
 
-jmp_buf cpu_exception_handler;
+#ifdef ENABLE_PAGING
+static jmp_buf cpu_exception_handler;
+#endif
 
 const char *regs[32] = {
   "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
@@ -61,9 +64,9 @@ void print_registers() {
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
   // =============================================================
-    eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0[CP0_COUNT][0], cpu.cp0[CP0_COUNT][1]);
+    eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0.count[0], cpu.cp0.count[1]);
     // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
-    eprintf("$epc:%08x\n", cpu.cp0[CP0_EPC][0]);
+    eprintf("$epc:%08x\n", cpu.cp0.epc);
   // =============================================================
 }
 
@@ -72,28 +75,24 @@ int init_cpu(vaddr_t entry) {
   nemu_start_time = get_current_time();
 
   cpu.pc = entry;
-  cpu.cp0[CP0_STATUS][0] = 0x1000FF00;
-  cpu.cp0[CP0_PRID][0] = 0x00018000;   // MIPS32 4Kc
+  cpu.cp0.cpr[CP0_STATUS][0] = 0x1000FF00;
+  cpu.cp0.cpr[CP0_PRID][0] = 0x00018000;   // MIPS32 4Kc
 
   // init cp0 config 0
-  cpu.cp0[CP0_CONFIG][0] = 0x00000000; // config1 present
-  cp0_config_t *config = (cp0_config_t*)&(cpu.cp0[CP0_CONFIG][0]);
-  config->MT = 1; // standard MMU
-  config->BE = 0; // little endian
-  config->M  = 1; // config1 present
+  cpu.cp0.config.MT = 1; // standard MMU
+  cpu.cp0.config.BE = 0; // little endian
+  cpu.cp0.config.M  = 1; // config1 present
 
   // init cp0 config 1
-  cpu.cp0[CP0_CONFIG][1] = 0x00000000;
-  cp0_config1_t *config1 = (cp0_config1_t*)&(cpu.cp0[CP0_CONFIG][1]);
-  config1->DA = 2; // 4=2^(2) ways dcache
-  config1->DL = 2; // 8=2^(2 + 1) bytes per line
-  config1->DS = 0; // 64=2^(0 + 8) sets
+  cpu.cp0.config1.DA = 2; // 4=2^(2) ways dcache
+  cpu.cp0.config1.DL = 2; // 8=2^(2 + 1) bytes per line
+  cpu.cp0.config1.DS = 0; // 64=2^(0 + 8) sets
 
-  config1->IA = 2; // 4=2^(2) ways dcache
-  config1->IL = 2; // 8=2^(2 + 1) bytes per line
-  config1->IS = 0; // 64=2^(0 + 8) sets
+  cpu.cp0.config1.IA = 2; // 4=2^(2) ways dcache
+  cpu.cp0.config1.IL = 2; // 8=2^(2 + 1) bytes per line
+  cpu.cp0.config1.IS = 0; // 64=2^(0 + 8) sets
 
-  config1->MMU_size = 63; // 64 TLB entries
+  cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
 
   return 0;
 }
@@ -147,48 +146,41 @@ void signal_exception(int code) {
 	exit(0);
   }
 
-  cpu.cp0[CP0_EPC][0] = cpu.pc;
+  cpu.cp0.epc = cpu.pc;
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
 #ifdef ENABLE_SEGMENT
   cpu.base = 0; // kernel segment base is zero
 #endif
 
-  cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
-  status->EXL = 1;
-  status->IE = 0;
+  cpu.cp0.status.EXL = 1;
+  cpu.cp0.status.IE = 0;
 
-  cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-  cause->ExcCode = code;
+  cpu.cp0.cause.ExcCode = code;
 
-#ifdef ENALE_PAGING
+#ifdef ENABLE_PAGING
   longjmp(cpu_exception_handler);
 #endif
 }
 
 
 void check_interrupt(bool ie) {
-  cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-  if(ie && cause->IP) {
+  if(ie && cpu.cp0.cause.IP) {
 	signal_exception(EXC_INTR);
   }
 }
 
 void update_cp0_timer() {
   union { struct { uint32_t lo, hi; }; uint64_t val; } cycles;
-  cycles.lo = cpu.cp0[CP0_COUNT][0];
-  cycles.hi = cpu.cp0[CP0_COUNT][1];
+  cycles.lo = cpu.cp0.count[0];
+  cycles.hi = cpu.cp0.count[1];
   cycles.val += 5; // add 5 cycles
-  cpu.cp0[CP0_COUNT][0] = cycles.lo;
-  cpu.cp0[CP0_COUNT][1] = cycles.hi;
+  cpu.cp0.count[0] = cycles.lo;
+  cpu.cp0.count[1] = cycles.hi;
 
   // update IP
-  cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
-
-  uint32_t compare = cpu.cp0[CP0_COMPARE][0];
-  uint32_t count = cpu.cp0[CP0_COUNT][0];
-  if(count == compare) {
-    cause->IP |= CAUSE_IP_TIMER;
+  if(cpu.cp0.count[0] == cpu.cp0.compare) {
+    cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
 
@@ -230,8 +222,7 @@ void cpu_exec(uint64_t n) {
 	cpu.pc += 4;
 
 #ifdef ENABLE_INTR
-	cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
-	bool ie = !(status->EXL) && status->IE;
+	bool ie = !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
 #endif
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);

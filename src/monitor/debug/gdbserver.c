@@ -219,15 +219,15 @@ char *gdb_read_registers(char *args, int arglen) {
 	len += snprintf(&regs[len], sizeof(regs) - len, "%08x", value);
   }
   len += snprintf(&regs[len], sizeof(regs) - len,
-	  "%08x", cpu.cp0[CP0_STATUS][0]);
+	  "%08x", cpu.cp0.cpr[CP0_STATUS][0]);
   len += snprintf(&regs[len], sizeof(regs) - len,
 	  "%08x", cpu.lo);
   len += snprintf(&regs[len], sizeof(regs) - len,
 	  "%08x", cpu.hi);
   len += snprintf(&regs[len], sizeof(regs) - len,
-	  "%08x", cpu.cp0[CP0_BADVADDR][0]);
+	  "%08x", cpu.cp0.cpr[CP0_BADVADDR][0]);
   len += snprintf(&regs[len], sizeof(regs) - len,
-	  "%08x", cpu.cp0[CP0_CAUSE][0]);
+	  "%08x", cpu.cp0.cpr[CP0_CAUSE][0]);
   len += snprintf(&regs[len], sizeof(regs) - len,
 	  "%08x", cpu.pc);
   return regs;
@@ -302,10 +302,10 @@ char *gdb_read_register(char *args, int arglen) {
 	  case 0x20: value = 0; break;
 	  case 0x21: value = cpu.lo; break;
 	  case 0x22: value = cpu.hi; break;
-	  case 0x23: value = cpu.cp0[CP0_BADVADDR][0]; break;
-	  case 0x24: value = cpu.cp0[CP0_CAUSE][0]; break;
+	  case 0x23: value = cpu.cp0.cpr[CP0_BADVADDR][0]; break;
+	  case 0x24: value = cpu.cp0.cpr[CP0_CAUSE][0]; break;
 	  case 0x25: value = cpu.pc; break;
-	  case 0x26: value = cpu.cp0[CP0_EPC][0]; break;
+	  case 0x26: value = cpu.cp0.cpr[CP0_EPC][0]; break;
 	  default: value = 0; break;
 	}
 	snprintf(reg_value, sizeof(reg_value), "%08x", htonl(value));

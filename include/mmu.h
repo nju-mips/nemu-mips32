@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "cpu/reg.h"
 
 #define NR_TLB_ENTRY 512
 
@@ -17,7 +18,7 @@ typedef struct {
   uint16_t pagemask;
 
   struct {
-	uint32_t vpn2 : 19;
+	uint32_t vpn : 19;
 	uint32_t g    : 1;
 	uint32_t asid : 8;
   };
@@ -34,6 +35,12 @@ typedef union {
   };
   uint32_t val;
 } vaddr_mapped_t;
+
+
+void tlb_present();
+void tlb_read(Inst inst);
+void tlb_write_by_index(Inst inst);
+void tlb_write_randomly(Inst inst);
 
 
 #endif

@@ -89,9 +89,9 @@ static const void * cop0_table_rs[32] = {
 };
 
 static const void * cop0_table_func[64] = {
-  /* 0x00 */    &&inv, &&inv, &&inv, &&inv,
-  /* 0x04 */    &&inv, &&inv, &&inv, &&inv,
-  /* 0x08 */    &&inv, &&inv, &&inv, &&inv,
+  /* 0x00 */    &&inv, &&tlbr, &&tlbwi, &&inv,
+  /* 0x04 */    &&inv, &&inv, &&tlbwr, &&inv,
+  /* 0x08 */    &&tlbp, &&inv, &&inv, &&inv,
   /* 0x0c */    &&inv, &&inv, &&inv, &&inv,
   /* 0x10 */    &&inv, &&inv, &&inv, &&inv,
   /* 0x14 */    &&inv, &&inv, &&inv, &&inv,
@@ -161,7 +161,25 @@ make_exec_handler(inv) ({
   nemu_state = NEMU_END;
 });
 
-// temporary strategy: store timer registers in C0
+
+/* tlb strategy */
+make_exec_handler(tlbp) ({
+  tlb_present();
+});
+
+make_exec_handler(tlbr) ({
+  tlb_read(inst);
+});
+
+make_exec_handler(tlbwi) ({
+  tlb_write_by_index(inst);
+});
+
+make_exec_handler(tlbwr) ({
+  tlb_write_randomly(inst);
+});
+
+/* temporary strategy: store timer registers in C0 */
 make_exec_handler(syscall) ({
   signal_exception(EXC_SYSCALL);
   dsprintf(asm_buf_p, "syscall");
@@ -172,13 +190,12 @@ make_exec_handler(breakpoint) ({
 });
 
 make_exec_handler(eret) ({
-  cpu.pc = cpu.cp0[CP0_EPC][0];
-  cp0_status_t *status = (void *)&(cpu.cp0[CP0_STATUS][0]);
-  status->EXL = 0;
-  status->IE = 1;
+  cpu.pc = cpu.cp0.epc;
+  cpu.cp0.status.EXL = 0;
+  cpu.cp0.status.IE = 1;
 
 #ifdef ENABLE_SEGMENT
-  cpu.base = cpu.cp0[CP0_RESERVED][CP0_RESERVED_BASE];
+  cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
 #endif
 
   dsprintf(asm_buf_p, "eret");
@@ -186,7 +203,7 @@ make_exec_handler(eret) ({
 
 make_exec_handler(mfc0) ({
 #ifdef ENABLE_INTR
-  cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
+  cpu.gpr[inst.rt] = cpu.cp0.cpr[inst.rd][inst.sel];
 #else
   // only for microbench
   if(inst.rd == CP0_COUNT) {
@@ -200,7 +217,7 @@ make_exec_handler(mfc0) ({
 	  assert(0);
 	}
   } else {
-    cpu.gpr[inst.rt] = cpu.cp0[inst.rd][inst.sel];
+    cpu.gpr[inst.rt] = cpu.cp0.cpr[inst.rd][inst.sel];
   }
 #endif
   dsprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
@@ -208,7 +225,7 @@ make_exec_handler(mfc0) ({
 });
 
 make_exec_handler(mtc0) ({
-  cpu.cp0[inst.rd][inst.sel] = cpu.gpr[inst.rt];
+  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
   // this serial is for debugging,
   // please don't use it in real codes
   if(inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_SERIAL)

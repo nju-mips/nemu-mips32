@@ -2,7 +2,7 @@
 #include "cpu/reg.h"
 #include "common.h"
 
-static tlb_entry_t tlb_entries[NR_TLB_ENTRY];
+tlb_entry_t tlb_entries[NR_TLB_ENTRY];
 
 extern void signal_exception(int);
 
@@ -10,15 +10,43 @@ extern void signal_exception(int);
 #define EXC_TLB_MODIFIED 1
 #define EXC_TLB_INVALID 2
 
+static inline bool match_vpn_and_asid(int idx, uint32_t vpn, uint32_t asid) {
+  uint32_t not_pagemask = ~(tlb_entries[idx].pagemask);
+  bool vpn_match = (tlb_entries[idx].vpn & not_pagemask) == (vpn & not_pagemask);
+  bool asid_match = tlb_entries[idx].asid == asid;
+  if(! (vpn_match && asid_match && tlb_entries[idx].g) ) {
+	return false;
+  }
+  return true;
+}
+
+void tlb_present() {
+  for(int i = 0; i < NR_TLB_ENTRY; i++) {
+	if(!match_vpn_and_asid(i, cpu.cp0.entry_hi.vpn, cpu.cp0.entry_hi.asid)) {
+	  continue;
+	}
+	/* match this tlb entry */
+	cpu.cp0.index.p = 0;
+	cpu.cp0.index.idx = i;
+	return;
+  }
+  cpu.cp0.index.p = 1;
+}
+
+void tlb_read(Inst inst) {
+}
+
+void tlb_write_by_index(Inst inst) {
+}
+
+void tlb_write_randomly(Inst inst) {
+}
+
 vaddr_t page_translate(vaddr_t vaddr) {
   vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
-  cp0_entry_hi_t *entry_hi = (cp0_entry_hi_t *)&(cpu.cp0[CP0_ENTRY_HI][0]);
   for(int i = 0; i < NR_TLB_ENTRY; i++) {
 	uint32_t not_pagemask = ~(tlb_entries[i].pagemask);
-	bool vpn_match = (tlb_entries[i].vpn2 & not_pagemask) ==
-	  (mapped->vpn & not_pagemask);
-	bool asid_match = tlb_entries[i].asid == entry_hi->asid;
-	if(! (vpn_match && asid_match && tlb_entries[i].g) ) {
+	if(!match_vpn_and_asid(i, mapped->vpn, cpu.cp0.entry_hi.asid)) {
 	  continue;
 	}
 
