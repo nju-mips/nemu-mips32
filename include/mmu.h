@@ -38,9 +38,8 @@ typedef union {
 
 
 void tlb_present();
-void tlb_read(Inst inst);
-void tlb_write_by_index(Inst inst);
-void tlb_write_randomly(Inst inst);
+void tlb_read(uint32_t i);
+void tlb_write(uint32_t i);
 
 
 #endif

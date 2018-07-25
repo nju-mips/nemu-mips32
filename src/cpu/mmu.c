@@ -33,13 +33,40 @@ void tlb_present() {
   cpu.cp0.index.p = 1;
 }
 
-void tlb_read(Inst inst) {
+void tlb_read(uint32_t i) {
+  cpu.cp0.pagemask = tlb_entries[i].pagemask;
+  cpu.cp0.entry_hi.vpn = tlb_entries[i].vpn & ~tlb_entries[i].pagemask;
+  cpu.cp0.entry_hi.asid = tlb_entries[i].asid;
+
+  cpu.cp0.entry_lo0.pfn = tlb_entries[i].p0.pfn & ~tlb_entries[i].pagemask;
+  cpu.cp0.entry_lo0.c = tlb_entries[i].p0.c;
+  cpu.cp0.entry_lo0.d = tlb_entries[i].p0.d;
+  cpu.cp0.entry_lo0.v = tlb_entries[i].p0.v;
+  cpu.cp0.entry_lo0.g = tlb_entries[i].g;
+
+  cpu.cp0.entry_lo1.pfn = tlb_entries[i].p1.pfn & ~tlb_entries[i].pagemask;
+  cpu.cp0.entry_lo1.c = tlb_entries[i].p1.c;
+  cpu.cp0.entry_lo1.d = tlb_entries[i].p1.d;
+  cpu.cp0.entry_lo1.v = tlb_entries[i].p1.v;
+  cpu.cp0.entry_lo1.g = tlb_entries[i].g;
 }
 
-void tlb_write_by_index(Inst inst) {
-}
+void tlb_write(uint32_t i) {
+  tlb_entries[i].pagemask = cpu.cp0.pagemask;
+  tlb_entries[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask;
+  tlb_entries[i].asid = cpu.cp0.entry_hi.asid;
 
-void tlb_write_randomly(Inst inst) {
+  tlb_entries[i].g = cpu.cp0.entry_lo0.g & cpu.cp0.entry_lo1.g;
+
+  tlb_entries[i].p0.pfn = cpu.cp0.entry_lo0.pfn & ~cpu.cp0.pagemask;
+  tlb_entries[i].p0.c = cpu.cp0.entry_lo0.c;
+  tlb_entries[i].p0.d = cpu.cp0.entry_lo0.d;
+  tlb_entries[i].p0.v = cpu.cp0.entry_lo0.v;
+
+  tlb_entries[i].p1.pfn = cpu.cp0.entry_lo1.pfn & ~cpu.cp0.pagemask;
+  tlb_entries[i].p1.c = cpu.cp0.entry_lo1.c;
+  tlb_entries[i].p1.d = cpu.cp0.entry_lo1.d;
+  tlb_entries[i].p1.v = cpu.cp0.entry_lo1.v;
 }
 
 vaddr_t page_translate(vaddr_t vaddr) {

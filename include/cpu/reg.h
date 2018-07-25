@@ -206,7 +206,7 @@ typedef union {
 #define OFFSET_OF(t, f) ((uintptr_t)&(((t*)NULL)->f))
 
 _Static_assert(OFFSET_OF(cp0_t, index) == OFFSET_OF(cp0_t, cpr[CP0_INDEX][0]), "index position error");
-_Static_assert(OFFSET_OF(cp0_t, random) == OFFSET_OF(cp0_t, cpr[CP0_RANDOM][0]), "index position error");
+_Static_assert(OFFSET_OF(cp0_t, random) == OFFSET_OF(cp0_t, cpr[CP0_RANDOM][0]), "random position error");
 _Static_assert(OFFSET_OF(cp0_t, entry_lo0) == OFFSET_OF(cp0_t, cpr[CP0_ENTRY_LO0][0]), "entry_lo0 position error");
 _Static_assert(OFFSET_OF(cp0_t, entry_lo1) == OFFSET_OF(cp0_t, cpr[CP0_ENTRY_LO1][0]), "entry_lo1 position error");
 _Static_assert(OFFSET_OF(cp0_t, context) == OFFSET_OF(cp0_t, cpr[CP0_CONTEXT][0]), "context position error");
@@ -236,20 +236,20 @@ typedef struct {
 
 #define CAUSE_IP_TIMER 0x80
 
-#define EXC_INTR    0
-#define EXC_TLBM    1  /* tlb modification */
-#define EXC_TLBL    2  /* tlb load */
-#define EXC_TLBS    3  /* tlb store */
-#define EXC_AdEL    4
-#define EXC_AdES    5
-#define EXC_IBE     6
-#define EXC_DBE     7
-#define EXC_SYSCALL 8
-#define EXC_BP      9
-#define EXC_RI      10
-#define EXC_CPU     11
-#define EXC_OV      12
-#define EXC_TRAP    13
+#define EXC_INTR    0    /* interrupt */
+#define EXC_TLBM    1    /* tlb modification */
+#define EXC_TLBL    2    /* tlb load */
+#define EXC_TLBS    3    /* tlb store */
+#define EXC_AdEL    4    /* exception on load */
+#define EXC_AdES    5    /* exception on store */
+#define EXC_IBE     6    /* instruction bus error */
+#define EXC_DBE     7    /* data bus error */
+#define EXC_SYSCALL 8    /* syscall */
+#define EXC_BP      9    /* breakpoint */
+#define EXC_RI      10   /* reserved instruction */
+#define EXC_CPU     11   /* ????? */
+#define EXC_OV      12   /* arithmetic overflow */
+#define EXC_TRAP    13   /* trap */
 
 
 typedef struct {

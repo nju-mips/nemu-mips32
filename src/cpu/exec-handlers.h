@@ -168,15 +168,21 @@ make_exec_handler(tlbp) ({
 });
 
 make_exec_handler(tlbr) ({
-  tlb_read(inst);
+  uint32_t i = cpu.cp0.index.idx;
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
+  tlb_read(i);
 });
 
 make_exec_handler(tlbwi) ({
-  tlb_write_by_index(inst);
+  uint32_t i = cpu.cp0.index.idx;
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
+  tlb_write(i);
 });
 
 make_exec_handler(tlbwr) ({
-  tlb_write_randomly(inst);
+  uint32_t i = rand() % NR_TLB_ENTRY;
+  cpu.cp0.random = i;
+  tlb_write(i);
 });
 
 /* temporary strategy: store timer registers in C0 */
