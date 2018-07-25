@@ -133,7 +133,7 @@ void keyboard_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 #define check_input(addr, len) \
-  CPUAssert(addr >= 0 && addr <= KB_STAT, \
+  CPUAssert(addr >= 0 && addr <= KB_SIZE, \
 	  "input: address(0x%08x) is out side", addr); \
   CPUAssert(len == 4, "input only allow byte read/write");
 

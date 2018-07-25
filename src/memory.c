@@ -24,6 +24,7 @@ struct mmap_region {
   {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
   {0x40010000, 0x4001ffff, invalid_read, invalid_write},
   {0x50000000, 0x50100000, vga_read, vga_write},
+  {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 };
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))

@@ -4,17 +4,16 @@
 
 
 #define check_gpio(addr, len) \
-  CPUAssert(addr == 0, \
-	  "address(0x%08x) is out side GPIO", addr); \
-	  CPUAssert(len == 1, "GPIO only allow byte read/write");
+  CPUAssert(addr == 0, "address(0x%08x) is out side GPIO", addr); \
+  CPUAssert(len == 1, "GPIO only allow byte read/write");
 
-#define ANSI_WIDTHOR_RED     "\x1b[31m"
-#define ANSI_WIDTHOR_GREEN   "\x1b[32m"
-#define ANSI_WIDTHOR_YELLOW  "\x1b[33m"
-#define ANSI_WIDTHOR_BLUE    "\x1b[34m"
-#define ANSI_WIDTHOR_MAGENTA "\x1b[35m"
-#define ANSI_WIDTHOR_CYAN    "\x1b[36m"
-#define ANSI_WIDTHOR_RESET   "\x1b[0m"
+#define ANSI_WIDTHOR_RED     "\e[31m"
+#define ANSI_WIDTHOR_GREEN   "\e[32m"
+#define ANSI_WIDTHOR_YELLOW  "\e[33m"
+#define ANSI_WIDTHOR_BLUE    "\e[34m"
+#define ANSI_WIDTHOR_MAGENTA "\e[35m"
+#define ANSI_WIDTHOR_CYAN    "\e[36m"
+#define ANSI_WIDTHOR_RESET   "\e[0m"
 
 
 void gpio_write(paddr_t addr, int len, uint32_t data) {

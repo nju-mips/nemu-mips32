@@ -8,6 +8,8 @@
 typedef uint32_t (*read_func) (paddr_t addr, int len);
 typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
+uint32_t unmapped_read(paddr_t addr, int len);
+void unmapped_write(paddr_t addr, int len, uint32_t data);
 uint32_t ddr_read(paddr_t addr, int len);
 void ddr_write(paddr_t addr, int len, uint32_t data);
 uint32_t uartlite_read(paddr_t addr, int len);
