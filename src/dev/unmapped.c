@@ -2,8 +2,7 @@
 #include "memory.h"
 #include "device.h"
 
-
-static uint8_t unmapped[UNMAPPED_SIZE];
+uint8_t unmapped[UNMAPPED_SIZE];
 
 #define check_unmapped(addr, len) \
   CPUAssert(addr >= 0 && addr < UNMAPPED_SIZE && addr + len <= UNMAPPED_SIZE, \

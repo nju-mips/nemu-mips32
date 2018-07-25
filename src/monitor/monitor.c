@@ -16,8 +16,6 @@ static char *img_file = NULL;
 
 work_mode_t work_mode = MODE_GDB;
 
-void *ddr_map(uint32_t vaddr, uint32_t size);
-
 size_t get_file_size(const char *img_file) {
   struct stat file_status;
   lstat(img_file, &file_status);
@@ -56,7 +54,12 @@ void load_elf() {
 	  Elf32_Phdr *ph = (void*)buf + i * elf->e_phentsize + elf->e_phoff;
 	  if(ph->p_type != PT_LOAD) { continue; }
 
-	  void *p_vaddr = ddr_map(ph->p_vaddr, ph->p_memsz);
+	  void *p_vaddr = NULL;
+	  if(is_unmapped(ph->p_vaddr)) {
+		p_vaddr = unmapped_map(ph->p_vaddr, ph->p_memsz);
+	  } else {
+		p_vaddr = ddr_map(ph->p_vaddr, ph->p_memsz);
+	  }
 	  memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
 	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }

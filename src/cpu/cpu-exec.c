@@ -98,10 +98,18 @@ int init_cpu(vaddr_t entry) {
 }
 
 static inline uint32_t instr_fetch(uint32_t addr) {
-  addr = prot_addr(addr) - DDR_BASE;
-  Assert(addr < DDR_SIZE && (addr & 3) == 0,
-	  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
-  return ((uint32_t*)ddr)[addr >> 2];
+  if(is_unmapped(addr)) {
+	extern uint8_t unmapped[];
+	addr -= UNMAPPED_BASE;
+	Assert(addr < UNMAPPED_SIZE && (addr & 3) == 0,
+		"addr is %08x, UNMAPPED_BASE:%08x\n", addr + UNMAPPED_BASE, UNMAPPED_BASE);
+	return unmapped[addr];
+  } else {
+	addr = prot_addr(addr) - DDR_BASE;
+	Assert(addr < DDR_SIZE && (addr & 3) == 0,
+		"addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
+	return ((uint32_t*)ddr)[addr >> 2];
+  }
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {

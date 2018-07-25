@@ -32,6 +32,10 @@
 #define UNMAPPED_END  0xC0000000
 #define UNMAPPED_SIZE (4 * 1024 * 1024) /* only support 4 MB */
 
+static inline bool is_unmapped(uint32_t addr) {
+  return UNMAPPED_BASE <= addr && addr < UNMAPPED_END;
+}
+
 extern uint8_t ddr[];
 uint32_t vaddr_read(vaddr_t, int);
 uint32_t paddr_read(paddr_t, int);
