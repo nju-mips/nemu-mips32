@@ -16,11 +16,11 @@ CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 CFLAGS += -D__ARCH_MIPS32_NPC__ 
 
 CFLAGS += -DENABLE_DELAYSLOT
-CFLAGS += -DENABLE_SEGMENT
+# CFLAGS += -DENABLE_SEGMENT
 # CFLAGS += -DENABLE_PAGING
 
 # enable interrupt will lose about 400 marks
-CFLAGS += -DENABLE_INTR
+# CFLAGS += -DENABLE_INTR
 
 # no action indeed
 # CFLAGS += -DDEBUG

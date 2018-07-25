@@ -30,7 +30,11 @@ uint32_t kb_read(paddr_t addr, int len);
 #define DDR_SIZE (256 * 1024 * 1024)
 
 // UART
+#ifdef ENABLE_PAGING
 #define UARTLITE_ADDR 0xbfd03000
+#else
+#define UARTLITE_ADDR 0x40001000
+#endif
 #define UARTLITE_Rx     0x0
 #define UARTLITE_Tx     0x4
 #define UARTLITE_STAT   0x8
