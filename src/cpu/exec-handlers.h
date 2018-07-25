@@ -163,7 +163,7 @@ make_exec_handler(inv) ({
 
 // temporary strategy: store timer registers in C0
 make_exec_handler(syscall) ({
-  trigger_exception(EXC_SYSCALL);
+  signal_exception(EXC_SYSCALL);
   dsprintf(asm_buf_p, "syscall");
 });
 
@@ -221,84 +221,84 @@ make_exec_handler(mtc0) ({
 
 make_exec_handler(teq) ({
   if((int32_t)cpu.gpr[inst.rs] == (int32_t)cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "teq $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(teqi) ({
   if((int32_t)cpu.gpr[inst.rs] == inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "teqi $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tge) ({
   if((int32_t)cpu.gpr[inst.rs] >= (int32_t)cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tge $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tgei) ({
   if((int32_t)cpu.gpr[inst.rs] >= inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tgei $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tgeiu) ({
   if(cpu.gpr[inst.rs] >= inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tgeiu $%s, %u", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tgeu) ({
   if(cpu.gpr[inst.rs] >= cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tgeu $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tlt) ({
   if((int32_t)cpu.gpr[inst.rs] < (int32_t)cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tlt $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tlti) ({
   if((int32_t)cpu.gpr[inst.rs] < inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tlti $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tltiu) ({
   if(cpu.gpr[inst.rs] < inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tltiu $%s, %u", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tltu) ({
   if(cpu.gpr[inst.rs] < cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tltu $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tne) ({
   if((int32_t)cpu.gpr[inst.rs] != (int32_t)cpu.gpr[inst.rt]) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tne $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tnei) ({
   if((int32_t)cpu.gpr[inst.rs] != inst.simm) {
-    trigger_exception(EXC_TRAP);
+    signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tnei $%s, %d", regs[inst.rs], inst.simm);
 });

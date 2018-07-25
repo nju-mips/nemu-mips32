@@ -1,4 +1,5 @@
 #include <sys/time.h>
+#include <setjmp.h>
 
 #include "nemu.h"
 #include "device.h"
@@ -6,6 +7,8 @@
 #include "memory.h"
 
 CPU_state cpu;
+
+jmp_buf cpu_exception_handler;
 
 const char *regs[32] = {
   "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
@@ -23,27 +26,7 @@ nemu_state_t nemu_state = NEMU_STOP;
 
 static uint64_t nemu_start_time = 0;
 
-char asm_buf[80];
-char *asm_buf_p;
-
-uint32_t common_registers[32], saved_exception_code;
-
-void save_common_registers(int code) {
-  for(int i = 0; i < 32; i++)
-	common_registers[i] = cpu.gpr[i];
-  saved_exception_code = code;
-}
-
-void diff_common_registers() {
-  // don't check for EVENT_YIELD
-  if(saved_exception_code == EXC_SYSCALL && common_registers[4] == 0xFFFFFFFF) return;
-
-  for(int i = 0; i < 32; i++) {
-	if(i == 26 || i == 27) continue;
-	if(saved_exception_code == EXC_SYSCALL && i == 2) continue;
-	CPUAssert(common_registers[i] == cpu.gpr[i], "registers differ at %d, %08x <> %08x\n", i, common_registers[i], cpu.gpr[i]);
-  }
-}
+char asm_buf[80], *asm_buf_p;
 
 // 1s = 10^3 ms = 10^6 us
 static uint64_t get_current_time() { // in us
@@ -118,7 +101,7 @@ int init_cpu(vaddr_t entry) {
 static inline uint32_t instr_fetch(uint32_t addr) {
   addr = prot_addr(addr) - DDR_BASE;
   Assert(addr < DDR_SIZE && (addr & 3) == 0,
-		  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
+	  "addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
   return ((uint32_t*)ddr)[addr >> 2];
 }
 
@@ -158,7 +141,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   }
 }
 
-static inline void trigger_exception(int code) {
+void signal_exception(int code) {
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP txx\e0m\n");
 	exit(0);
@@ -177,13 +160,17 @@ static inline void trigger_exception(int code) {
 
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   cause->ExcCode = code;
+
+#ifdef ENALE_PAGING
+  longjmp(cpu_exception_handler);
+#endif
 }
 
 
 void check_interrupt(bool ie) {
   cp0_cause_t *cause = (void *)&(cpu.cp0[CP0_CAUSE][0]);
   if(ie && cause->IP) {
-	trigger_exception(EXC_INTR);
+	signal_exception(EXC_INTR);
   }
 }
 
@@ -208,7 +195,7 @@ void update_cp0_timer() {
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
   if(work_mode == MODE_GDB && nemu_state != NEMU_END) {
-	/* exception handler */
+	/* assertion failure handler */
 	extern jmp_buf gdb_mode_top_caller;
 	int code = setjmp(gdb_mode_top_caller);
 	if(code != 0) nemu_state = NEMU_END;
@@ -218,7 +205,13 @@ void cpu_exec(uint64_t n) {
     printf("Program execution has ended. To restart the program, exit NEMU and run again.\n");
     return;
   }
+
   nemu_state = NEMU_RUNNING;
+
+#ifdef ENABLE_PAGING
+  /* register exception handler */
+  setjmp(cpu_exception_handler);
+#endif
 
   for (; n > 0; n --) {
 #ifdef ENABLE_INTR

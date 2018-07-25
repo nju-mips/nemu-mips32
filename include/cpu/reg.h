@@ -19,15 +19,26 @@ typedef struct {
 
 #define CP0_RESERVED_SERIAL 1
 
-#define CP0_RESERVED 7  // for extra debug
-#define CP0_BADVADDR 8
-#define CP0_COUNT    9
-#define CP0_COMPARE  11
-#define CP0_STATUS   12
-#define CP0_CAUSE    13
-#define CP0_EPC      14
-#define CP0_PRID     15
-#define CP0_CONFIG   16
+#define CP0_INDEX        0
+#define CP0_RANDOM       1
+#define CP0_ENTRY_LO0    2
+#define CP0_ENTRY_LO1    3
+#define CP0_PAGE_CONTEXT 4  // maintained by kernel
+#define CP0_PAGE_MASK    5
+#define CP0_WIRED        6
+#define CP0_RESERVED     7  // for extra debug and segment
+#define CP0_BADVADDR     8
+#define CP0_COUNT        9
+#define CP0_ENTRY_HI     10
+#define CP0_COMPARE      11
+#define CP0_STATUS       12
+#define CP0_CAUSE        13
+#define CP0_EPC          14
+#define CP0_PRID         15
+#define CP0_CONFIG       16
+
+#define CP0_TAG_LO       28
+#define CP0_TAG_HI       29
 
 /*
  * default config:
@@ -146,12 +157,36 @@ typedef struct {
   uint32_t M  : 1; // indicate config 2 is present
 } cp0_config1_t;
 
+typedef struct {
+  uint32_t vpn2 : 19;
+  uint32_t _0   : 1;
+  uint32_t asid : 8;
+} cp0_entry_hi_t;
+
+typedef struct {
+  uint32_t _0  : 2;
+  uint32_t pfn : 25;
+  uint32_t c   : 2;
+  uint32_t d   : 1;
+  uint32_t v   : 1;
+  uint32_t g   : 1;
+} cp0_entry_lo_t;
+
+typedef struct {
+  uint32_t _0 : 2;
+  uint32_t mask : 16;
+} cp0_page_mask_t;
+
+typedef struct {
+} cp0_wired_t;
+
+
 #define CAUSE_IP_TIMER 0x80
 
 #define EXC_INTR    0
-#define EXC_TLB     1
-#define EXC_TLBL    2
-#define EXC_TLBS    3
+#define EXC_TLBM    1  /* tlb modification */
+#define EXC_TLBL    2  /* tlb load */
+#define EXC_TLBS    3  /* tlb store */
 #define EXC_AdEL    4
 #define EXC_AdES    5
 #define EXC_IBE     6
@@ -162,6 +197,7 @@ typedef struct {
 #define EXC_CPU     11
 #define EXC_OV      12
 #define EXC_TRAP    13
+
 
 typedef struct {
 	union {

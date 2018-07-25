@@ -4,6 +4,18 @@
 #include "nemu.h"
 #include "device.h"
 
+static uint32_t uartlite_ctrl_reg = 0;
+
+/* status */
+#define SR_TX_FIFO_FULL		(1 << 3) /* transmit FIFO full */
+#define SR_TX_FIFO_EMPTY	(1 << 2) /* transmit FIFO empty */
+#define SR_RX_FIFO_VALID_DATA	(1 << 0) /* data in receive FIFO */
+#define SR_RX_FIFO_FULL		(1 << 1) /* receive FIFO full */
+
+/* ctrl */
+#define ULITE_CONTROL_RST_TX	0x01
+#define ULITE_CONTROL_RST_RX	0x02
+
 /////////////////////////////////////////////////////////////////
 //                      serial simulation                      //
 /////////////////////////////////////////////////////////////////
@@ -129,8 +141,6 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 	  "UART: address(0x%08x) is out side", addr); \
 
 uint32_t uartlite_read(paddr_t addr, int len) {
-  printf("[NEMU] uart read %x, %d\n", addr, len);
-  /* CTRL not yet implemented, only allow byte read/write */
   check_input(addr, len);
   switch (addr) {
 	case UARTLITE_Rx: {
@@ -140,6 +150,8 @@ uint32_t uartlite_read(paddr_t addr, int len) {
 	}
 	case UARTLITE_STAT:
 	  return serial_f == serial_r ? 0 : 1;
+	case UARTLITE_CTRL:
+	  return uartlite_ctrl_reg;
 	default:
 	  CPUAssert(false, "uart: address(0x%08x) is not readable", addr);
 	  break;
@@ -148,12 +160,13 @@ uint32_t uartlite_read(paddr_t addr, int len) {
 }
 
 void uartlite_write(paddr_t addr, int len, uint32_t data) {
-  printf("[NEMU] uart write %x:%x, len:%d\n", addr, data, len);
-
   check_input(addr, len);
   switch (addr) {
 	case UARTLITE_Tx:
 	  putchar((char)data);
+	  break;
+	case UARTLITE_CTRL:
+	  uartlite_ctrl_reg = data;
 	  break;
 	default:
 	  CPUAssert(false, "uart: address(0x%08x) is not writable", addr);

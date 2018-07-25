@@ -17,6 +17,7 @@ CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
 CFLAGS += -DENABLE_DELAYSLOT
 # CFLAGS += -DENABLE_SEGMENT
+CFLAGS += -DENABLE_PAGING
 
 # enable interrupt will lose about 400 marks
 CFLAGS += -DENABLE_INTR

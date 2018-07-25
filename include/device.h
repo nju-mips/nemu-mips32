@@ -23,8 +23,8 @@ uint32_t kb_read(paddr_t addr, int len);
 #ifdef __ARCH_MIPS32_NPC__
 #define DDR_BASE (0x10000000)
 #else
-// #define DDR_BASE (0x80000000)
-#define DDR_BASE (0x1000000)
+#define DDR_BASE (0x80000000)
+// #define DDR_BASE (0x1000000)
 #endif
 
 #define DDR_SIZE (256 * 1024 * 1024)
