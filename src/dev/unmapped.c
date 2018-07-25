@@ -17,10 +17,12 @@ void *unmapped_map(uint32_t addr, uint32_t size) {
 
 uint32_t unmapped_read(paddr_t addr, int len) {
   check_unmapped(addr, len);
+  eprintf("unmapped read %08x -- %08x\n", addr, addr + UNMAPPED_BASE);
   return *((uint32_t *)((uint8_t *)ddr + addr)) & (~0u >> ((4 - len) << 3));
 }
 
 void unmapped_write(paddr_t addr, int len, uint32_t data) {
   check_unmapped(addr, len);
+  eprintf("unmapped write %08x -- %08x\n", addr, addr + UNMAPPED_BASE);
   memcpy((uint8_t *)unmapped + addr, &data, len);
 }

@@ -19,10 +19,10 @@ struct mmap_region {
 } mmap_table [] = {
   // {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
-  {0x40000000, 0x40000fff, invalid_read, gpio_write},
+  {0x40000000, 0x40001000, invalid_read, gpio_write},
   {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
   {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
-  {0x40010000, 0x4001ffff, invalid_read, invalid_write},
+  {0x40010000, 0x40020000, invalid_read, invalid_write},
   {0x50000000, 0x50100000, vga_read, vga_write},
   {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 };
@@ -76,3 +76,21 @@ void invalid_write(paddr_t addr, int len, uint32_t data) {
   CPUAssert(false, "invalid write at address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
 }
 
+static inline bool region_collide(uint32_t x, uint32_t y,
+	uint32_t a, uint32_t b) {
+  return (x <= a && a < y)
+	|| (x < b && b <= y)
+	|| (a <= x && y <= b);
+}
+
+void init_mmio() {
+  for(int i = 0; i < NR_REGION; i++) {
+	for(int j = i + 1; j < NR_REGION; j++) {
+	  assert(!region_collide(mmap_table[i].start, 
+			mmap_table[i].end,
+			mmap_table[j].start,
+			mmap_table[j].end
+			));
+	}
+  }
+}

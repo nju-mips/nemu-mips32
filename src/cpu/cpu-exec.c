@@ -115,6 +115,7 @@ static inline uint32_t instr_fetch(uint32_t addr) {
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t pa = prot_addr(addr);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
+	Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
 	switch(len) {
 	  case 1: return ddr[addr];
@@ -130,6 +131,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t pa = prot_addr(addr);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
+	Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
 	switch(len) {
 	  case 1: ddr[addr] = data; return;
