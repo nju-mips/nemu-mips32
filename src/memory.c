@@ -22,7 +22,6 @@ struct mmap_region {
   {0x40000000, 0x40001000, invalid_read, gpio_write},
   {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
   {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
-  {0x40010000, 0x40020000, invalid_read, invalid_write},
   {0x50000000, 0x50100000, vga_read, vga_write},
   {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 };
@@ -32,7 +31,7 @@ struct mmap_region {
 uint32_t find_region(vaddr_t addr) {
   int ret = -1;
   for(int i = 0; i < NR_REGION; i++)
-	if(addr >= mmap_table[i].start && addr <= mmap_table[i].end) {
+	if(addr >= mmap_table[i].start && addr < mmap_table[i].end) {
 	  ret = i;
 	  break;
 	}
