@@ -53,6 +53,9 @@ uint32_t kb_read(paddr_t addr, int len);
 #define KB_SIZE 0x10
 
 // VGA
+#define VGA_BASE 0x50000000
+#define VGA_SIZE 0x100000
+
 #define SCR_W 400
 #define SCR_H 300
 #define WINDOW_W (SCR_W * 2)

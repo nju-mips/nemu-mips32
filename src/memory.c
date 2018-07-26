@@ -22,7 +22,7 @@ struct mmap_region {
   {0x40000000, 0x40001000, invalid_read, gpio_write},
   {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
   {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
-  {0x50000000, 0x50100000, vga_read, vga_write},
+  {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
   {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 };
 
