@@ -63,4 +63,8 @@ uint32_t kb_read(paddr_t addr, int len);
 #define VGA_HZ 25
 #define TIMER_HZ 100
 
+// GPIO
+#define GPIO_BASE 0x40000000
+#define GPIO_SIZE 0x1000
+
 #endif

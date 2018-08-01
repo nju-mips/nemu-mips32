@@ -20,7 +20,8 @@
 
 #ifdef ENABLE_DELAYSLOT
 #define exec_delayslot() \
-	inst.val = instr_fetch(oldpc + 4); \
+	if(work_mode == MODE_LOG) print_registers(); \
+	inst.val = instr_fetch(oldpc += 4); \
 	goto exec_entry;
 #else
 #define exec_delayslot()
@@ -30,7 +31,7 @@ static const void * special_table[64] = {
   /* 0x00 */    &&sll, &&inv, &&srl, &&sra,
   /* 0x04 */	&&sllv, &&inv, &&srlv, &&srav,
   /* 0x08 */	&&jr, &&jalr, &&movz, &&movn,
-  /* 0x0c */	&&syscall, &&breakpoint, &&inv, &&inv,
+  /* 0x0c */	&&syscall, &&breakpoint, &&inv, &&sync,
   /* 0x10 */	&&mfhi, &&inv, &&mflo, &&inv,
   /* 0x14 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x18 */	&&mult, &&multu, &&divide, &&divu,
@@ -164,22 +165,26 @@ make_exec_handler(inv) ({
 
 /* tlb strategy */
 make_exec_handler(tlbp) ({
+  printf("\e[33m HELLO ?\e[0m\n");
   tlb_present();
 });
 
 make_exec_handler(tlbr) ({
+  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_read(i);
 });
 
 make_exec_handler(tlbwi) ({
+  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_write(i);
 });
 
 make_exec_handler(tlbwr) ({
+  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = rand() % NR_TLB_ENTRY;
   cpu.cp0.random = i;
   tlb_write(i);
@@ -628,6 +633,10 @@ make_exec_handler(cache) ({
   dsprintf(asm_buf_p, "cache", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
+make_exec_handler(sync) ({
+  dsprintf(asm_buf_p, "sync", regs[inst.rt], inst.simm, regs[inst.rs]);
+});
+
 
 //////////////////////////////////////////////////////////////
 //                      likely branch                       //
@@ -637,7 +646,9 @@ make_exec_handler(beql) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
@@ -647,7 +658,9 @@ make_exec_handler(bnel) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
@@ -658,7 +671,9 @@ make_exec_handler(blezl) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -668,7 +683,9 @@ make_exec_handler(bgtzl) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -678,7 +695,9 @@ make_exec_handler(bltzl) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -688,7 +707,9 @@ make_exec_handler(bgezl) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
   dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -699,7 +720,9 @@ make_exec_handler(bgezall) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
 });
 
@@ -709,7 +732,9 @@ make_exec_handler(bltzall) ({
 	cpu.pc += inst.simm << 2;
 	exec_delayslot();
   } else {
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   }
 });
 
@@ -721,7 +746,9 @@ make_exec_handler(beq) ({
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
@@ -730,7 +757,9 @@ make_exec_handler(bne) ({
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
@@ -740,7 +769,9 @@ make_exec_handler(blez) ({
   if ((int32_t)cpu.gpr[inst.rs] <= 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -749,7 +780,9 @@ make_exec_handler(bgtz) ({
   if ((int32_t)cpu.gpr[inst.rs] > 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -758,7 +791,9 @@ make_exec_handler(bltz) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -767,7 +802,9 @@ make_exec_handler(bgez) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -777,7 +814,9 @@ make_exec_handler(bgezal) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "bgezal %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -787,7 +826,9 @@ make_exec_handler(bltzal) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0)
 	cpu.pc += inst.simm << 2;
   else
+#ifdef ENABLE_DELAYSLOT
     cpu.pc += 4;
+#endif
   exec_delayslot();
   dsprintf(asm_buf_p, "bltzal %s,0x%x", regs[inst.rs], inst.simm);
 });

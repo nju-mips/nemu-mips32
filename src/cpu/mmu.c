@@ -70,7 +70,7 @@ void tlb_write(uint32_t i) {
 }
 
 vaddr_t page_translate(vaddr_t vaddr) {
-  CPUAssert(0, "fuckyou\n");
+  CPUAssert(0, "fuckyou addr %08x\n", vaddr);
   vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
   for(int i = 0; i < NR_TLB_ENTRY; i++) {
 	uint32_t not_pagemask = ~(tlb_entries[i].pagemask);

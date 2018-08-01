@@ -64,9 +64,9 @@ void print_registers() {
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
   // =============================================================
-    eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0.count[0], cpu.cp0.count[1]);
-    // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
-    eprintf("$epc:%08x\n", cpu.cp0.epc);
+  // eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0.count[0], cpu.cp0.count[1]);
+  // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
+  // eprintf("$epc:%08x\n", cpu.cp0.epc);
   // =============================================================
 }
 

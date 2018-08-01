@@ -19,7 +19,7 @@ struct mmap_region {
 } mmap_table [] = {
   // {0x00000000, 0x00001fff, invalid_read, invalid_write},
   {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
-  {0x40000000, 0x40001000, invalid_read, gpio_write},
+  {GPIO_BASE, GPIO_BASE + GPIO_SIZE, invalid_read, gpio_write},
   {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
   {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
   {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
