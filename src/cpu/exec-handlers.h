@@ -32,7 +32,7 @@ static const void * special_table[64] = {
   /* 0x04 */	&&sllv, &&inv, &&srlv, &&srav,
   /* 0x08 */	&&jr, &&jalr, &&movz, &&movn,
   /* 0x0c */	&&syscall, &&breakpoint, &&inv, &&sync,
-  /* 0x10 */	&&mfhi, &&inv, &&mflo, &&inv,
+  /* 0x10 */	&&mfhi, &&mthi, &&mflo, &&mtlo,
   /* 0x14 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x18 */	&&mult, &&multu, &&divide, &&divu,
   /* 0x1c */	&&inv, &&inv, &&inv, &&inv,
@@ -165,26 +165,22 @@ make_exec_handler(inv) ({
 
 /* tlb strategy */
 make_exec_handler(tlbp) ({
-  printf("\e[33m HELLO ?\e[0m\n");
   tlb_present();
 });
 
 make_exec_handler(tlbr) ({
-  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_read(i);
 });
 
 make_exec_handler(tlbwi) ({
-  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_write(i);
 });
 
 make_exec_handler(tlbwr) ({
-  printf("\e[33m HELLO ?\e[0m\n");
   uint32_t i = rand() % NR_TLB_ENTRY;
   cpu.cp0.random = i;
   tlb_write(i);
@@ -464,10 +460,22 @@ make_exec_handler(mfhi) ({
   dsprintf(asm_buf_p, "mfhi %s", regs[inst.rd]);
 });
 
+make_exec_handler(mthi) ({
+  assert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
+  cpu.hi = cpu.gpr[inst.rs];
+  dsprintf(asm_buf_p, "mthi %s", regs[inst.rd]);
+});
+
 make_exec_handler(mflo) ({
   assert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.lo;
   dsprintf(asm_buf_p, "mflo %s", regs[inst.rd]);
+});
+
+make_exec_handler(mtlo) ({
+  assert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
+  cpu.lo = cpu.gpr[inst.rs];
+  dsprintf(asm_buf_p, "mtlo %s", regs[inst.rd]);
 });
 
 make_exec_handler(jalr) ({
