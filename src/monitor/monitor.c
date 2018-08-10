@@ -19,7 +19,15 @@ work_mode_t work_mode = MODE_GDB;
 size_t get_file_size(const char *img_file) {
   struct stat file_status;
   lstat(img_file, &file_status);
-  return file_status.st_size;
+  if(S_ISLNK(file_status.st_mode)) {
+	char *buf = malloc(file_status.st_size);
+	size_t size = readlink(img_file, buf, file_status.st_size);
+	size = get_file_size(buf);
+	free(buf);
+	return size;
+  } else {
+	return file_status.st_size;
+  }
 }
 
 void *read_file(const char *filename) {
