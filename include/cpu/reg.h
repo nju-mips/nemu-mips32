@@ -232,6 +232,9 @@ typedef struct {
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif
+#ifdef ENABLE_DELAYSLOT
+  bool is_delayslot;
+#endif
 } CPU_state;
 
 

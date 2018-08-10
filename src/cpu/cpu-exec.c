@@ -9,6 +9,8 @@
 
 CPU_state cpu;
 
+void signal_exception(int code);
+
 #ifdef ENABLE_PAGING
 static jmp_buf cpu_exception_handler;
 #endif
@@ -160,7 +162,16 @@ void signal_exception(int code) {
 	exit(0);
   }
 
-  cpu.cp0.epc = cpu.pc;
+#ifdef ENABLE_DELAYSLOT
+  if(cpu.is_delayslot) {
+	cpu.cp0.epc = oldpc - 4;
+	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
+  } else {
+#endif
+	cpu.cp0.epc = oldpc;
+#ifdef ENABLE_DELAYSLOT
+  }
+#endif
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
 #ifdef ENABLE_SEGMENT
@@ -168,7 +179,6 @@ void signal_exception(int code) {
 #endif
 
   cpu.cp0.status.EXL = 1;
-  cpu.cp0.status.IE = 0;
 
   cpu.cp0.cause.ExcCode = code;
 
@@ -178,8 +188,9 @@ void signal_exception(int code) {
 }
 
 
-void check_interrupt(bool ie) {
-  if(ie && cpu.cp0.cause.IP) {
+void check_ipbits(bool ie) {
+  if(ie && (cpu.cp0.cause.IP & cpu.cp0.status.IM)) {
+	oldpc = cpu.pc;
 	signal_exception(EXC_INTR);
   }
 }
@@ -231,11 +242,18 @@ void cpu_exec(uint64_t n) {
     asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
 #endif
 
+#ifdef ENABLE_EXCEPTION
+	if((cpu.pc & 0x3) != 0) {
+	  cpu.cp0.badvaddr = cpu.pc;
+	  signal_exception(EXC_AdEL);
+	}
+#endif
+
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
 	cpu.pc += 4;
 
-#ifdef ENABLE_INTR
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
 	bool ie = !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
 #endif
 
@@ -245,8 +263,12 @@ void cpu_exec(uint64_t n) {
 
     if(work_mode == MODE_LOG) print_registers();
 
-#ifdef ENABLE_INTR
-    check_interrupt(ie);
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+    check_ipbits(ie);
+#endif
+
+#ifdef ENABLE_DELAYSLOT
+	cpu.is_delayslot = false; // clear this bits
 #endif
 
     if (nemu_state != NEMU_RUNNING) { return; }
