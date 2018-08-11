@@ -53,8 +53,9 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 static uint32_t oldpc = 0;
 
 void print_registers() {
+  static unsigned int ninstr = 0;
   // print registers to stderr, so that will not mixed with uart output
-  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", oldpc, cpu.hi, cpu.lo);
+  eprintf("ninstr: 0x%08x    $pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", ninstr, oldpc, cpu.hi, cpu.lo);
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -63,6 +64,7 @@ void print_registers() {
   eprintf("$s4:0x%08x  $s5:0x%08x  $s6:0x%08x  $s7:0x%08x\n", cpu.gpr[20], cpu.gpr[21], cpu.gpr[22], cpu.gpr[23]);
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
+  ninstr++;
   // =============================================================
   // eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0.count[0], cpu.cp0.count[1]);
   // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
