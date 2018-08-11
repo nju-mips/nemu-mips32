@@ -21,9 +21,9 @@ struct mmap_region {
   {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
   {GPIO_BASE, GPIO_BASE + GPIO_SIZE, invalid_read, gpio_write},
   {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
-  {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
+  // {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
   {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
-  {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
+  // {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 };
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))

@@ -22,6 +22,7 @@ CFLAGS += -DENABLE_DELAYSLOT
 
 # enable interrupt will lose about 400 marks
 # CFLAGS += -DENABLE_INTR
+CFLAGS += -DENABLE_EXCEPTION
 
 # no action indeed
 # CFLAGS += -DDEBUG
