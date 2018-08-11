@@ -218,11 +218,7 @@ make_exec_handler(breakpoint) ({
 });
 
 make_exec_handler(eret) ({
-  if(cpu.cp0.cause.BD) {
-    cpu.pc = cpu.cp0.epc +  8;
-  } else {
-    cpu.pc = cpu.cp0.epc;
-  }
+  cpu.pc = cpu.cp0.epc;
   cpu.cp0.cause.BD = 0;
   cpu.cp0.status.EXL = 0;
 

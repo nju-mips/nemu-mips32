@@ -245,7 +245,11 @@ void cpu_exec(uint64_t n) {
 #ifdef ENABLE_EXCEPTION
 	if((cpu.pc & 0x3) != 0) {
 	  cpu.cp0.badvaddr = cpu.pc;
+	  /* sync with npc */
+	  if(work_mode == MODE_LOG) print_registers();
 	  signal_exception(EXC_AdEL);
+	  /* update oldpc */
+	  oldpc = cpu.pc;
 	}
 #endif
 
