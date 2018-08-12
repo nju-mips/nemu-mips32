@@ -2,6 +2,8 @@
 #include "memory.h"
 #include "device.h"
 
+#ifdef ENABLE_PAGING
+
 uint8_t unmapped[UNMAPPED_SIZE];
 
 #define check_unmapped(addr, len) \
@@ -24,3 +26,5 @@ void unmapped_write(paddr_t addr, int len, uint32_t data) {
   check_unmapped(addr, len);
   memcpy((uint8_t *)unmapped + addr, &data, len);
 }
+
+#endif

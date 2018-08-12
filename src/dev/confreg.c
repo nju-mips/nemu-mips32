@@ -9,17 +9,19 @@
 static uint8_t confreg[CONFREG_SIZE + 1];
 
 #define check_confreg(addr, len) \
-  CPUAssert(addr == 0, "address(0x%08x) is out side CONFREG", addr); \
-  CPUAssert(len == 1, "CONFREG only allow byte read/write");
+  CPUAssert(addr <= CONFREG_SIZE, "address(0x%08x) is out side CONFREG", addr);
 
 uint32_t confreg_read(paddr_t addr, int len) {
   check_confreg(addr, len);
-  return *((uint32_t *)((uint8_t *)ddr + addr)) & (~0u >> ((4 - len) << 3));
+  switch(addr) {
+	case CONFREG_SIMU_FLAG_ADDR: return 1;
+  }
+  return *((uint32_t *)((uint8_t *)confreg + addr)) & (~0u >> ((4 - len) << 3));
 }
 
 void confreg_write(paddr_t addr, int len, uint32_t data) {
   check_confreg(addr, len);
-  memcpy((uint8_t *)ddr + addr, &data, len);
+  memcpy((uint8_t *)confreg + addr, &data, len);
 
   uint32_t *led_rg0 = (void*)&confreg[CONFREG_LED_RG0_ADDR];
   uint32_t *led_rg1 = (void*)&confreg[CONFREG_LED_RG1_ADDR];

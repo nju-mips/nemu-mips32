@@ -27,6 +27,7 @@ struct mmap_region {
   {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
 #endif
 #ifdef __ARCH_LOONGSON__
+  {UNCACHED_DDR_BASE, UNCACHED_DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
   {CONFREG_BASE, CONFREG_BASE + CONFREG_SIZE, confreg_read, confreg_write},
 #endif
 };

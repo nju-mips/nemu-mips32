@@ -66,19 +66,25 @@ uint32_t kb_read(paddr_t addr, int len);
 #endif
 
 // DDR
-#ifdef __ARCH_MIPS32_NPC__
-#define DDR_BASE (0x10000000)
-#elif defined __ARCH_LOONGSON__
-#define DDR_BASE (0x80000000)
-#else
-#define DDR_BASE (0x1000000)
-#endif
-
 #ifdef __ARCH_LOONGSON__
 /* map from 0x80000000 to 0xc0000000 */
 #define DDR_SIZE (512 * 1024 * 1024)
 #else
 #define DDR_SIZE (256 * 1024 * 1024)
+#endif
+
+#ifdef __ARCH_MIPS32_NPC__
+#define DDR_BASE (0x10000000)
+#elif defined __ARCH_LOONGSON__
+
+#define DDR_BASE (0x80000000)
+#define UNCACHED_DDR_BASE (0xA0000000)
+static inline bool is_uncached(uint32_t addr) {
+  return UNCACHED_BASE <= addr && addr < UNCACHED_END;
+}
+
+#else
+#define DDR_BASE (0x1000000)
 #endif
 
 // UART

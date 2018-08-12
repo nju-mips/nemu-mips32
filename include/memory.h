@@ -28,13 +28,22 @@
  * 0000 0000 -/
  */
 
+#define UNCACHED_BASE 0xA0000000
+#define UNCACHED_END  0xC0000000
+
 #define UNMAPPED_BASE 0x80000000
 #define UNMAPPED_END  0xC0000000
+
+#ifdef ENABLE_PAGING
+
 #define UNMAPPED_SIZE (16 * 1024 * 1024) /* only support 16 MB */
 
 static inline bool is_unmapped(uint32_t addr) {
   return UNMAPPED_BASE <= addr && addr < UNMAPPED_END;
 }
+
+#endif
+
 
 extern uint8_t ddr[];
 uint32_t vaddr_read(vaddr_t, int);
