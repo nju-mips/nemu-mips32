@@ -19,10 +19,17 @@
 #define make_eoe() eoe:;
 
 #ifdef ENABLE_DELAYSLOT
+
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+#define MARK_DELAYSLOT cpu.is_delayslot = true
+#else
+#define MARK_DELAYSLOT
+#endif
+
 #define exec_delayslot() \
 	if(work_mode == MODE_LOG) print_registers(); \
 	inst.val = instr_fetch(oldpc += 4); \
-	cpu.is_delayslot = true; \
+	MARK_DELAYSLOT; \
 	goto exec_entry;
 #else
 #define exec_delayslot()

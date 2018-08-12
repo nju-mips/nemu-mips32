@@ -162,16 +162,14 @@ void signal_exception(int code) {
 	exit(0);
   }
 
-#ifdef ENABLE_DELAYSLOT
+#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   if(cpu.is_delayslot) {
 	cpu.cp0.epc = oldpc - 4;
 	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
-  } else {
+  } else
 #endif
 	cpu.cp0.epc = oldpc;
-#ifdef ENABLE_DELAYSLOT
-  }
-#endif
+
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
 #ifdef ENABLE_SEGMENT
@@ -271,7 +269,7 @@ void cpu_exec(uint64_t n) {
     check_ipbits(ie);
 #endif
 
-#ifdef ENABLE_DELAYSLOT
+#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
 	cpu.is_delayslot = false; // clear this bits
 #endif
 
