@@ -14,7 +14,8 @@ static uint8_t confreg[CONFREG_SIZE + 1];
 uint32_t confreg_read(paddr_t addr, int len) {
   check_confreg(addr, len);
   switch(addr) {
-	case CONFREG_SIMU_FLAG_ADDR: return 1;
+	case CONFREG_SIMU_FLAG_ADDR: return 0;
+	case CONFREG_SWITCH_ADDR: return CONFREG_SWITCH_NUM;
   }
   return *((uint32_t *)((uint8_t *)confreg + addr)) & (~0u >> ((4 - len) << 3));
 }
@@ -22,6 +23,11 @@ uint32_t confreg_read(paddr_t addr, int len) {
 void confreg_write(paddr_t addr, int len, uint32_t data) {
   check_confreg(addr, len);
   memcpy((uint8_t *)confreg + addr, &data, len);
+
+  if(addr == CONFREG_NUM_ADDR) {
+	uint32_t *num = (void*)&confreg[CONFREG_NUM_ADDR];
+	printf("NUM: %08x\n", *num);
+  }
 
   uint32_t *led_rg0 = (void*)&confreg[CONFREG_LED_RG0_ADDR];
   uint32_t *led_rg1 = (void*)&confreg[CONFREG_LED_RG1_ADDR];

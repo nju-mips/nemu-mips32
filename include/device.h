@@ -50,11 +50,14 @@ uint32_t kb_read(paddr_t addr, int len);
 #define CONFREG_LED_RG_GREEN   0x1
 #define CONFREG_LED_RG_RED     0x2
 
+/* custome it by youself */
+#define CONFREG_SWITCH_NUM  ((~1) & 0xFF) // switch 1
+
 #define CONFREG_LED_ADDR       0xf000 
 #define CONFREG_LED_RG0_ADDR   0xf004 // 1 is green, 2 is red
 #define CONFREG_LED_RG1_ADDR   0xf008 // 1 is green, 2 is red
-#define CONFREG_NUM_ADDR       0xf010 
-#define CONFREG_SWITCH_ADDR    0xf020 
+#define CONFREG_NUM_ADDR       0xf010 // number, nixie tube
+#define CONFREG_SWITCH_ADDR    0xf020 // 8 switchs, up 0, down 1
 #define CONFREG_BTN_KEY_ADDR   0xf024
 #define CONFREG_BTN_STEP_ADDR  0xf028
 #define CONFREG_TIMER_ADDR     0xe000 
