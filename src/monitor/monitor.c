@@ -63,11 +63,12 @@ void load_elf() {
 	  if(ph->p_type != PT_LOAD) { continue; }
 
 	  void *p_vaddr = NULL;
+#ifdef ENABLE_PAGING
 	  if(is_unmapped(ph->p_vaddr)) {
 		p_vaddr = unmapped_map(ph->p_vaddr, ph->p_memsz);
-	  } else {
-		p_vaddr = ddr_map(ph->p_vaddr, ph->p_memsz);
-	  }
+	  } else
+#endif
+	  p_vaddr = ddr_map(ph->p_vaddr, ph->p_memsz);
 	  memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
 	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }

@@ -232,7 +232,7 @@ typedef struct {
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif
-#ifdef ENABLE_DELAYSLOT
+#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   bool is_delayslot;
 #endif
 } CPU_state;

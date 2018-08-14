@@ -24,7 +24,11 @@ const char *regs[32] = {
 
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
+#ifdef __ARCH_LOONGSON__
+#define EXCEPTION_VECTOR_LOCATION 0xbfc00380
+#else
 #define EXCEPTION_VECTOR_LOCATION 0x10000020
+#endif
 #define MAX_INSTR_TO_PRINT 10
 
 nemu_state_t nemu_state = NEMU_STOP;
@@ -102,13 +106,26 @@ int init_cpu(vaddr_t entry) {
 }
 
 static inline uint32_t instr_fetch(uint32_t addr) {
+#ifdef ENABLE_PAGING
   if(is_unmapped(addr)) {
 	extern uint32_t unmapped[];
 	addr -= UNMAPPED_BASE;
 	Assert(addr < UNMAPPED_SIZE && (addr & 3) == 0,
 		"addr is %08x, UNMAPPED_BASE:%08x\n", addr + UNMAPPED_BASE, UNMAPPED_BASE);
 	return unmapped[addr >> 2];
-  } else {
+  }
+  else
+#endif
+#ifdef __ARCH_LOONGSON__
+  if(is_uncached(addr)) {
+	addr = prot_addr(addr) - UNCACHED_DDR_BASE;
+	Assert(addr < DDR_SIZE && (addr & 3) == 0,
+		"addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
+	return ((uint32_t*)ddr)[addr >> 2];
+  }
+  else
+#endif
+  {
 	addr = prot_addr(addr) - DDR_BASE;
 	Assert(addr < DDR_SIZE && (addr & 3) == 0,
 		"addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
@@ -164,16 +181,14 @@ void signal_exception(int code) {
 	exit(0);
   }
 
-#ifdef ENABLE_DELAYSLOT
+#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   if(cpu.is_delayslot) {
 	cpu.cp0.epc = oldpc - 4;
 	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
-  } else {
+  } else
 #endif
 	cpu.cp0.epc = oldpc;
-#ifdef ENABLE_DELAYSLOT
-  }
-#endif
+
   cpu.pc = EXCEPTION_VECTOR_LOCATION;
 
 #ifdef ENABLE_SEGMENT
@@ -273,7 +288,7 @@ void cpu_exec(uint64_t n) {
     check_ipbits(ie);
 #endif
 
-#ifdef ENABLE_DELAYSLOT
+#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
 	cpu.is_delayslot = false; // clear this bits
 #endif
 
