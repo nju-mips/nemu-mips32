@@ -260,11 +260,44 @@ make_exec_handler(mfc0) ({
 });
 
 make_exec_handler(mtc0) ({
-  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
   // this serial is for debugging,
   // please don't use it in real codes
   if(inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_SERIAL)
     putchar(cpu.gpr[inst.rt]);
+
+#define CPRS(reg, sel) (((reg) << 3) | (sel))
+  switch(CPRS(inst.rd, inst.sel)) {
+    case CPRS(CP0_BADVADDR, 0):
+	  break;
+    case CPRS(CP0_STATUS, 0): {
+	  cp0_status_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.status.CU = newVal->CU;
+	  cpu.cp0.status.RP = newVal->RP;
+	  cpu.cp0.status.RE = newVal->RE;
+	  cpu.cp0.status.BEV = newVal->BEV;
+	  cpu.cp0.status.TS = newVal->TS;
+	  cpu.cp0.status.SR = newVal->SR;
+	  cpu.cp0.status.NMI = newVal->NMI;
+	  cpu.cp0.status.IM = newVal->IM;
+	  cpu.cp0.status.UM = newVal->UM;
+	  cpu.cp0.status.ERL = newVal->ERL;
+	  cpu.cp0.status.EXL = newVal->EXL;
+	  cpu.cp0.status.IE = newVal->IE;
+	  break;
+	}
+    case CPRS(CP0_CAUSE, 0): {
+	  uint32_t sw_ip_mask = 3;
+	  cp0_cause_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.cause.IV = newVal->IV;
+	  cpu.cp0.cause.WP = newVal->WP;
+	  cpu.cp0.cause.IP = (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
+	  break;
+    }
+	default:
+	  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
+	  break;
+  }
+
   dsprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
 	  inst.rd, inst.sel);
 });
