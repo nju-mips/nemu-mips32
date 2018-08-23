@@ -24,11 +24,7 @@ const char *regs[32] = {
 
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
-#ifdef __ARCH_LOONGSON__
 #define EXCEPTION_VECTOR_LOCATION 0xbfc00380
-#else
-#define EXCEPTION_VECTOR_LOCATION 0x10000020
-#endif
 #define MAX_INSTR_TO_PRINT 10
 
 nemu_state_t nemu_state = NEMU_STOP;

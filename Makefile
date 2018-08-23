@@ -13,9 +13,7 @@ INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
 # ddr start at 0x10000000 or 0x1000000
-# CFLAGS += -D__ARCH_MIPS32_NPC__ 
 CFLAGS += -D__ARCH_MIPS32_R1__ 
-# CFLAGS += -D__ARCH_LOONGSON__ 
 
 # CFLAGS += -DENABLE_PERF
 

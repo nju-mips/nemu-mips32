@@ -9,11 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#ifdef ENABLE_PAGING
 uint32_t entry_start = 0xbfc00000;
-#else
-uint32_t entry_start = 0x10000000;
-#endif
 
 char *elf_file = NULL;
 static char *img_file = NULL;
