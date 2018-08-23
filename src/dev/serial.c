@@ -4,6 +4,11 @@
 #include "nemu.h"
 #include "device.h"
 
+#define UARTLITE_Rx     0x0
+#define UARTLITE_Tx     0x4
+#define UARTLITE_STAT   0x8
+#define UARTLITE_CTRL   0xC
+
 static uint32_t uartlite_ctrl_reg = 0;
 
 /* status */
@@ -137,10 +142,10 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 #define check_input(addr, len) \
-  CPUAssert(addr >= 0 && addr <= UARTLITE_SIZE, \
+  CPUAssert(addr >= 0 && addr <= SERIAL_SIZE, \
 	  "UART: address(0x%08x) is out side", addr); \
 
-uint32_t uartlite_read(paddr_t addr, int len) {
+uint32_t serial_read(paddr_t addr, int len) {
   check_input(addr, len);
   switch (addr) {
 	case UARTLITE_Rx: {
@@ -159,7 +164,7 @@ uint32_t uartlite_read(paddr_t addr, int len) {
   return 0;
 }
 
-void uartlite_write(paddr_t addr, int len, uint32_t data) {
+void serial_write(paddr_t addr, int len, uint32_t data) {
   check_input(addr, len);
   switch (addr) {
 	case UARTLITE_Tx:

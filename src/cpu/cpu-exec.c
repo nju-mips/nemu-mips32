@@ -105,31 +105,32 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-static inline uint32_t instr_fetch(uint32_t addr) {
-#ifdef ENABLE_PAGING
-  if(is_unmapped(addr)) {
-	extern uint32_t unmapped[];
-	addr -= UNMAPPED_BASE;
-	Assert(addr < UNMAPPED_SIZE && (addr & 3) == 0,
-		"addr is %08x, UNMAPPED_BASE:%08x\n", addr + UNMAPPED_BASE, UNMAPPED_BASE);
-	return unmapped[addr >> 2];
+static inline uint32_t read_handler(uint8_t *p, int len) {
+  switch(len) {
+	case 1: return p[0];
+	case 2: return (p[1] << 8) | p[0];
+	case 3: return (p[2] << 16) | (p[1] << 8) | p[0];
+	case 4: return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
+	default: CPUAssert(0, "invalid len %d\n", len); break;
   }
-  else
-#endif
-#ifdef __ARCH_LOONGSON__
-  if(is_uncached(addr)) {
-	addr = prot_addr(addr) - UNCACHED_DDR_BASE;
-	Assert(addr < DDR_SIZE && (addr & 3) == 0,
-		"addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
-	return ((uint32_t*)ddr)[addr >> 2];
-  }
-  else
-#endif
-  {
-	addr = prot_addr(addr) - DDR_BASE;
-	Assert(addr < DDR_SIZE && (addr & 3) == 0,
-		"addr is %08x, DDR_BASE:%08x\n", addr + DDR_BASE, DDR_BASE);
-	return ((uint32_t*)ddr)[addr >> 2];
+}
+
+static inline void write_handler(uint8_t *p, uint32_t len, uint32_t data) {
+  switch(len) {
+	case 1: p[0] = data; return;
+	case 2: p[0] = data & 0xFF;
+			p[1] = (data >> 8) & 0xFF;
+			return;
+	case 3: p[0] = data & 0xFF;
+			p[1] = (data >> 8) & 0xFF;
+			p[2] = (data >> 16) & 0xFF;
+			return;
+	case 4: p[0] = data & 0xFF;
+			p[1] = (data >> 8) & 0xFF;
+			p[2] = (data >> 16) & 0xFF;
+			p[3] = (data >> 24) & 0xFF;
+			return;
+	default: CPUAssert(0, "invalid len %d\n", len); break;
   }
 }
 
@@ -138,13 +139,10 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
 	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
-	switch(len) {
-	  case 1: return ddr[addr];
-	  case 2: return (ddr[addr + 1] << 8) | ddr[addr];
-	  case 3: return (ddr[addr + 2] << 16) | (ddr[addr + 1] << 8) | ddr[addr];
-	  case 4: return (ddr[addr + 3] << 24) | (ddr[addr + 2] << 16) | (ddr[addr + 1] << 8) | ddr[addr];
-	  default: CPUAssert(0, "invalid len %d\n", len); break;
-	}
+	return read_handler(&ddr[addr], len);
+  } else if(BRAM_BASE <= pa && pa < BRAM_BASE + BRAM_SIZE) {
+    addr = pa - BRAM_BASE;
+	return read_handler(&bram[addr], len);
   }
   return vaddr_read(addr, len);
 }
@@ -152,27 +150,15 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t pa = prot_addr(addr);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
-	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
-	switch(len) {
-	  case 1: ddr[addr] = data; return;
-	  case 2: ddr[addr] = data & 0xFF;
-			  ddr[addr + 1] = (data >> 8) & 0xFF;
-			  return;
-	  case 3: ddr[addr] = data & 0xFF;
-			  ddr[addr + 1] = (data >> 8) & 0xFF;
-			  ddr[addr + 2] = (data >> 16) & 0xFF;
-			  return;
-	  case 4: ddr[addr] = data & 0xFF;
-			  ddr[addr + 1] = (data >> 8) & 0xFF;
-			  ddr[addr + 2] = (data >> 16) & 0xFF;
-			  ddr[addr + 3] = (data >> 24) & 0xFF;
-			  return;
-	  default: CPUAssert(0, "invalid len %d\n", len); break;
-	}
+	write_handler(&ddr[addr], len, data);
   } else {
     vaddr_write(addr, len, data);
   }
+}
+
+static inline uint32_t instr_fetch(vaddr_t addr) {
+  return load_mem(addr, 4);
 }
 
 void signal_exception(int code) {

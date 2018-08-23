@@ -36,16 +36,20 @@
 
 #ifdef ENABLE_PAGING
 
-#define UNMAPPED_SIZE (16 * 1024 * 1024) /* only support 16 MB */
-
 static inline bool is_unmapped(uint32_t addr) {
   return UNMAPPED_BASE <= addr && addr < UNMAPPED_END;
+}
+
+static inline bool is_uncached(uint32_t addr) {
+  return UNCACHED_BASE <= addr && addr < UNCACHED_END;
 }
 
 #endif
 
 
 extern uint8_t ddr[];
+extern uint8_t bram[];
+
 uint32_t vaddr_read(vaddr_t, int);
 uint32_t paddr_read(paddr_t, int);
 void vaddr_write(vaddr_t, int, uint32_t);

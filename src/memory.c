@@ -16,20 +16,15 @@ struct mmap_region {
   uint32_t start, end;
   read_func read;
   write_func write;
+  map_func map;
 } mmap_table [] = {
   // {0x00000000, 0x00001fff, invalid_read, invalid_write},
-  {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
+  {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write, ddr_map},
+  {BRAM_BASE, BRAM_BASE + BRAM_SIZE, bram_read, bram_write, bram_map},
   {GPIO_BASE, GPIO_BASE + GPIO_SIZE, invalid_read, gpio_write},
-  {UARTLITE_ADDR, UARTLITE_ADDR + UARTLITE_SIZE, uartlite_read, uartlite_write},
+  {SERIAL_ADDR, SERIAL_ADDR + SERIAL_SIZE, serial_read, serial_write},
   // {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
   {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
-#ifdef ENABLE_PAGING
-  {UNMAPPED_BASE, UNMAPPED_BASE + UNMAPPED_SIZE, unmapped_read, unmapped_write},
-#endif
-#ifdef __ARCH_LOONGSON__
-  {UNCACHED_DDR_BASE, UNCACHED_DDR_BASE + DDR_SIZE, ddr_read, ddr_write},
-  {CONFREG_BASE, CONFREG_BASE + CONFREG_SIZE, confreg_read, confreg_write},
-#endif
 };
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))
@@ -42,6 +37,13 @@ uint32_t find_region(vaddr_t addr) {
 	  break;
 	}
   return ret;
+}
+
+void *paddr_map(uint32_t addr, uint32_t len) {
+  int idx = find_region(addr);
+  Assert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
+  Assert(mmap_table[idx].map, "cannot find map handler for address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
+  return mmap_table[idx].map(addr - mmap_table[idx].start, len);
 }
 
 uint32_t vaddr_read_safe(vaddr_t addr, int len) {
