@@ -4,7 +4,7 @@
 
 uint8_t bram[BRAM_SIZE];
 
-/* Memory accessing interfaces */
+/* fake spi flash */
 
 #define check_bram(addr, len) \
   CPUAssert(addr >= 0 && addr < BRAM_SIZE && addr + len <= BRAM_SIZE, \

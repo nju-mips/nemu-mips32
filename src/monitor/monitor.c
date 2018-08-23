@@ -77,13 +77,11 @@ static inline void load_img() {
   Assert(img_file, "Need an image file");
   Log("The image is %s", img_file);
 
-  // load into ddr
-  // be careful about memory mapping
-  int fd = open(img_file, O_RDONLY);
-  Assert(fd > 0, "Can not open '%s'", img_file);
-  int ret = read(fd, ddr, DDR_SIZE);
-  Assert(ret > 0, "read fails\n");
-  close(fd);
+  size_t size = get_file_size(img_file);
+  void *buf = read_file(img_file);
+  void *paddr = paddr_map(entry_start, size);
+  memcpy(paddr, buf, size);
+  free(buf);
 
   // assume img_file is xxx.bin and elf_file is xxx
   char *end = strrchr(img_file, '.');
