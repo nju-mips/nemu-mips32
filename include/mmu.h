@@ -10,8 +10,8 @@
 typedef struct {
   uint32_t pfn : 25;
   uint32_t c   : 2;  // cache coherency
-  uint32_t d   : 2;  // dirty
-  uint32_t v   : 2;  // valid
+  uint32_t d   : 1;  // dirty
+  uint32_t v   : 1;  // valid
 } tlb_phyn_t;
 
 typedef struct {

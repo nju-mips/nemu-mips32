@@ -90,11 +90,11 @@ int init_cpu(vaddr_t entry) {
   // init cp0 config 1
   cpu.cp0.config1.DA = 2; // 4=2^(2) ways dcache
   cpu.cp0.config1.DL = 2; // 8=2^(2 + 1) bytes per line
-  cpu.cp0.config1.DS = 0; // 64=2^(0 + 8) sets
+  cpu.cp0.config1.DS = 0; // 256=2^(0 + 8) sets
 
   cpu.cp0.config1.IA = 2; // 4=2^(2) ways dcache
   cpu.cp0.config1.IL = 2; // 8=2^(2 + 1) bytes per line
-  cpu.cp0.config1.IS = 0; // 64=2^(0 + 8) sets
+  cpu.cp0.config1.IS = 0; // 256=2^(0 + 8) sets
 
   cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
 
