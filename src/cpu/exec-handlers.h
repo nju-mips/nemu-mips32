@@ -142,7 +142,7 @@ static const void * opcode_table[64] = {
   /* 0x24 */	&&lbu, &&lhu, &&lwr, &&inv,
   /* 0x28 */	&&sb, &&sh, &&swl, &&sw,
   /* 0x2c */	&&inv, &&inv, &&swr, &&cache,
-  /* 0x30 */	&&ll, &&inv, &&inv, &&inv,
+  /* 0x30 */	&&ll, &&inv, &&inv, &&pref,
   /* 0x34 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x38 */	&&sc, &&inv, &&inv, &&inv,
   /* 0x3c */	&&inv, &&inv, &&inv, &&inv,
@@ -188,10 +188,12 @@ make_exec_handler(inv) ({
 
 /* tlb strategy */
 make_exec_handler(tlbp) ({
+  printf("[NEMU] tlbp\n");
   tlb_present();
 });
 
 make_exec_handler(tlbr) ({
+  printf("[NEMU] tlbr\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_read(i);
@@ -204,6 +206,7 @@ make_exec_handler(tlbwi) ({
 });
 
 make_exec_handler(tlbwr) ({
+  printf("[NEMU] tlbwr\n");
   uint32_t i = rand() % NR_TLB_ENTRY;
   cpu.cp0.random = i;
   tlb_write(i);
@@ -754,6 +757,10 @@ make_exec_handler(lhu) ({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
   dsprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
+});
+
+make_exec_handler(pref) ({
+  dsprintf(asm_buf_p, "pref %d, %d(%s)", inst.rt, inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(ll) ({

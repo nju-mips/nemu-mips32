@@ -112,6 +112,14 @@ const char *SDLK_to_ascii[SDLK_LAST] = {
 	[SDLK_KP_ENTER]	= "\n",
 };
 
+void serial_enqueue_ascii(char ch) {
+  int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
+  if(next != serial_f) { // if not full
+	serial_queue[serial_r] = ch;
+	serial_r = next;
+  }
+}
+
 void serial_enqueue(SDL_EventType type, SDLKey key) {
   if(key < 0 || key >= SDLK_LAST) return;
 
@@ -169,6 +177,7 @@ void serial_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
 	case UARTLITE_Tx:
 	  putchar((char)data);
+	  fflush(stdout);
 	  break;
 	case UARTLITE_CTRL:
 	  uartlite_ctrl_reg = data;

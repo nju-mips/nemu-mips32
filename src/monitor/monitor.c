@@ -9,9 +9,12 @@
 #include <fcntl.h>
 #include <signal.h>
 
+vaddr_t uimage_base = DDR_BASE + 16 * 1024 * 1024;
+void serial_enqueue_ascii(char);
 uint32_t entry_start = 0xbfc00000;
 
 char *elf_file = NULL;
+char *symbol_file = NULL;
 static char *img_file = NULL;
 static char *kernel_img = NULL;
 
@@ -49,6 +52,8 @@ void load_elf() {
   Assert(elf_file, "Need an elf file");
   Log("The elf is %s", elf_file);
 
+  /* set symbol file to elf_file */
+  symbol_file = elf_file;
   const uint32_t elf_magic = 0x464c457f;
 
   void *buf = read_file(elf_file);
@@ -99,10 +104,11 @@ void sigint_handler(int no) {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bcdi:e:k:")) != -1) {
+  while ( (o = getopt(argc, argv, "-S:bcdi:e:k:")) != -1) {
     switch (o) {
+	  case 'S': symbol_file = optarg; break;
 	  case 'k': kernel_img = optarg;
-				load_image(kernel_img, DDR_BASE);
+				load_image(kernel_img, uimage_base);
 				break;
 	  case 'd': work_mode |= MODE_DIFF; break;
       case 'b': work_mode |= MODE_BATCH; break;
@@ -140,6 +146,12 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 
   if(!(work_mode & MODE_BATCH))
 	signal(SIGINT, sigint_handler);
+
+  // send command to uboot
+  char cmd[1024];
+  sprintf(cmd, "bootm 0x%08x - 0xbfc3b730\n", uimage_base);
+  for(char *p = cmd; *p; p++)
+	serial_enqueue_ascii(*p);
 
   /* Initialize this virtual computer system. */
   init_cpu(entry_start);

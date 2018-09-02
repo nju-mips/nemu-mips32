@@ -28,7 +28,7 @@ void cpu_exec(uint64_t);
 
 static struct gdb_conn *conn;
 
-extern char *elf_file;
+extern char *symbol_file;
 extern uint32_t entry_start;
 
 int start_qemu(int port) {
@@ -37,7 +37,7 @@ int start_qemu(int port) {
   snprintf(remote_s, sizeof(remote_s), "tcp::%d", port);
 
   execlp(exec, exec, "-S", "-gdb", remote_s,
-		  "-kernel", elf_file, NULL);
+		  "-kernel", symbol_file, NULL);
   return -1;
 }
 

@@ -52,6 +52,9 @@ void tlb_read(uint32_t i) {
 }
 
 void tlb_write(uint32_t i) {
+  printf("tlb_write: index:%08x, @%08x\n", cpu.cp0.cpr[CP0_INDEX][0], cpu.pc);
+  printf("  pagemask:%08x, entry_hi:%08x\n", cpu.cp0.cpr[CP0_PAGEMASK][0], cpu.cp0.cpr[CP0_ENTRY_HI][0]);
+  printf("  entry_lo0:%08x, entry_lo1:%08x\n", cpu.cp0.cpr[CP0_ENTRY_LO0][0], cpu.cp0.cpr[CP0_ENTRY_LO1][0]);
   tlb_entries[i].pagemask = cpu.cp0.pagemask;
   tlb_entries[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask;
   tlb_entries[i].asid = cpu.cp0.entry_hi.asid;

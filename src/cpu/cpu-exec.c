@@ -78,6 +78,9 @@ void print_registers() {
 int init_cpu(vaddr_t entry) {
   nemu_start_time = get_current_time();
 
+  cpu.cp0.count[0] = 0;
+  cpu.cp0.compare = 0xFFFFFFFF;
+
   cpu.pc = entry;
   cpu.cp0.cpr[CP0_STATUS][0] = 0x1000FF00;
   cpu.cp0.cpr[CP0_PRID][0] = 0x00018000;   // MIPS32 4Kc
@@ -88,13 +91,13 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.config.M  = 1; // config1 present
 
   // init cp0 config 1
-  cpu.cp0.config1.DA = 2; // 4=2^(2) ways dcache
-  cpu.cp0.config1.DL = 2; // 8=2^(2 + 1) bytes per line
-  cpu.cp0.config1.DS = 0; // 256=2^(0 + 8) sets
+  cpu.cp0.config1.DA = 3; // 4=3+1 ways dcache
+  cpu.cp0.config1.DL = 5; // 64=2^(5 + 1) bytes per line
+  cpu.cp0.config1.DS = 2; // 256=2^(2 + 6) sets
 
-  cpu.cp0.config1.IA = 2; // 4=2^(2) ways dcache
-  cpu.cp0.config1.IL = 2; // 8=2^(2 + 1) bytes per line
-  cpu.cp0.config1.IS = 0; // 256=2^(0 + 8) sets
+  cpu.cp0.config1.IA = 3; // 4=3+1 ways ways dcache
+  cpu.cp0.config1.IL = 5; // 64=2^(5 + 1) bytes per line
+  cpu.cp0.config1.IS = 2; // 256=2^(2 + 6) sets
 
   cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
 
@@ -158,6 +161,8 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 }
 
 void signal_exception(int code) {
+  if(code != EXC_INTR)
+	CPUAssert(0, "who signal the exception ?\n");
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP txx\e0m\n");
 	exit(0);
@@ -171,7 +176,12 @@ void signal_exception(int code) {
 #endif
 	cpu.cp0.epc = oldpc;
 
-  cpu.pc = EXCEPTION_VECTOR_LOCATION;
+  /* reference linux: arch/mips/kernel/cps-vec.S */
+  if(cpu.cp0.status.BEV) {
+	cpu.pc = EXCEPTION_VECTOR_LOCATION;
+  } else {
+	cpu.pc = 0x80000400;
+  }
 
 #ifdef ENABLE_SEGMENT
   cpu.base = 0; // kernel segment base is zero
@@ -188,7 +198,7 @@ void signal_exception(int code) {
 
 
 void check_ipbits(bool ie) {
-  if(ie && (cpu.cp0.cause.IP & cpu.cp0.status.IM)) {
+  if(ie && cpu.cp0.cause.IP) {
 	oldpc = cpu.pc;
 	signal_exception(EXC_INTR);
   }
@@ -203,7 +213,7 @@ void update_cp0_timer() {
   cpu.cp0.count[1] = cycles.hi;
 
   // update IP
-  if(cpu.cp0.count[0] == cpu.cp0.compare) {
+  if(cpu.cp0.status.IE && (cpu.cp0.count[0] % 500000) == 0) {
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
