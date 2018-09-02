@@ -13,6 +13,7 @@ uint32_t entry_start = 0xbfc00000;
 
 char *elf_file = NULL;
 static char *img_file = NULL;
+static char *kernel_img = NULL;
 
 work_mode_t work_mode = MODE_GDB;
 
@@ -72,18 +73,19 @@ void load_elf() {
   free(buf);
 }
 
+static inline void load_image(const char *img, vaddr_t vaddr) {
+  Assert(img, "Need an image file");
+  Log("The image is %s", img);
 
-static inline void load_img() {
-  Assert(img_file, "Need an image file");
-  Log("The image is %s", img_file);
-
-  size_t size = get_file_size(img_file);
-  void *buf = read_file(img_file);
-  void *paddr = paddr_map(entry_start, size);
+  size_t size = get_file_size(img);
+  void *buf = read_file(img);
+  void *paddr = paddr_map(vaddr, size);
   memcpy(paddr, buf, size);
   free(buf);
+}
 
-  // assume img_file is xxx.bin and elf_file is xxx
+static inline void assume_elf_file() {
+  /* assume img_file is xxx.bin and elf_file is xxx */
   char *end = strrchr(img_file, '.');
   if(end) {
 	  *end = 0;
@@ -97,8 +99,11 @@ void sigint_handler(int no) {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-bcdi:e:")) != -1) {
+  while ( (o = getopt(argc, argv, "-bcdi:e:k:")) != -1) {
     switch (o) {
+	  case 'k': kernel_img = optarg;
+				load_image(kernel_img, DDR_BASE);
+				break;
 	  case 'd': work_mode |= MODE_DIFF; break;
       case 'b': work_mode |= MODE_BATCH; break;
       case 'c': work_mode |= MODE_LOG; break;
@@ -115,7 +120,7 @@ static inline void parse_args(int argc, char *argv[]) {
 				  img_file = optarg;
                 break;
       default:
-                panic("Usage: %s [-b] [-c] [-d] [-i img_file] [-e elf_file]", argv[0]);
+                panic("Usage: %s [-b] [-c] [-d] [-i img_file] [-k uImage] [-e elf_file]", argv[0]);
     }
   }
 }
@@ -130,7 +135,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   if(elf_file) {
 	load_elf();
   } else {
-	load_img();
+	load_image(img_file, entry_start);
   }
 
   if(!(work_mode & MODE_BATCH))
