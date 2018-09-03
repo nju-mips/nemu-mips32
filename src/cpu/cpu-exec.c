@@ -24,7 +24,6 @@ const char *regs[32] = {
 
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
-#define EXCEPTION_VECTOR_LOCATION 0xbfc00380
 #define MAX_INSTR_TO_PRINT 10
 
 nemu_state_t nemu_state = NEMU_STOP;
@@ -41,14 +40,15 @@ static uint64_t get_current_time() { // in us
 }
 
 static int dsprintf(char *buf, const char *fmt, ...) {
+  int len = 0;
 #if 0
   va_list ap;
   va_start(ap, fmt);
-  vprintf(fmt, ap);
+  len = vprintf(fmt, ap);
   va_end(ap);
   printf("\n");
 #endif
-  return 0;
+  return len;
 }
 
 
@@ -81,8 +81,12 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.count[0] = 0;
   cpu.cp0.compare = 0xFFFFFFFF;
 
+  cpu.cp0.status.CU = CU0_ENABLE;
+  cpu.cp0.status.ERL = 1;
+  cpu.cp0.status.BEV = 1;
+  cpu.cp0.status.IM = 0x00;
+
   cpu.pc = entry;
-  cpu.cp0.cpr[CP0_STATUS][0] = 0x1000FF00;
   cpu.cp0.cpr[CP0_PRID][0] = 0x00018000;   // MIPS32 4Kc
 
   // init cp0 config 0
@@ -164,7 +168,7 @@ void signal_exception(int code) {
   if(code != EXC_INTR)
 	CPUAssert(0, "who signal the exception ?\n");
   if(code == EXC_TRAP) {
-	eprintf("\e[31mHIT BAD TRAP txx\e0m\n");
+	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
 	exit(0);
   }
 
@@ -177,10 +181,20 @@ void signal_exception(int code) {
 	cpu.cp0.epc = oldpc;
 
   /* reference linux: arch/mips/kernel/cps-vec.S */
-  if(cpu.cp0.status.BEV) {
-	cpu.pc = EXCEPTION_VECTOR_LOCATION;
-  } else {
-	cpu.pc = 0x80000400;
+  uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
+  switch(code) {
+	case EXC_INTR:
+	  if(cpu.cp0.cause.IV) {
+		cpu.pc = ebase + 0x0200;
+	  } else {
+		cpu.pc = ebase + 0x0180;
+	  }
+	  break;
+	case EXC_TLBM:
+	case EXC_TLBL:
+	case EXC_TLBS: cpu.pc = ebase + 0x0000; break;
+	default: /* usual exception */
+				   cpu.pc = ebase + 0x0180; break;
   }
 
 #ifdef ENABLE_SEGMENT
@@ -198,7 +212,7 @@ void signal_exception(int code) {
 
 
 void check_ipbits(bool ie) {
-  if(ie && cpu.cp0.cause.IP) {
+  if(ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
 	oldpc = cpu.pc;
 	signal_exception(EXC_INTR);
   }
@@ -208,12 +222,12 @@ void update_cp0_timer() {
   union { struct { uint32_t lo, hi; }; uint64_t val; } cycles;
   cycles.lo = cpu.cp0.count[0];
   cycles.hi = cpu.cp0.count[1];
-  cycles.val += 5; // add 5 cycles
+  cycles.val += 1; // add 5 cycles
   cpu.cp0.count[0] = cycles.lo;
   cpu.cp0.count[1] = cycles.hi;
 
   // update IP
-  if(cpu.cp0.status.IE && (cpu.cp0.count[0] % 500000) == 0) {
+  if(cpu.cp0.compare != 0 && cpu.cp0.count[0] == cpu.cp0.compare) {
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
@@ -243,8 +257,10 @@ void cpu_exec(uint64_t n) {
 #ifdef ENABLE_INTR
 	update_cp0_timer();
 #endif
-	
+
 	oldpc = cpu.pc;
+
+	instr_enqueue(cpu.pc);
 
 #if 0
     asm_buf_p = asm_buf;
@@ -267,7 +283,7 @@ void cpu_exec(uint64_t n) {
 	cpu.pc += 4;
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-	bool ie = !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
+	bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
 #endif
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);

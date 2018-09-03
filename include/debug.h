@@ -9,6 +9,8 @@
 
 #include "monitor.h"
 
+extern void instr_enqueue(uint32_t pc);
+extern void print_instr_queue(void);
 extern void print_registers();
 
 #define eprintf(...) fprintf(stderr, ## __VA_ARGS__)
@@ -44,6 +46,7 @@ extern void print_registers();
     if (!(cond)) { \
 	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
 			  __FILE__, __LINE__, __func__, #cond); \
+	  print_instr_queue(); \
 	  eprintf("=========== dump registers =========\n"); \
 	  print_registers(); \
 	  eprintf("=========== dump    end =========\n"); \

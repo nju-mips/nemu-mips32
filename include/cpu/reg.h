@@ -9,6 +9,7 @@
 #endif
 
 #define CP0_RESERVED_SERIAL 1
+#define CP0_RESERVED_STOP   2
 
 #define CP0_INDEX        0
 #define CP0_RANDOM       1
@@ -25,11 +26,20 @@
 #define CP0_STATUS       12
 #define CP0_CAUSE        13
 #define CP0_EPC          14
-#define CP0_PRID         15
+#define CP0_PRID         15 // sel = 0
+#define CP0_EBASE        15 // sel = 1
 #define CP0_CONFIG       16
+
+#define CP0_PRID_SEL     0 // sel = 0
+#define CP0_EBASE_SEL    1 // sel = 1
 
 #define CP0_TAG_LO       28
 #define CP0_TAG_HI       29
+
+#define CU0_ENABLE       1
+#define CU1_ENABLE       2
+#define CU2_ENABLE       4
+#define CU3_ENABLE       8
 
 /*
  * default config:
@@ -195,7 +205,8 @@ typedef union {
 	struct { cp0_status_t status;       uint32_t _12[7]; };
 	struct { cp0_cause_t cause;         uint32_t _13[7]; };
 	struct { vaddr_t epc;               uint32_t _14[7]; };
-	struct { cp0_prid_t prid;           uint32_t _15[7]; };
+	struct { cp0_prid_t prid;
+	         vaddr_t ebase;             uint32_t _15[6]; };
 	struct {
 	  cp0_config_t config;
 	  cp0_config1_t config1;

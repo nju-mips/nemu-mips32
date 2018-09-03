@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-vaddr_t uimage_base = DDR_BASE + 16 * 1024 * 1024;
+vaddr_t uimage_base = DDR_BASE + 24 * 1024 * 1024;
 void serial_enqueue_ascii(char);
 uint32_t entry_start = 0xbfc00000;
 

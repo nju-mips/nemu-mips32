@@ -239,9 +239,15 @@ make_exec_handler(eret) ({
   dsprintf(asm_buf_p, "eret");
 });
 
+#define CPRS(reg, sel) (((reg) << 3) | (sel))
+
 make_exec_handler(mfc0) ({
 #ifdef ENABLE_INTR
   cpu.gpr[inst.rt] = cpu.cp0.cpr[inst.rd][inst.sel];
+
+  if(CPRS(inst.rd, inst.sel) == CPRS(CP0_EBASE, CP0_EBASE_SEL)) {
+	printf("****** read ebase to %08x @%08x\n", cpu.cp0.cpr[CP0_EBASE][CP0_EBASE_SEL], cpu.pc);
+  }
 #else
   /* only for microbench */
   if(inst.rd == CP0_COUNT) {
@@ -268,8 +274,16 @@ make_exec_handler(mtc0) ({
   if(inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_SERIAL)
     putchar(cpu.gpr[inst.rt]);
 
-#define CPRS(reg, sel) (((reg) << 3) | (sel))
+  if(inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_STOP) {
+    cpu.pc += 4;
+    nemu_state = NEMU_STOP;
+  }
+
   switch(CPRS(inst.rd, inst.sel)) {
+    case CPRS(CP0_EBASE, CP0_EBASE_SEL):
+	  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
+	  printf("****** write ebase to %08x @%08x\n", cpu.gpr[inst.rt], cpu.pc);
+	  break;
     case CPRS(CP0_BADVADDR, 0):
 	  break;
     case CPRS(CP0_STATUS, 0): {
@@ -288,6 +302,10 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.status.IE = newVal->IE;
 	  break;
 	}
+    case CPRS(CP0_COMPARE, 0):
+	  cpu.cp0.compare = cpu.gpr[inst.rt];
+	  cpu.cp0.cause.IP &= ~(CAUSE_IP_TIMER);
+	  break;
     case CPRS(CP0_CAUSE, 0): {
 	  uint32_t sw_ip_mask = 3;
 	  cp0_cause_t *newVal = (void*)&(cpu.gpr[inst.rt]);
