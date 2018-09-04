@@ -34,10 +34,13 @@ uint32_t find_region(vaddr_t addr) {
 }
 
 void *paddr_map(uint32_t addr, uint32_t len) {
+  // only unmapped address can be map
+  Assert(is_unmapped(addr), "addr %08x should be unmapped\n", addr);
+
   int idx = find_region(ioremap(addr));
   Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   Assert(mmap_table[idx].map, "cannot find map handler for address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
-  return mmap_table[idx].map(addr - mmap_table[idx].start, len);
+  return mmap_table[idx].map(ioremap(addr) - mmap_table[idx].start, len);
 }
 
 uint32_t vaddr_read_safe(vaddr_t addr, int len) {

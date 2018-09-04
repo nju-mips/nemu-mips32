@@ -60,7 +60,7 @@ void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
 vaddr_t page_translate(vaddr_t);
 
 static inline vaddr_t ioremap(vaddr_t vaddr) {
-	return vaddr & 0x1FFFFFFF;
+  return vaddr & 0x1FFFFFFF;
 }
 
 static inline vaddr_t prot_addr(vaddr_t addr) {

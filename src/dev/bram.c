@@ -15,7 +15,7 @@ static bool bram_mapped = false;
 
 void *bram_map(uint32_t addr, uint32_t len) {
   check_bram(addr, len);
-  if(addr == 0x1fc00000) bram_mapped = true;
+  if(addr == 0) bram_mapped = true;
   return &bram[addr];
 }
 
@@ -26,7 +26,7 @@ uint32_t bram_read(paddr_t addr, int len) {
 
 void bram_write(paddr_t addr, int len, uint32_t data) {
   check_bram(addr, len);
-  memcpy((uint8_t *)bram + addr, &data, len);
+  memcpy((void *)bram + addr, &data, len);
 }
 
 void bram_init(vaddr_t entry) {

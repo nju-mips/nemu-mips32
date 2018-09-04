@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 
-vaddr_t uimage_base = DDR_BASE + 24 * 1024 * 1024;
+vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 24 * 1024 * 1024;
 void serial_enqueue_ascii(char);
 uint32_t entry_start = 0xbfc00000;
 
@@ -70,8 +70,7 @@ void load_elf() {
 	  Elf32_Phdr *ph = (void*)buf + i * elf->e_phentsize + elf->e_phoff;
 	  if(ph->p_type != PT_LOAD) { continue; }
 
-	  void *p_vaddr = NULL;
-	  p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
+	  void *p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
 	  memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
 	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }
@@ -82,7 +81,7 @@ void load_elf() {
 
 static inline void load_image(const char *img, vaddr_t vaddr) {
   Assert(img, "Need an image file");
-  Log("The image is %s", img);
+  Log("The image is %s\n", img);
 
   size_t size = get_file_size(img);
   void *buf = read_file(img);
