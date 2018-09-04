@@ -20,6 +20,8 @@ static char *kernel_img = NULL;
 
 work_mode_t work_mode = MODE_GDB;
 
+void bram_init(vaddr_t entry);
+
 size_t get_file_size(const char *img_file) {
   struct stat file_status;
   lstat(img_file, &file_status);
@@ -154,6 +156,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 	serial_enqueue_ascii(*p);
 
   /* Initialize this virtual computer system. */
+  bram_init(entry_start);
   init_cpu(entry_start);
 
   return work_mode;

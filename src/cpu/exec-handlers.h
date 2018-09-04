@@ -232,6 +232,10 @@ make_exec_handler(eret) ({
   cpu.cp0.cause.BD = 0;
   cpu.cp0.status.EXL = 0;
 
+#ifdef ENABLE_CAE_CHECK
+  check_usual_registers();
+#endif
+
 #ifdef ENABLE_SEGMENT
   cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
 #endif

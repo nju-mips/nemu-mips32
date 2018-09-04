@@ -12,10 +12,10 @@
  *            +----- supervisor mapped
  * C000 0000 -/
  * BFFF FFFF -\
- *            +----- kernel unmapped uncached
+ *            +----- kernel unmapped uncached (kseg1)
  * A000 0000 -/
  * 9FFF FFFF -\
- *            +----- kernel unmapped
+ *            +----- kernel unmapped (kseg0)
  * 8000 0000 -/
  * 7FFF FFFF -\
  *            |
@@ -59,12 +59,20 @@ void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
 
 vaddr_t page_translate(vaddr_t);
 
-static inline vaddr_t prot_addr(uint32_t addr) {
+static inline vaddr_t ioremap(vaddr_t vaddr) {
+	return vaddr & 0x1FFFFFFF;
+}
+
+static inline vaddr_t prot_addr(vaddr_t addr) {
 #ifdef ENABLE_SEGMENT
   return addr + cpu.base;
 #elif defined ENABLE_PAGING
   if(is_unmapped(addr)) {
-	return addr;
+	//  0x80000000 -> 0x00000000
+	//  0x90000000 -> 0x10000000
+	//  0xA0000000 -> 0x00000000
+	//  0xB0000000 -> 0x10000000
+	return ioremap(addr);
   } else {
 	return page_translate(addr);
   }

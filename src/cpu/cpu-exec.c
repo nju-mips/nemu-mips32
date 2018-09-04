@@ -67,13 +67,29 @@ void print_registers() {
   eprintf("$t8:0x%08x  $t9:0x%08x  $k0:0x%08x  $k1:0x%08x\n", cpu.gpr[24], cpu.gpr[25], cpu.gpr[26], cpu.gpr[27]);
   eprintf("$gp:0x%08x  $sp:0x%08x  $fp:0x%08x  $ra:0x%08x\n", cpu.gpr[28], cpu.gpr[29], cpu.gpr[30], cpu.gpr[31]);
   ninstr++;
-  // =============================================================
-  // eprintf("$count0:%08x,    $count1:%08x\n", cpu.cp0.count[0], cpu.cp0.count[1]);
-  // eprintf("$compare:%08x,    $status:%08x,    $cause:%08x\n", cpu.cp0[CP0_COMPARE][0], cpu.cp0[CP0_STATUS][0], cpu.cp0[CP0_CAUSE][0]);
-  // eprintf("$epc:%08x\n", cpu.cp0.epc);
-  // =============================================================
 }
 
+/* if you run your os with multiple processes, disable this */
+#ifdef ENABLE_CAE_CHECK
+
+#define NR_GPR 32
+static uint32_t saved_gprs[NR_GPR];
+
+void save_usual_registers(void) {
+  for(int i = 0; i < NR_GPR; i++)
+	saved_gprs[i] = cpu.gpr[i];
+}
+
+void check_usual_registers(void) {
+  for(int i = 0; i < NR_GPR; i++) {
+	if(i == 26 || i == 27) continue; // k0 and k1
+	CPUAssert(saved_gprs[i] == cpu.gpr[i],
+		"gpr[%d] %08x <> %08x after eret\n",
+		i, saved_gprs[i], cpu.gpr[i]);
+  }
+}
+
+#endif
 
 int init_cpu(vaddr_t entry) {
   nemu_start_time = get_current_time();
@@ -166,11 +182,18 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 
 void signal_exception(int code) {
   if(code != EXC_INTR)
-	CPUAssert(0, "who signal the exception ?\n");
+	CPUAssert(0, "who signal the exception:%d ?\n", code);
+  else
+	printf("[NEMU] trigger intr\n");
+
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
 	exit(0);
   }
+
+#ifdef ENABLE_CAE_CHECK
+  save_usual_registers();
+#endif
 
 #if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   if(cpu.is_delayslot) {

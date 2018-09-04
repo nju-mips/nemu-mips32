@@ -40,26 +40,29 @@ uint32_t spi_read(paddr_t addr, int len);
 void spi_write(paddr_t addr, int len, uint32_t data);
 */
 
+#define KSEG0_BASE 0x80000000
+#define KSEG1_BASE 0xA0000000
+
 // block ram
-#define BRAM_BASE 0xbfc00000
+#define BRAM_BASE 0x1fc00000
 #define BRAM_SIZE (1024 * 1024)
 
 // DDR
-#define DDR_BASE (0x80000000)
-#define DDR_SIZE (128 * 1024 * 1024)
+#define DDR_BASE (0x00000000)
+#define DDR_SIZE (128 * 1024 * 1024) // 0x08000000
 
 // UART
-#define SERIAL_ADDR 0xbfe50000
+#define SERIAL_ADDR 0x1fe50000
 #define SERIAL_SIZE  0x10
 
 // KEYBOARD
-#define KB_ADDR 0xbfe94000
+#define KB_ADDR 0x1fe94000
 #define KB_CODE 0x0
 #define KB_STAT 0x4
 #define KB_SIZE 0x10
 
 // VGA
-#define VGA_BASE 0xA0000000
+#define VGA_BASE 0x10400000
 #define VGA_SIZE 0x100000
 
 #define SCR_W 400
@@ -70,7 +73,7 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 #define TIMER_HZ 100
 
 // GPIO
-#define GPIO_BASE 0xA1000000
+#define GPIO_BASE 0x10000000
 #define GPIO_SIZE 0x1000
 
 #endif
