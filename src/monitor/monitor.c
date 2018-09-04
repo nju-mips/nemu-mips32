@@ -12,7 +12,7 @@
 
 vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 24 * 1024 * 1024;
 void serial_enqueue_ascii(char);
-uint32_t entry_start = 0xbfc00000;
+uint32_t elf_entry = 0xbfc00000;
 
 char *elf_file = NULL;
 char *symbol_file = NULL;
@@ -64,6 +64,8 @@ void load_elf() {
 
   Elf32_Ehdr *elf = buf;
 
+  elf_entry = elf->e_entry;
+
   uint32_t *p_magic = buf;
   assert(*p_magic == elf_magic);
 
@@ -76,7 +78,6 @@ void load_elf() {
 	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }
 
-  entry_start = elf->e_entry;
   free(buf);
 }
 
@@ -168,25 +169,29 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   /* Parse arguments. */
   parse_args(argc, argv);
 
+  const vaddr_t cpu_init_pc = 0xbfc00000;
+
   /* Load the image to memory. */
   if(elf_file) {
 	load_elf();
   } else {
-	load_image(img_file, entry_start);
+	load_image(img_file, cpu_init_pc);
   }
 
   if(!(work_mode & MODE_BATCH))
 	signal(SIGINT, sigint_handler);
 
+#ifdef __ARCH_MIPS32_R1__
   // send command to uboot
   char cmd[1024];
   sprintf(cmd, "bootm 0x%08x - 0xbfc3b730\n", uimage_base);
   for(char *p = cmd; *p; p++)
 	serial_enqueue_ascii(*p);
+#endif
 
   /* Initialize this virtual computer system. */
-  bram_init(entry_start);
-  init_cpu(entry_start);
+  bram_init(elf_entry);
+  init_cpu(cpu_init_pc);
 
   return work_mode;
 }

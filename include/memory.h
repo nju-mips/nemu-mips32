@@ -34,8 +34,6 @@
 #define UNMAPPED_BASE 0x80000000
 #define UNMAPPED_END  0xC0000000
 
-#ifdef ENABLE_PAGING
-
 static inline bool is_unmapped(uint32_t addr) {
   return UNMAPPED_BASE <= addr && addr < UNMAPPED_END;
 }
@@ -43,9 +41,6 @@ static inline bool is_unmapped(uint32_t addr) {
 static inline bool is_uncached(uint32_t addr) {
   return UNCACHED_BASE <= addr && addr < UNCACHED_END;
 }
-
-#endif
-
 
 extern uint8_t ddr[];
 extern uint8_t bram[];

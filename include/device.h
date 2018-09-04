@@ -61,6 +61,10 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 #define KB_STAT 0x4
 #define KB_SIZE 0x10
 
+// perf counter
+#define PERF_ADDR 0x1fe95000
+#define PERF_SIZE 0x1000
+
 // VGA
 #define VGA_BASE 0x10400000
 #define VGA_SIZE 0x100000

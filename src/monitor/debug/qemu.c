@@ -29,7 +29,7 @@ void cpu_exec(uint64_t);
 static struct gdb_conn *conn;
 
 extern char *symbol_file;
-extern uint32_t entry_start;
+extern uint32_t elf_entry;
 
 int start_qemu(int port) {
   char remote_s[100];
@@ -210,12 +210,12 @@ void qemu_diff() {
 
     gdb_connect_qemu(port);
 
-	qemu_break(entry_start);
+	qemu_break(elf_entry);
 	qemu_continue();
-	qemu_remove_breakpoint(entry_start);
+	qemu_remove_breakpoint(elf_entry);
 
 	for(int i = 0; i < 32; i++) regs.gpr[i] = 0;
-	regs.pc = entry_start;
+	regs.pc = elf_entry;
 	qemu_setregs(&regs);
 
 	while(1) {

@@ -57,7 +57,8 @@ static uint32_t oldpc = 0;
 void print_registers() {
   static unsigned int ninstr = 0;
   // print registers to stderr, so that will not mixed with uart output
-  eprintf("ninstr: 0x%08x    $pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", ninstr, oldpc, cpu.hi, cpu.lo);
+  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", oldpc, cpu.hi, cpu.lo);
+  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(oldpc, 4));
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -181,10 +182,12 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 }
 
 void signal_exception(int code) {
+  /*
   if(code != EXC_INTR)
 	CPUAssert(0, "who signal the exception:%d ?\n", code);
   else
 	printf("[NEMU] trigger intr\n");
+	*/
 
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
@@ -238,7 +241,7 @@ void signal_exception(int code) {
   cpu.cp0.cause.ExcCode = code;
 
 #ifdef ENABLE_PAGING
-  longjmp(cpu_exception_handler, 1);
+  // longjmp(cpu_exception_handler, 1);
 #endif
 }
 
