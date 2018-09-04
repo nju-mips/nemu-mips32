@@ -24,7 +24,6 @@ for file in $files; do
   base=`basename $file | sed -e 's/-mips32-npc.bin//'`
   printf "[%14s] " $base
   logfile=$base-log.txt
-#  $nemu -b -l $ori_log -i $file &> $logfile
   $nemu -b -e $file &> $logfile
 
   if (grep 'HIT GOOD TRAP' $logfile > /dev/null) then

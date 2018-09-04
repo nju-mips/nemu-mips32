@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <getopt.h>
 
 vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 24 * 1024 * 1024;
 void serial_enqueue_ascii(char);
@@ -103,15 +104,42 @@ void sigint_handler(int no) {
   nemu_state = NEMU_STOP;
 }
 
+const struct option long_options[] = {
+  { "symbol",         1, NULL, 'S' },
+  { "uImage",         1, NULL, 'u' },
+  { "diff-with-qemu", 0, NULL, 'D' },
+  { "batch",          0, NULL, 'b' },
+  { "commit",         0, NULL, 'c' },
+  { "image",          1, NULL, 'i' },
+  { "elf",            1, NULL, 'e' },
+  { "help",           0, NULL, 'h' },
+  { NULL,             0, NULL,  0  },
+};
+
+static void print_help(const char *file) {
+  printf("Usage: %s [OPTION...]\n", file);
+  printf("\n");
+  printf("  -S, --symbol=FILE     use this file to produce symbols\n");
+  printf("  -u, --uImage=FILE     specify uImage file\n");
+  printf("  -d, --diff-with-qemu  run diff tests with qemu\n");
+  printf("  -b, --batch           run on batch mode\n");
+  printf("  -c, --commit          commit all executed instructions\n");
+  printf("  -i, --image=FILE      run with this image file\n");
+  printf("  -e, --elf=FILE        run with this elf file\n");
+  printf("  -h, --help            print program help info\n");
+  printf("\n");
+  printf("Report bugs to 141242068@smail.nju.edu.cn.\n");
+}
+
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt(argc, argv, "-S:bcdi:e:k:")) != -1) {
+  while ( (o = getopt_long(argc, argv, "-bcDe:i:S:u:", long_options, NULL)) != -1) {
     switch (o) {
 	  case 'S': symbol_file = optarg; break;
-	  case 'k': kernel_img = optarg;
+	  case 'u': kernel_img = optarg;
 				load_image(kernel_img, uimage_base);
 				break;
-	  case 'd': work_mode |= MODE_DIFF; break;
+	  case 'D': work_mode |= MODE_DIFF; break;
       case 'b': work_mode |= MODE_BATCH; break;
       case 'c': work_mode |= MODE_LOG; break;
       case 'e':
@@ -126,8 +154,10 @@ static inline void parse_args(int argc, char *argv[]) {
                 else
 				  img_file = optarg;
                 break;
+	  case 'h':
       default:
-                panic("Usage: %s [-b] [-c] [-d] [-i img_file] [-k uImage] [-e elf_file]", argv[0]);
+				print_help(argv[0]);
+				exit(0);
     }
   }
 }

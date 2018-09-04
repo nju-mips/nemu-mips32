@@ -205,19 +205,28 @@ void signal_exception(int code) {
 
   /* reference linux: arch/mips/kernel/cps-vec.S */
   uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
+  // for loongson testcase, exception entry is 'h0380'
   switch(code) {
 	case EXC_INTR:
+#ifdef __ARCH_LOONGSON__
+	  cpu.pc = ebase + 0x0380;
+#else
 	  if(cpu.cp0.cause.IV) {
 		cpu.pc = ebase + 0x0200;
 	  } else {
 		cpu.pc = ebase + 0x0180;
 	  }
+#endif
 	  break;
 	case EXC_TLBM:
 	case EXC_TLBL:
 	case EXC_TLBS: cpu.pc = ebase + 0x0000; break;
 	default: /* usual exception */
+#ifdef __ARCH_LOONGSON__
+				   cpu.pc = ebase + 0x0380;
+#else
 				   cpu.pc = ebase + 0x0180; break;
+#endif
   }
 
 #ifdef ENABLE_SEGMENT
