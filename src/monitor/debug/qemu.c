@@ -2,11 +2,12 @@
 #include <unistd.h>
 #include <sys/prctl.h>
 #include <signal.h>
+
 #include "common.h"
 #include "protocol.h"
-
 #include "cpu/reg.h"
 #include "memory.h"
+#include "device.h"
 
 /* only for debug, print the packets */
 /*
@@ -29,7 +30,7 @@ void cpu_exec(uint64_t);
 static struct gdb_conn *conn;
 
 extern char *symbol_file;
-extern uint32_t elf_entry;
+extern vaddr_t elf_entry;
 
 int start_qemu(int port) {
   char remote_s[100];
@@ -214,7 +215,9 @@ void qemu_diff() {
 	qemu_continue();
 	qemu_remove_breakpoint(elf_entry);
 
-	for(int i = 0; i < 32; i++) regs.gpr[i] = 0;
+	cpu.pc = elf_entry; // sync with qemu
+
+	for(int i = 0; i < 32; i++) regs.gpr[i] = cpu.gpr[i];
 	regs.pc = elf_entry;
 	qemu_setregs(&regs);
 
@@ -243,7 +246,7 @@ void qemu_diff() {
 	  CPUAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
 	}
   } else {
-    // install a parent death signal in the chlid
+    // install a parent death signal in the child
     int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
     if (r == -1) { panic("prctl error"); }
 

@@ -52,13 +52,15 @@ void vaddr_write(vaddr_t, int, uint32_t);
 uint32_t vaddr_read_safe(vaddr_t, int);
 void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
 
-vaddr_t page_translate(vaddr_t);
+vaddr_t page_translate(vaddr_t, bool rwbit);
 
 static inline vaddr_t ioremap(vaddr_t vaddr) {
   return vaddr & 0x1FFFFFFF;
 }
 
-static inline vaddr_t prot_addr(vaddr_t addr) {
+enum { MMU_LOAD, MMU_STORE };
+
+static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
 #ifdef ENABLE_SEGMENT
   return addr + cpu.base;
 #elif defined ENABLE_PAGING
@@ -69,7 +71,7 @@ static inline vaddr_t prot_addr(vaddr_t addr) {
 	//  0xB0000000 -> 0x10000000
 	return ioremap(addr);
   } else {
-	return page_translate(addr);
+	return page_translate(addr, rwbit);
   }
 #else
   return addr;

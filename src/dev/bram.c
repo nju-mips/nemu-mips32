@@ -4,7 +4,7 @@
 
 uint8_t bram[BRAM_SIZE];
 
-static bool bram_mapped = false;
+bool bram_mapped = false;
 
 /* fake spi flash */
 

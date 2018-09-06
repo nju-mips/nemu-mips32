@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "mmu.h"
 
+
 CPU_state cpu;
 
 void signal_exception(int code);
@@ -155,7 +156,7 @@ static inline void write_handler(uint8_t *p, uint32_t len, uint32_t data) {
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  uint32_t pa = prot_addr(addr);
+  uint32_t pa = prot_addr(addr, MMU_LOAD);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
 	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
@@ -168,7 +169,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
-  uint32_t pa = prot_addr(addr);
+  uint32_t pa = prot_addr(addr, MMU_STORE);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
     addr = pa - DDR_BASE;
 	write_handler(&ddr[addr], len, data);
@@ -193,7 +194,7 @@ void signal_exception(int code) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
 	exit(0);
   }
-
+  
 #ifdef ENABLE_CAE_CHECK
   save_usual_registers();
 #endif

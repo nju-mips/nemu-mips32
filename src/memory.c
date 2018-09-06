@@ -6,6 +6,14 @@
 #include "memory.h"
 
 
+uint32_t badp_read(paddr_t addr, int len) {
+  return 0;
+}
+
+void badp_write(paddr_t addr, int len, uint32_t data) {
+  return;
+}
+
 // the memory mapping of mips32-npc
 struct mmap_region {
   uint32_t start, end;
@@ -13,6 +21,7 @@ struct mmap_region {
   write_func write;
   map_func map;
 } mmap_table [] = {
+  {BADP_ADDR, BADP_ADDR + BADP_SIZE, badp_read, badp_write},
   {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write, ddr_map},
   {BRAM_BASE, BRAM_BASE + BRAM_SIZE, bram_read, bram_write, bram_map},
   {GPIO_BASE, GPIO_BASE + GPIO_SIZE, invalid_read, gpio_write},
@@ -44,28 +53,28 @@ void *paddr_map(uint32_t addr, uint32_t len) {
 }
 
 uint32_t vaddr_read_safe(vaddr_t addr, int len) {
-  addr = prot_addr(addr);
+  addr = prot_addr(addr, MMU_LOAD);
   int idx = find_region(addr);
   if(idx == -1) return 0;
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
-  addr = prot_addr(addr);
+  addr = prot_addr(addr, MMU_STORE);
   int idx = find_region(addr);
   if(idx == -1) return;
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  addr = prot_addr(addr);
+  addr = prot_addr(addr, MMU_LOAD);
   int idx = find_region(addr);
   CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  addr = prot_addr(addr);
+  addr = prot_addr(addr, MMU_STORE);
   int idx = find_region(addr);
   CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);

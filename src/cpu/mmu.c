@@ -1,23 +1,23 @@
 #include "mmu.h"
 #include "cpu/reg.h"
 #include "common.h"
+#include "memory.h"
+#include "device.h"
 
 tlb_entry_t tlb[NR_TLB_ENTRY];
 
 extern void signal_exception(int);
 
-#define EXC_TLB_MISS 0
-#define EXC_TLB_MODIFIED 1
-#define EXC_TLB_INVALID 2
+#define PAGE_MASK ((1 << 12) - 1)
+#define VPN_MASK ((1 << 19) - 1)
 
 static inline bool match_vpn_and_asid(int idx, uint32_t vpn, uint32_t asid) {
-  uint32_t not_pagemask = ~(tlb[idx].pagemask);
-  bool vpn_match = (tlb[idx].vpn & not_pagemask) == (vpn & not_pagemask);
+  bool vpn_match = (tlb[idx].vpn & VPN_MASK) == (vpn & VPN_MASK);
   bool asid_match = tlb[idx].asid == asid;
-  if(! (vpn_match && asid_match && tlb[idx].g) ) {
-	return false;
+  if(vpn_match && (asid_match || tlb[idx].g)) {
+	return true;
   }
-  return true;
+  return false;
 }
 
 void tlb_present() {
@@ -34,7 +34,7 @@ void tlb_present() {
 }
 
 void tlb_read(uint32_t i) {
-  cpu.cp0.pagemask = tlb[i].pagemask;
+  cpu.cp0.pagemask.mask = tlb[i].pagemask;
   cpu.cp0.entry_hi.vpn = tlb[i].vpn & ~tlb[i].pagemask;
   cpu.cp0.entry_hi.asid = tlb[i].asid;
 
@@ -52,49 +52,54 @@ void tlb_read(uint32_t i) {
 }
 
 void tlb_write(uint32_t i) {
-  printf("tlb_write: index:%08x, @%08x\n", cpu.cp0.cpr[CP0_INDEX][0], cpu.pc);
-  printf("  pagemask:%08x, entry_hi:%08x\n", cpu.cp0.cpr[CP0_PAGEMASK][0], cpu.cp0.cpr[CP0_ENTRY_HI][0]);
-  printf("  entry_lo0:%08x, entry_lo1:%08x\n", cpu.cp0.cpr[CP0_ENTRY_LO0][0], cpu.cp0.cpr[CP0_ENTRY_LO1][0]);
-  tlb[i].pagemask = cpu.cp0.pagemask;
-  tlb[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask;
+  // printf("tlb_write@%08x: index:%08x, @%08x\n", cpu.pc, cpu.cp0.cpr[CP0_INDEX][0], cpu.pc);
+  // printf("  pagemask:%08x, entry_hi:%08x\n", cpu.cp0.cpr[CP0_PAGEMASK][0], cpu.cp0.cpr[CP0_ENTRY_HI][0]);
+  // printf("  entry_lo0:%08x, entry_lo1:%08x\n", cpu.cp0.cpr[CP0_ENTRY_LO0][0], cpu.cp0.cpr[CP0_ENTRY_LO1][0]);
+  tlb[i].pagemask = cpu.cp0.pagemask.mask;
+  tlb[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask.mask;
   tlb[i].asid = cpu.cp0.entry_hi.asid;
 
   tlb[i].g = cpu.cp0.entry_lo0.g & cpu.cp0.entry_lo1.g;
 
-  tlb[i].p0.pfn = cpu.cp0.entry_lo0.pfn & ~cpu.cp0.pagemask;
+  tlb[i].p0.pfn = cpu.cp0.entry_lo0.pfn & ~cpu.cp0.pagemask.mask;
   tlb[i].p0.c = cpu.cp0.entry_lo0.c;
   tlb[i].p0.d = cpu.cp0.entry_lo0.d;
   tlb[i].p0.v = cpu.cp0.entry_lo0.v;
 
-  tlb[i].p1.pfn = cpu.cp0.entry_lo1.pfn & ~cpu.cp0.pagemask;
+  tlb[i].p1.pfn = cpu.cp0.entry_lo1.pfn & ~cpu.cp0.pagemask.mask;
   tlb[i].p1.c = cpu.cp0.entry_lo1.c;
   tlb[i].p1.d = cpu.cp0.entry_lo1.d;
   tlb[i].p1.v = cpu.cp0.entry_lo1.v;
 }
 
-vaddr_t page_translate(vaddr_t vaddr) {
-  CPUAssert(0, "access addr %08x (mmu hasn't been tested)\n", vaddr);
+vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
+  uint32_t exccode = rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
   vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
   for(int i = 0; i < NR_TLB_ENTRY; i++) {
-	uint32_t not_pagemask = ~(tlb[i].pagemask);
 	if(!match_vpn_and_asid(i, mapped->vpn, cpu.cp0.entry_hi.asid)) {
 	  continue;
 	}
 
 	/* match the vpn and asid */
-	tlb_phyn_t *phyn = (mapped->oe == 0) ? &(tlb[i].p0) : &(tlb[i].p1);
+	tlb_phyn_t *phyn = mapped->oddbit ? &(tlb[i].p1) : &(tlb[i].p0);
 	if(phyn->v == 0) {
-	  signal_exception(EXC_TLB_INVALID);
-	  return -1;
-	} else if(phyn->d == 0 && false) {
-	  signal_exception(EXC_TLB_MODIFIED);
-	  return -1;
+	  // printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
+	  cpu.cp0.badvaddr = vaddr;
+	  signal_exception(exccode);
+	  return BADP_ADDR;
+	} else if(rwbit == MMU_STORE && phyn->d == 0) {
+	  // printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
+	  cpu.cp0.badvaddr = vaddr;
+	  signal_exception(EXC_TLBM);
+	  return BADP_ADDR;
 	} else {
-	  uint32_t mask = not_pagemask << 12;
-	  return ((phyn->pfn << 12) & mask) || (vaddr & ~mask);
+	  // printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc, vaddr, (phyn->pfn << 12) | (vaddr & PAGE_MASK));
+	  return (phyn->pfn << 12) | (vaddr & PAGE_MASK);
 	}
   }
 
-  signal_exception(EXC_TLB_MISS);
-  return -1;
+  // printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
+  cpu.cp0.badvaddr = vaddr;
+  signal_exception(exccode);
+  return BADP_ADDR;
 }

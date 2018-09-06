@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+#define CPU_INIT_PC 0xbfc00000
 
 #ifdef ENABLE_SEGMENT
 #define CP0_RESERVED_BASE 0   // for segment
@@ -40,6 +41,8 @@
 #define CU1_ENABLE       2
 #define CU2_ENABLE       4
 #define CU3_ENABLE       8
+
+#define CPR_VAL(cpr) *((uint32_t *)(void *)&(cpr))
 
 /*
  * default config:
@@ -159,17 +162,24 @@ typedef struct {
 } cp0_config1_t;
 
 typedef struct {
+  uint32_t _0   : 13;
+  uint32_t mask : 16;
+  uint32_t _1   :  3;
+} cp0_pagemask_t;
+
+// only 4KB page is supported
+typedef struct {
   uint32_t asid : 8;
-  uint32_t _0   : 1;
-  uint32_t vpn : 19;
+  uint32_t _0   : 5;
+  uint32_t vpn  : 19;
 } cp0_entry_hi_t;
 
 typedef struct {
   uint32_t g   : 1;
   uint32_t v   : 1;
   uint32_t d   : 1;
-  uint32_t c   : 2;
-  uint32_t pfn : 25;
+  uint32_t c   : 3;
+  uint32_t pfn : 24;
   uint32_t _0  : 2;
 } cp0_entry_lo_t;
 
@@ -195,7 +205,7 @@ typedef union {
 	struct { cp0_entry_lo_t entry_lo0;  uint32_t _2 [7]; };
 	struct { cp0_entry_lo_t entry_lo1;  uint32_t _3 [7]; };
 	struct { uint32_t context;          uint32_t _4 [7]; };
-	struct { uint32_t pagemask;         uint32_t _5 [7]; };
+	struct { cp0_pagemask_t pagemask;   uint32_t _5 [7]; };
 	struct { cp0_wired_t wired;         uint32_t _6 [7]; };
 	uint32_t reserved[8];                 /* reserved */
 	struct { uint32_t badvaddr;         uint32_t _8 [7]; };

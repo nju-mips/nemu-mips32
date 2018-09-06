@@ -188,12 +188,10 @@ make_exec_handler(inv) ({
 
 /* tlb strategy */
 make_exec_handler(tlbp) ({
-  printf("[NEMU] tlbp\n");
   tlb_present();
 });
 
 make_exec_handler(tlbr) ({
-  printf("[NEMU] tlbr\n");
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
   tlb_read(i);
@@ -201,12 +199,11 @@ make_exec_handler(tlbr) ({
 
 make_exec_handler(tlbwi) ({
   uint32_t i = cpu.cp0.index.idx;
-  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n", i, NR_TLB_ENTRY);
   tlb_write(i);
 });
 
 make_exec_handler(tlbwr) ({
-  printf("[NEMU] tlbwr\n");
   uint32_t i = rand() % NR_TLB_ENTRY;
   cpu.cp0.random = i;
   tlb_write(i);
@@ -316,6 +313,35 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.cause.IV = newVal->IV;
 	  cpu.cp0.cause.WP = newVal->WP;
 	  cpu.cp0.cause.IP = (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
+	  break;
+    }
+    case CPRS(CP0_PAGEMASK, 0): {
+	  cp0_pagemask_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.pagemask.mask = newVal->mask;
+	  break;
+	}
+    case CPRS(CP0_ENTRY_LO0, 0): {
+	  cp0_entry_lo_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.entry_lo0.g = newVal->g;
+	  cpu.cp0.entry_lo0.v = newVal->v;
+	  cpu.cp0.entry_lo0.d = newVal->d;
+	  cpu.cp0.entry_lo0.c = newVal->c;
+	  cpu.cp0.entry_lo0.pfn = newVal->pfn;
+	  break;
+	}
+    case CPRS(CP0_ENTRY_LO1, 0): {
+	  cp0_entry_lo_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.entry_lo1.g = newVal->g;
+	  cpu.cp0.entry_lo1.v = newVal->v;
+	  cpu.cp0.entry_lo1.d = newVal->d;
+	  cpu.cp0.entry_lo1.c = newVal->c;
+	  cpu.cp0.entry_lo1.pfn = newVal->pfn;
+	  break;
+    }
+    case CPRS(CP0_ENTRY_HI, 0): {
+	  cp0_entry_hi_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cpu.cp0.entry_hi.asid = newVal->asid;
+	  cpu.cp0.entry_hi.vpn = newVal->vpn;
 	  break;
     }
 	default:

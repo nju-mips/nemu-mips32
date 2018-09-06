@@ -8,8 +8,8 @@
 #define NR_TLB_ENTRY 512
 
 typedef struct {
-  uint32_t pfn : 25;
-  uint32_t c   : 2;  // cache coherency
+  uint32_t pfn : 24;
+  uint32_t c   : 3;  // cache coherency
   uint32_t d   : 1;  // dirty
   uint32_t v   : 1;  // valid
 } tlb_phyn_t;
@@ -29,9 +29,9 @@ typedef struct {
 
 typedef union {
   struct {
-	uint32_t vpn : 19;
-	uint32_t oe  : 1;
-	uint32_t off : 12;
+	uint32_t off    : 12;
+	uint32_t oddbit : 1;
+	uint32_t vpn    : 19;
   };
   uint32_t val;
 } vaddr_mapped_t;

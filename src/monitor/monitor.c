@@ -122,7 +122,7 @@ static void print_help(const char *file) {
   printf("\n");
   printf("  -S, --symbol=FILE     use this file to produce symbols\n");
   printf("  -u, --uImage=FILE     specify uImage file\n");
-  printf("  -d, --diff-with-qemu  run diff tests with qemu\n");
+  printf("  -D, --diff-with-qemu  run diff tests with qemu\n");
   printf("  -b, --batch           run on batch mode\n");
   printf("  -c, --commit          commit all executed instructions\n");
   printf("  -i, --image=FILE      run with this image file\n");
@@ -169,13 +169,11 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   /* Parse arguments. */
   parse_args(argc, argv);
 
-  const vaddr_t cpu_init_pc = 0xbfc00000;
-
   /* Load the image to memory. */
   if(elf_file) {
 	load_elf();
   } else {
-	load_image(img_file, cpu_init_pc);
+	load_image(img_file, CPU_INIT_PC);
   }
 
   if(!(work_mode & MODE_BATCH))
@@ -191,7 +189,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 
   /* Initialize this virtual computer system. */
   bram_init(elf_entry);
-  init_cpu(cpu_init_pc);
+  init_cpu(CPU_INIT_PC);
 
   return work_mode;
 }
