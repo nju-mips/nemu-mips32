@@ -1,6 +1,6 @@
 /* @{{
  *   `cpu.pc' for jmp instruction
- *   `oldpc'  for delayslot
+ *   `cpu.oldpc'  for delayslot
  *   `instr'  for special table
  * @}}
  */
@@ -28,7 +28,7 @@
 
 #define exec_delayslot() \
 	if(work_mode == MODE_LOG) print_registers(); \
-	inst.val = instr_fetch(oldpc += 4); \
+	inst.val = instr_fetch(cpu.oldpc += 4); \
 	MARK_DELAYSLOT; \
 	goto exec_entry;
 #else
@@ -38,7 +38,7 @@
 #ifdef ENABLE_EXCEPTION
 #define InstAssert(cond) do {    \
   if(!(cond)) {                  \
-	cpu.cp0.badvaddr = oldpc;    \
+	cpu.cp0.badvaddr = cpu.oldpc;    \
 	signal_exception(EXC_RI);    \
 	goto eoe;                    \
   }                              \
@@ -180,7 +180,7 @@ make_exec_handler(inv) ({
 #else
   uint8_t *p = (uint8_t *)&inst;
   printf("invalid opcode(pc = 0x%08x): %02x %02x %02x %02x ...\n",
-	  oldpc, p[0], p[1], p[2], p[3]);
+	  cpu.oldpc, p[0], p[1], p[2], p[3]);
   nemu_state = NEMU_END;
 #endif
 });

@@ -54,6 +54,7 @@ void *read_file(const char *filename) {
 void load_elf() {
   Assert(elf_file, "Need an elf file");
   Log("The elf is %s", elf_file);
+  printf("The elf is %s", elf_file);
 
   /* set symbol file to elf_file */
   symbol_file = elf_file;
@@ -68,6 +69,7 @@ void load_elf() {
 
   uint32_t *p_magic = buf;
   assert(*p_magic == elf_magic);
+
 
   for(int i = 0; i < elf->e_phnum; i++) {
 	  Elf32_Phdr *ph = (void*)buf + i * elf->e_phentsize + elf->e_phoff;
@@ -134,7 +136,7 @@ static void print_help(const char *file) {
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ( (o = getopt_long(argc, argv, "-bcDe:i:S:u:", long_options, NULL)) != -1) {
+  while ( (o = getopt_long(argc, argv, "-bcDe:i:S:u:h", long_options, NULL)) != -1) {
     switch (o) {
 	  case 'S': symbol_file = optarg; break;
 	  case 'u': kernel_img = optarg;

@@ -3,12 +3,14 @@ INC_DIR += ./include
 BUILD_DIR ?= ./build
 OBJ_DIR ?= $(BUILD_DIR)/obj
 BINARY ?= $(BUILD_DIR)/$(NAME)
+SHARED ?= $(BUILD_DIR)/$(NAME).a
 
 .DEFAULT_GOAL = app
 
 # Compilation flags
 CC = gcc
 LD = gcc
+AR = ar
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb $(INCLUDES)
 
@@ -46,7 +48,7 @@ $(OBJ_DIR)/%.o: src/%.c
 # Some convinient rules
 
 .PHONY: app run debug submit clean
-app: $(BINARY)
+app: $(BINARY) $(SHARED)
 
 # IMG ?= $(BUILD_DIR)/nanos-mips32-npc
 # IMG ?= $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
@@ -58,6 +60,10 @@ IMG = ~/u-boot/u-boot
 $(BINARY): $(OBJS)
 	@echo + LD $@
 	@$(LD) -O2 -o $@ $^ -lSDL -lreadline
+
+$(SHARED): $(OBJS)
+	@echo + AR $@
+	@$(AR) -r -o $@ $^
 
 run: $(BINARY)
 	$(BINARY) -b -e $(IMG)

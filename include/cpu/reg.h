@@ -249,7 +249,7 @@ typedef struct {
   uint32_t gpr[32];
   uint32_t hi, lo;
   cp0_t cp0;
-  vaddr_t pc;
+  vaddr_t pc, oldpc;
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif

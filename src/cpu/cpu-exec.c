@@ -53,13 +53,11 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 }
 
 
-static uint32_t oldpc = 0;
-
 void print_registers() {
   static unsigned int ninstr = 0;
   // print registers to stderr, so that will not mixed with uart output
-  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", oldpc, cpu.hi, cpu.lo);
-  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(oldpc, 4));
+  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.oldpc, cpu.hi, cpu.lo);
+  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(cpu.oldpc, 4));
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -201,11 +199,11 @@ void signal_exception(int code) {
 
 #if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   if(cpu.is_delayslot) {
-	cpu.cp0.epc = oldpc - 4;
+	cpu.cp0.epc = cpu.oldpc - 4;
 	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
   } else
 #endif
-	cpu.cp0.epc = oldpc;
+	cpu.cp0.epc = cpu.oldpc;
 
   /* reference linux: arch/mips/kernel/cps-vec.S */
   uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
@@ -249,7 +247,7 @@ void signal_exception(int code) {
 
 void check_ipbits(bool ie) {
   if(ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
-	oldpc = cpu.pc;
+	cpu.oldpc = cpu.pc;
 	signal_exception(EXC_INTR);
   }
 }
@@ -294,7 +292,7 @@ void cpu_exec(uint64_t n) {
 	update_cp0_timer();
 #endif
 
-	oldpc = cpu.pc;
+	cpu.oldpc = cpu.pc;
 
 	instr_enqueue(cpu.pc);
 
@@ -309,8 +307,8 @@ void cpu_exec(uint64_t n) {
 	  /* sync with npc */
 	  if(work_mode == MODE_LOG) print_registers();
 	  signal_exception(EXC_AdEL);
-	  /* update oldpc */
-	  oldpc = cpu.pc;
+	  /* update cpu.oldpc */
+	  cpu.oldpc = cpu.pc;
 	}
 #endif
 
