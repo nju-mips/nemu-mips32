@@ -23,6 +23,7 @@ const char *regs[32] = {
   "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"
 };
 
+#define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
 #define MAX_INSTR_TO_PRINT 10
@@ -56,8 +57,8 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 void print_registers() {
   static unsigned int ninstr = 0;
   // print registers to stderr, so that will not mixed with uart output
-  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.oldpc, cpu.hi, cpu.lo);
-  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(cpu.oldpc, 4));
+  eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
+  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(cpu.pc, 4));
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -197,37 +198,37 @@ void signal_exception(int code) {
   save_usual_registers();
 #endif
 
-#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
   if(cpu.is_delayslot) {
-	cpu.cp0.epc = cpu.oldpc - 4;
+	cpu.cp0.epc = cpu.pc - 4;
 	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
-  } else
-#endif
-	cpu.cp0.epc = cpu.oldpc;
+  } else {
+	cpu.cp0.epc = cpu.pc;
+  }
 
   /* reference linux: arch/mips/kernel/cps-vec.S */
   uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
+  cpu.need_br = true;
   // for loongson testcase, exception entry is 'h0380'
   switch(code) {
 	case EXC_INTR:
 #ifdef __ARCH_LOONGSON__
-	  cpu.pc = ebase + 0x0380;
+	  cpu.br_target = ebase + 0x0380;
 #else
 	  if(cpu.cp0.cause.IV) {
-		cpu.pc = ebase + 0x0200;
+		cpu.br_target = ebase + 0x0200;
 	  } else {
-		cpu.pc = ebase + 0x0180;
+		cpu.br_target = ebase + 0x0180;
 	  }
 #endif
 	  break;
 	case EXC_TLBM:
 	case EXC_TLBL:
-	case EXC_TLBS: cpu.pc = ebase + 0x0000; break;
+	case EXC_TLBS: cpu.br_target = ebase + 0x0000; break;
 	default: /* usual exception */
 #ifdef __ARCH_LOONGSON__
-				   cpu.pc = ebase + 0x0380;
+				   cpu.br_target = ebase + 0x0380;
 #else
-				   cpu.pc = ebase + 0x0180; break;
+				   cpu.br_target = ebase + 0x0180; break;
 #endif
   }
 
@@ -247,7 +248,6 @@ void signal_exception(int code) {
 
 void check_ipbits(bool ie) {
   if(ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
-	cpu.oldpc = cpu.pc;
 	signal_exception(EXC_INTR);
   }
 }
@@ -292,7 +292,10 @@ void cpu_exec(uint64_t n) {
 	update_cp0_timer();
 #endif
 
-	cpu.oldpc = cpu.pc;
+	if(UNLIKELY(cpu.need_br)) {
+	  cpu.pc = cpu.br_target;
+	  cpu.need_br = false;
+	}
 
 	instr_enqueue(cpu.pc);
 
@@ -304,17 +307,12 @@ void cpu_exec(uint64_t n) {
 #ifdef ENABLE_EXCEPTION
 	if((cpu.pc & 0x3) != 0) {
 	  cpu.cp0.badvaddr = cpu.pc;
-	  /* sync with npc */
-	  if(work_mode == MODE_LOG) print_registers();
 	  signal_exception(EXC_AdEL);
-	  /* update cpu.oldpc */
-	  cpu.oldpc = cpu.pc;
+	  goto cpu_exec_end;
 	}
 #endif
 
     Inst inst = { .val = instr_fetch(cpu.pc) };
-
-	cpu.pc += 4;
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
 	bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
@@ -324,14 +322,21 @@ void cpu_exec(uint64_t n) {
 
 #include "exec-handlers.h"
 
+	if(cpu.is_delayslot) {
+	  cpu.need_br = true;
+	}
+
+	cpu.is_delayslot = false; // clear this bits
+
+cpu_exec_end:
+
     if(work_mode == MODE_LOG) print_registers();
+
+	/* update pc */
+	cpu.pc += 4;
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
     check_ipbits(ie);
-#endif
-
-#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
-	cpu.is_delayslot = false; // clear this bits
 #endif
 
     if (nemu_state != NEMU_RUNNING) { return; }

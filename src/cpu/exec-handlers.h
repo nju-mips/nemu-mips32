@@ -1,6 +1,6 @@
 /* @{{
+ *   `cpu_exec_end'
  *   `cpu.pc' for jmp instruction
- *   `cpu.oldpc'  for delayslot
  *   `instr'  for special table
  * @}}
  */
@@ -8,37 +8,20 @@
 // checked delayslot: jal, jalr, 
 
 
-#ifdef ENABLE_DELAYSLOT
-#define make_entry() exec_entry:
-#else
 #define make_entry()
-#endif
 
 #define make_exec_handler(name) name: make_exec_wrapper
 #define make_exec_wrapper(...) __VA_ARGS__; goto eoe;
 #define make_eoe() eoe:;
 
-#ifdef ENABLE_DELAYSLOT
-
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-#define MARK_DELAYSLOT cpu.is_delayslot = true
-#else
-#define MARK_DELAYSLOT
-#endif
-
 #define exec_delayslot() \
-	if(work_mode == MODE_LOG) print_registers(); \
-	inst.val = instr_fetch(cpu.oldpc += 4); \
-	MARK_DELAYSLOT; \
-	goto exec_entry;
-#else
-#define exec_delayslot()
-#endif
+	cpu.is_delayslot = true; \
+	goto cpu_exec_end;
 
 #ifdef ENABLE_EXCEPTION
 #define InstAssert(cond) do {    \
   if(!(cond)) {                  \
-	cpu.cp0.badvaddr = cpu.oldpc;    \
+	cpu.cp0.badvaddr = cpu.pc;    \
 	signal_exception(EXC_RI);    \
 	goto eoe;                    \
   }                              \
@@ -180,7 +163,7 @@ make_exec_handler(inv) ({
 #else
   uint8_t *p = (uint8_t *)&inst;
   printf("invalid opcode(pc = 0x%08x): %02x %02x %02x %02x ...\n",
-	  cpu.oldpc, p[0], p[1], p[2], p[3]);
+	  cpu.pc, p[0], p[1], p[2], p[3]);
   nemu_state = NEMU_END;
 #endif
 });
@@ -225,7 +208,8 @@ make_exec_handler(breakpoint) ({
 });
 
 make_exec_handler(eret) ({
-  cpu.pc = cpu.cp0.epc;
+  cpu.need_br = true;
+  cpu.br_target = cpu.cp0.epc;
   cpu.cp0.cause.BD = 0;
   cpu.cp0.status.EXL = 0;
 
@@ -245,10 +229,6 @@ make_exec_handler(eret) ({
 make_exec_handler(mfc0) ({
 #ifdef ENABLE_INTR
   cpu.gpr[inst.rt] = cpu.cp0.cpr[inst.rd][inst.sel];
-
-  if(CPRS(inst.rd, inst.sel) == CPRS(CP0_EBASE, CP0_EBASE_SEL)) {
-	printf("****** read ebase to %08x @%08x\n", cpu.cp0.cpr[CP0_EBASE][CP0_EBASE_SEL], cpu.pc);
-  }
 #else
   /* only for microbench */
   if(inst.rd == CP0_COUNT) {
@@ -283,7 +263,6 @@ make_exec_handler(mtc0) ({
   switch(CPRS(inst.rd, inst.sel)) {
     case CPRS(CP0_EBASE, CP0_EBASE_SEL):
 	  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
-	  printf("****** write ebase to %08x @%08x\n", cpu.gpr[inst.rt], cpu.pc);
 	  break;
     case CPRS(CP0_BADVADDR, 0):
 	  break;
@@ -442,7 +421,7 @@ make_exec_handler(tnei) ({
 
 make_exec_handler(jr) ({
   InstAssert(inst.rt == 0 && inst.rd == 0);
-  cpu.pc = cpu.gpr[inst.rs];
+  cpu.br_target = cpu.gpr[inst.rs];
   exec_delayslot();
   dsprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 });
@@ -628,8 +607,8 @@ make_exec_handler(mtlo) ({
 
 make_exec_handler(jalr) ({
   InstAssert(inst.rt == 0 && inst.shamt == 0);
-  cpu.gpr[inst.rd] = cpu.pc + 4;
-  cpu.pc = cpu.gpr[inst.rs];
+  cpu.gpr[inst.rd] = cpu.pc + 8;
+  cpu.br_target = cpu.gpr[inst.rs];
   exec_delayslot();
   dsprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
 });
@@ -838,98 +817,90 @@ make_exec_handler(sync) ({
 //////////////////////////////////////////////////////////////
 make_exec_handler(beql) ({
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt]) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
-  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+  dsprintf(asm_buf_p, "beql %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bnel) ({
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt]) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
-  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+  dsprintf(asm_buf_p, "bnel %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(blezl) ({
   InstAssert(inst.rt == 0);
   if ((int32_t)cpu.gpr[inst.rs] <= 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
   dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtzl) ({
   if ((int32_t)cpu.gpr[inst.rs] > 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzl) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezl) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
   dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezall) ({
-  cpu.gpr[31] = cpu.pc + 4;
+  cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[inst.rs] >= 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
 });
 
 make_exec_handler(bltzall) ({
-  cpu.gpr[31] = cpu.pc + 4;
+  cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[inst.rs] < 0) {
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
 	exec_delayslot();
   } else {
-#ifdef ENABLE_DELAYSLOT
+    cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
-#endif
   }
 });
 
@@ -939,104 +910,88 @@ make_exec_handler(bltzall) ({
 //////////////////////////////////////////////////////////////
 make_exec_handler(beq) ({
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bne) ({
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+  dsprintf(asm_buf_p, "bne %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(blez) ({
   InstAssert(inst.rt == 0);
   if ((int32_t)cpu.gpr[inst.rs] <= 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtz) ({
   if ((int32_t)cpu.gpr[inst.rs] > 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltz) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgez) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezal) ({
-  cpu.gpr[31] = cpu.pc + 4;
+  cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "bgezal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzal) ({
-  cpu.gpr[31] = cpu.pc + 4;
+  cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[inst.rs] < 0)
-	cpu.pc += inst.simm << 2;
+	cpu.br_target = cpu.pc + (inst.simm << 2) + 4;
   else
-#ifdef ENABLE_DELAYSLOT
-    cpu.pc += 4;
-#endif
+    cpu.br_target = cpu.pc + 8;
   exec_delayslot();
   dsprintf(asm_buf_p, "bltzal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(jal) ({
-  cpu.gpr[31] = cpu.pc + 4;
-  cpu.pc = (cpu.pc & 0xf0000000) | (inst.addr << 2);
+  cpu.gpr[31] = cpu.pc + 8;
+  cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
   exec_delayslot();
   dsprintf(asm_buf_p, "jal %x", cpu.pc);
 });
 
 make_exec_handler(j) ({
-  cpu.pc = (cpu.pc & 0xf0000000) | (inst.addr << 2);
+  cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
   exec_delayslot();
   dsprintf(asm_buf_p, "j %x", cpu.pc);
 });

@@ -249,13 +249,14 @@ typedef struct {
   uint32_t gpr[32];
   uint32_t hi, lo;
   cp0_t cp0;
-  vaddr_t pc, oldpc;
+  vaddr_t pc;
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif
-#if defined ENABLE_DELAYSLOT && (defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR))
+
+  vaddr_t br_target;
   bool is_delayslot;
-#endif
+  bool need_br;
 } CPU_state;
 
 
