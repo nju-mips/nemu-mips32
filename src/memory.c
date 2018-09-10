@@ -76,8 +76,7 @@ uint32_t vaddr_read(vaddr_t addr, int len) {
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
-uint32_t vaddr_peek(vaddr_t addr, int len) {
-  addr = prot_addr(addr, MMU_LOAD);
+uint32_t paddr_peek(paddr_t addr, int len) {
   int idx = find_region(addr);
   CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
   return mmap_table[idx].peek(addr - mmap_table[idx].start, len);
