@@ -45,10 +45,12 @@ static inline bool is_uncached(uint32_t addr) {
 extern uint8_t ddr[];
 extern uint8_t bram[];
 
+/* for nemu core */
 uint32_t vaddr_read(vaddr_t, int);
-uint32_t paddr_read(paddr_t, int);
+uint32_t vaddr_peek(paddr_t, int);
 void vaddr_write(vaddr_t, int, uint32_t);
 
+/* for gdb debugger */
 uint32_t vaddr_read_safe(vaddr_t, int);
 void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
 

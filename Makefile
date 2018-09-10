@@ -29,7 +29,7 @@ CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 # no action indeed
-# CFLAGS += -DDEBUG
+CFLAGS += -DDEBUG
 
 
 # Files to be compiled

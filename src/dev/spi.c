@@ -1,4 +1,3 @@
-#if 0
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
@@ -7,6 +6,7 @@
 #include "device.h"
 
 
+#if 0
 /* SPI Control Register (spicr), [1] p9, [2] p8 */
 #define SPICR_LSB_FIRST		BIT(9)
 #define SPICR_MASTER_INHIBIT	BIT(8)

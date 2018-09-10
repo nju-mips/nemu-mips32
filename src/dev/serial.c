@@ -153,14 +153,11 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
   CPUAssert(addr >= 0 && addr <= SERIAL_SIZE, \
 	  "UART: address(0x%08x) is out side", addr); \
 
-uint32_t serial_read(paddr_t addr, int len) {
+uint32_t serial_peek(paddr_t addr, int len) {
   check_input(addr, len);
   switch (addr) {
-	case UARTLITE_Rx: {
-	  char ch = serial_queue[serial_f];
-	  serial_f = (serial_f + 1) % SERIAL_QUEUE_LEN;
-	  return ch;
-	}
+	case UARTLITE_Rx:
+	  return serial_queue[serial_f];
 	case UARTLITE_STAT:
 	  return serial_f == serial_r ? 0 : 1;
 	case UARTLITE_CTRL:
@@ -170,6 +167,14 @@ uint32_t serial_read(paddr_t addr, int len) {
 	  break;
   }
   return 0;
+}
+
+uint32_t serial_read(paddr_t addr, int len) {
+  check_input(addr, len);
+  uint32_t data = serial_peek(addr, len);
+  if(addr == UARTLITE_Rx && serial_f != serial_r)
+	serial_f = (serial_f + 1) % SERIAL_QUEUE_LEN;
+  return data;
 }
 
 void serial_write(paddr_t addr, int len, uint32_t data) {

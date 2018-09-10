@@ -181,11 +181,13 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   if(!(work_mode & MODE_BATCH))
 	signal(SIGINT, sigint_handler);
 
-#ifdef __ARCH_MIPS32_R1__
+#ifdef DEBUG
   // send command to uboot
-  char cmd[1024];
-  sprintf(cmd, "bootm 0x%08x - 0xbfc3b730\n", uimage_base);
-  for(char *p = cmd; *p; p++)
+  char cmd[1024], *p = cmd;
+  p += sprintf(p, "set serverip 192.168.1.1\n");
+  p += sprintf(p, "set ipaddr 192.168.1.107\n");
+  p += sprintf(p, "ping 192.168.1.1\n");
+  for(p = cmd; *p; p++)
 	serial_enqueue_ascii(*p);
 #endif
 

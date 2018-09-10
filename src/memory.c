@@ -20,12 +20,15 @@ struct mmap_region {
   read_func read;
   write_func write;
   map_func map;
+  peek_func peek;
 } mmap_table [] = {
-  {BADP_ADDR, BADP_ADDR + BADP_SIZE, badp_read, badp_write},
-  {DDR_BASE, DDR_BASE + DDR_SIZE, ddr_read, ddr_write, ddr_map},
-  {BRAM_BASE, BRAM_BASE + BRAM_SIZE, bram_read, bram_write, bram_map},
-  {GPIO_BASE, GPIO_BASE + GPIO_SIZE, invalid_read, gpio_write},
-  {SERIAL_ADDR, SERIAL_ADDR + SERIAL_SIZE, serial_read, serial_write},
+/*  start             end                   reader         writer      mapper    peeker   */
+  {BADP_ADDR,   BADP_ADDR + BADP_SIZE,     badp_read,    badp_write,   NULL,     badp_read   },
+  {DDR_BASE,    DDR_BASE + DDR_SIZE,       ddr_read,     ddr_write,    ddr_map,  ddr_read    },
+  {BRAM_BASE,   BRAM_BASE + BRAM_SIZE,     bram_read,    bram_write,   bram_map, bram_read   },
+  {GPIO_BASE,   GPIO_BASE + GPIO_SIZE,     invalid_read, gpio_write,   NULL,     invalid_read},
+  {SERIAL_ADDR, SERIAL_ADDR + SERIAL_SIZE, serial_read,  serial_write, NULL,     serial_peek },
+  {MAC_ADDR,    MAC_ADDR + MAC_SIZE,       mac_read,     mac_write,    NULL,     mac_read    },
   // {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
   // {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
 };
@@ -71,6 +74,13 @@ uint32_t vaddr_read(vaddr_t addr, int len) {
   int idx = find_region(addr);
   CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
+}
+
+uint32_t vaddr_peek(vaddr_t addr, int len) {
+  addr = prot_addr(addr, MMU_LOAD);
+  int idx = find_region(addr);
+  CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
+  return mmap_table[idx].peek(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {

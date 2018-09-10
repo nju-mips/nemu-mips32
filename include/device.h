@@ -10,6 +10,7 @@ void *paddr_map(uint32_t paddr, uint32_t size);
 
 typedef void* (*map_func) (uint32_t vaddr, uint32_t size);
 typedef uint32_t (*read_func) (paddr_t addr, int len);
+typedef uint32_t (*peek_func) (paddr_t addr, int len);
 typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
 
 void *ddr_map(uint32_t vaddr, uint32_t size);
@@ -18,6 +19,7 @@ void ddr_write(paddr_t addr, int len, uint32_t data);
 
 /* uartlite protocol */
 uint32_t serial_read(paddr_t addr, int len);
+uint32_t serial_peek(paddr_t addr, int len);
 void serial_write(paddr_t addr, int len, uint32_t data);
 
 void gpio_write(paddr_t addr, int len, uint32_t data);
@@ -27,6 +29,9 @@ void vga_write(paddr_t addr, int len, uint32_t data);
 
 uint32_t invalid_read(paddr_t addr, int len);
 void invalid_write(paddr_t addr, int len, uint32_t data);
+
+uint32_t mac_read(paddr_t addr, int len);
+void mac_write(paddr_t addr, int len, uint32_t data);
 
 uint32_t kb_read(paddr_t addr, int len);
 
@@ -55,6 +60,10 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 #define SERIAL_ADDR 0x1fe50000
 #define SERIAL_SIZE  0x10
 
+// SPI
+#define SPI_ADDR 0x1fe80000
+#define SPI_SIZE 0x1000
+
 // KEYBOARD
 #define KB_ADDR 0x1fe94000
 #define KB_CODE 0x0
@@ -68,6 +77,10 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 // bad phsical address
 #define BADP_ADDR 0x1fe96000
 #define BADP_SIZE 0x1000
+
+// emaclite
+#define MAC_ADDR 0x1ff00000
+#define MAC_SIZE 0x10000
 
 // VGA
 #define VGA_BASE 0x10400000
