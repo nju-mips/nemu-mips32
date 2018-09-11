@@ -65,9 +65,6 @@ static inline vaddr_t ioremap(vaddr_t vaddr) {
 enum { MMU_LOAD, MMU_STORE };
 
 static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
-#ifdef ENABLE_SEGMENT
-  return addr + cpu.base;
-#elif defined ENABLE_PAGING
   if(is_unmapped(addr)) {
 	//  0x80000000 -> 0x00000000
 	//  0x90000000 -> 0x10000000
@@ -75,11 +72,14 @@ static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
 	//  0xB0000000 -> 0x10000000
 	return ioremap(addr);
   } else {
+#ifdef ENABLE_SEGMENT
+	return addr + cpu.base;
+#elif defined ENABLE_PAGING
 	return page_translate(addr, rwbit);
-  }
 #else
-  return addr;
+	return addr;
 #endif
+  }
 }
 
 #endif

@@ -30,7 +30,7 @@ struct mmap_region {
   {SERIAL_ADDR, SERIAL_ADDR + SERIAL_SIZE, serial_read,  serial_write, NULL,     serial_peek },
   {MAC_ADDR,    MAC_ADDR + MAC_SIZE,       mac_read,     mac_write,    NULL,     mac_read    },
   // {KB_ADDR, KB_ADDR + KB_SIZE, kb_read, invalid_write},
-  // {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
+  {VGA_BASE, VGA_BASE + VGA_SIZE, vga_read, vga_write},
 };
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))

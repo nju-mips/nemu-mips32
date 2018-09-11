@@ -12,10 +12,6 @@ CPU_state cpu;
 
 void signal_exception(int code);
 
-#ifdef ENABLE_PAGING
-static jmp_buf cpu_exception_handler;
-#endif
-
 const char *regs[32] = {
   "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
   "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
@@ -239,10 +235,6 @@ void signal_exception(int code) {
   cpu.cp0.status.EXL = 1;
 
   cpu.cp0.cause.ExcCode = code;
-
-#ifdef ENABLE_PAGING
-  // longjmp(cpu_exception_handler, 1);
-#endif
 }
 
 
@@ -281,11 +273,6 @@ void cpu_exec(uint64_t n) {
   }
 
   nemu_state = NEMU_RUNNING;
-
-#ifdef ENABLE_PAGING
-  /* register exception handler */
-  setjmp(cpu_exception_handler);
-#endif
 
   for (; n > 0; n --) {
 #ifdef ENABLE_INTR
