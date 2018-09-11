@@ -58,23 +58,24 @@ void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
 
 vaddr_t page_translate(vaddr_t, bool rwbit);
 
-static inline vaddr_t ioremap(vaddr_t vaddr) {
+static inline vaddr_t iomap(vaddr_t vaddr) {
   return vaddr & 0x1FFFFFFF;
 }
 
 enum { MMU_LOAD, MMU_STORE };
 
 static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
+#ifdef ENABLE_SEGMENT
+  addr += cpu.base;
+#endif
   if(is_unmapped(addr)) {
 	//  0x80000000 -> 0x00000000
 	//  0x90000000 -> 0x10000000
 	//  0xA0000000 -> 0x00000000
 	//  0xB0000000 -> 0x10000000
-	return ioremap(addr);
+	return iomap(addr);
   } else {
-#ifdef ENABLE_SEGMENT
-	return addr + cpu.base;
-#elif defined ENABLE_PAGING
+#if defined ENABLE_PAGING && ! defined ENABLE_SEGMENT
 	return page_translate(addr, rwbit);
 #else
 	return addr;

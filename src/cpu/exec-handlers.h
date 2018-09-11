@@ -195,7 +195,6 @@ make_exec_handler(tlbwr) ({
 /* temporary strategy: store timer registers in C0 */
 make_exec_handler(syscall) ({
   signal_exception(EXC_SYSCALL);
-  print_registers();
   dsprintf(asm_buf_p, "syscall");
 });
 

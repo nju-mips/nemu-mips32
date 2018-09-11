@@ -302,7 +302,8 @@ void cpu_exec(uint64_t n) {
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-	bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
+	static bool ie = 0; /* fuck gcc */
+	ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
 #endif
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
