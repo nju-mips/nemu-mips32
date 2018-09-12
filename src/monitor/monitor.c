@@ -10,7 +10,7 @@
 #include <signal.h>
 #include <getopt.h>
 
-vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 24 * 1024 * 1024;
+vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 32 * 1024 * 1024;
 void serial_enqueue_ascii(char);
 uint32_t elf_entry = 0xbfc00000;
 
@@ -53,8 +53,7 @@ void *read_file(const char *filename) {
 
 void load_elf() {
   Assert(elf_file, "Need an elf file");
-  Log("The elf is %s", elf_file);
-  printf("The elf is %s", elf_file);
+  printf("The elf is %s\n", elf_file);
 
   /* set symbol file to elf_file */
   symbol_file = elf_file;
@@ -187,6 +186,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   p += sprintf(p, "set serverip 192.168.1.1\n");
   p += sprintf(p, "set ipaddr 192.168.1.107\n");
   p += sprintf(p, "ping 192.168.1.1\n");
+  p += sprintf(cmd, "bootelf -p %08x\n", uimage_base);
   for(p = cmd; *p; p++)
 	serial_enqueue_ascii(*p);
 #endif
