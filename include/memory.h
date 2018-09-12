@@ -45,6 +45,11 @@ static inline bool is_uncached(uint32_t addr) {
 extern uint8_t ddr[];
 extern uint8_t bram[];
 
+typedef struct {
+  void *p;
+  size_t size;
+} map_result_t;
+
 /* for nemu core */
 uint32_t vaddr_read(vaddr_t, int);
 void vaddr_write(vaddr_t, int, uint32_t);

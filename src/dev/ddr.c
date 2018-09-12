@@ -3,6 +3,7 @@
 
 
 uint8_t ddr[DDR_SIZE];
+static uint32_t ddr_mapped_size = 0;
 
 /* Memory accessing interfaces */
 
@@ -12,7 +13,14 @@ uint8_t ddr[DDR_SIZE];
 
 void *ddr_map(uint32_t addr, uint32_t len) {
   check_ddr(addr, len);
+  if(addr + len >= ddr_mapped_size)
+	ddr_mapped_size = addr + len;
   return &ddr[addr];
+}
+
+void ddr_mapped_result(map_result_t *map) {
+  map->p = ddr;
+  map->size = ddr_mapped_size;
 }
 
 uint32_t ddr_read(paddr_t addr, int len) {

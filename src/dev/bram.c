@@ -3,7 +3,7 @@
 
 
 uint8_t bram[BRAM_SIZE];
-
+static uint32_t bram_mapped_size = 0;
 bool bram_mapped = false;
 
 /* fake spi flash */
@@ -16,7 +16,14 @@ bool bram_mapped = false;
 void *bram_map(uint32_t addr, uint32_t len) {
   check_bram(addr, len);
   if(addr == 0) bram_mapped = true;
+  if(addr + len >= bram_mapped_size)
+	bram_mapped_size = addr + len;
   return &bram[addr];
+}
+
+void bram_mapped_result(map_result_t *map) {
+  map->p = bram;
+  map->size = bram_mapped_size;
 }
 
 uint32_t bram_read(paddr_t addr, int len) {
