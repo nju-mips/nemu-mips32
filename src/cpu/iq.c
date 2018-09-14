@@ -16,7 +16,11 @@ void print_instr_queue(void) {
   eprintf("last executed %ld instrs:\n", NR_IQ);
   int i = p;
   do {
+#ifdef ENABLE_SEGMENT
+	if(is_unmapped(iq[i] + cpu.base))
+#else
 	if(is_unmapped(iq[i]))
+#endif
 	  eprintf("0x%08x: %08x\n", iq[i], vaddr_read_safe(iq[i], 4));
 	else
 	  eprintf("0x%08x: xxxxxxxx\n", iq[i]);

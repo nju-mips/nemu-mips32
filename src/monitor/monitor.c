@@ -187,6 +187,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
   p += sprintf(p, "set ipaddr 192.168.1.107\n");
   p += sprintf(p, "ping 192.168.1.1\n");
   p += sprintf(cmd, "bootelf -p %08x\n", uimage_base);
+  cmd[0] = 0;
   for(p = cmd; *p; p++)
 	serial_enqueue_ascii(*p);
 #endif
