@@ -284,7 +284,9 @@ void cpu_exec(uint64_t n) {
 	  cpu.need_br = false;
 	}
 
-	instr_enqueue(cpu.pc);
+#ifdef DEBUG
+	instr_enqueue_pc(cpu.pc);
+#endif
 
 #if 0
     asm_buf_p = asm_buf;
@@ -300,6 +302,10 @@ void cpu_exec(uint64_t n) {
 #endif
 
     Inst inst = { .val = instr_fetch(cpu.pc) };
+
+#ifdef DEBUG
+	instr_enqueue_instr(inst.val);
+#endif
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
 	static bool ie = 0; /* fuck gcc */

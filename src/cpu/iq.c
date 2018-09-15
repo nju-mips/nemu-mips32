@@ -2,28 +2,37 @@
 #include "monitor.h"
 #include "memory.h"
 
-static int p = 0;
-static vaddr_t iq[8];
+typedef struct {
+  vaddr_t pc;
+  uint32_t instr;
+  bool instr_enq;
+} iq_element_t;
+
+static int pc_ptr = 0, instr_ptr = 0;
+static iq_element_t iq[8];
 
 #define NR_IQ (sizeof(iq) / sizeof(iq[0]))
 
-void instr_enqueue(uint32_t pc) {
-  iq[p] = pc;
-  p = (p + 1) % NR_IQ;
+void instr_enqueue_pc(vaddr_t pc) {
+  instr_ptr = pc_ptr;
+  iq[pc_ptr].pc = pc;
+  iq[pc_ptr].instr_enq = false;
+  pc_ptr = (pc_ptr + 1) % NR_IQ;
+}
+
+void instr_enqueue_instr(uint32_t instr) {
+  iq[instr_ptr].instr_enq = true;
+  iq[instr_ptr].instr = instr;
 }
 
 void print_instr_queue(void) {
   eprintf("last executed %ld instrs:\n", NR_IQ);
-  int i = p;
+  int i = pc_ptr;
   do {
-#ifdef ENABLE_SEGMENT
-	if(is_unmapped(iq[i] + cpu.base))
-#else
-	if(is_unmapped(iq[i]))
-#endif
-	  eprintf("0x%08x: %08x\n", iq[i], vaddr_read_safe(iq[i], 4));
+	if(iq[i].instr_enq)
+	  eprintf("0x%08x: %08x\n", iq[i].pc, iq[i].instr);
 	else
-	  eprintf("0x%08x: xxxxxxxx\n", iq[i]);
+	  eprintf("0x%08x: xxxxxxxx\n", iq[i].pc);
 	i = (i + 1) % NR_IQ;
-  } while(i != p);
+  } while(i != pc_ptr);
 }

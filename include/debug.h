@@ -9,7 +9,8 @@
 
 #include "monitor.h"
 
-extern void instr_enqueue(uint32_t pc);
+extern void instr_enqueue_pc(uint32_t pc);
+extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);
 extern void print_registers();
 
