@@ -80,7 +80,7 @@ static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
 	//  0xB0000000 -> 0x10000000
 	return iomap(addr);
   } else {
-#if defined ENABLE_PAGING && ! defined ENABLE_SEGMENT
+#if defined ENABLE_PAGING
 	return page_translate(addr, rwbit);
 #else
 	return addr;
