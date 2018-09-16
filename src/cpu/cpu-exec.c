@@ -10,6 +10,8 @@
 
 CPU_state cpu;
 
+static bool cpu_has_except = false;
+
 void signal_exception(int code);
 
 const char *regs[32] = {
@@ -50,11 +52,11 @@ static int dsprintf(char *buf, const char *fmt, ...) {
 }
 
 
-void print_registers() {
+void print_registers(uint32_t instr) {
   static unsigned int ninstr = 0;
   // print registers to stderr, so that will not mixed with uart output
   eprintf("$pc:    0x%08x    $hi:    0x%08x    $lo:    0x%08x\n", cpu.pc, cpu.hi, cpu.lo);
-  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, vaddr_read_safe(cpu.pc, 4));
+  eprintf("$ninstr: 0x%08x                     $instr: 0x%08x\n", ninstr, instr);
   eprintf("$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n", cpu.gpr[0], cpu.gpr[1], cpu.gpr[2], cpu.gpr[3]);
   eprintf("$a0:0x%08x  $a1:0x%08x  $a2:0x%08x  $a3:0x%08x\n", cpu.gpr[4], cpu.gpr[5], cpu.gpr[6], cpu.gpr[7]);
   eprintf("$t0:0x%08x  $t1:0x%08x  $t2:0x%08x  $t3:0x%08x\n", cpu.gpr[8], cpu.gpr[9], cpu.gpr[10], cpu.gpr[11]);
@@ -178,12 +180,7 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 }
 
 void signal_exception(int code) {
-  /*
-  if(code != EXC_INTR)
-	CPUAssert(0, "who signal the exception:%d ?\n", code);
-  else
-	printf("[NEMU] trigger intr\n");
-	*/
+  cpu_has_except = true;
 
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
@@ -324,7 +321,12 @@ void cpu_exec(uint64_t n) {
 
 cpu_exec_end:
 
-    if(work_mode == MODE_LOG) print_registers();
+#ifdef DEBUG
+    if(work_mode == MODE_LOG)
+	  print_registers(inst.val);
+#endif
+
+	cpu_has_except = false;
 
 	/* update pc */
 	cpu.pc += 4;

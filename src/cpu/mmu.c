@@ -52,9 +52,17 @@ void tlb_read(uint32_t i) {
 }
 
 void tlb_write(uint32_t i) {
-  // printf("tlb_write@%08x: index:%08x, @%08x\n", cpu.pc, cpu.cp0.cpr[CP0_INDEX][0], cpu.pc);
-  // printf("  pagemask:%08x, entry_hi:%08x\n", cpu.cp0.cpr[CP0_PAGEMASK][0], cpu.cp0.cpr[CP0_ENTRY_HI][0]);
-  // printf("  entry_lo0:%08x, entry_lo1:%08x\n", cpu.cp0.cpr[CP0_ENTRY_LO0][0], cpu.cp0.cpr[CP0_ENTRY_LO1][0]);
+#if 0
+  printf("[NEMU] map v:[%08x, %08x] to p:[%08x, %08x], v:[%d %d], d:[%d, %d], g:[%d, %d]\n",
+	  cpu.cp0.entry_hi.vpn << 13,
+	  (cpu.cp0.entry_hi.vpn << 13) + (4 * 1024),
+	  cpu.cp0.entry_lo0.pfn << 12,
+	  cpu.cp0.entry_lo1.pfn << 12,
+	  cpu.cp0.entry_lo0.v, cpu.cp0.entry_lo1.v,
+	  cpu.cp0.entry_lo0.d, cpu.cp0.entry_lo1.d,
+	  cpu.cp0.entry_lo0.g, cpu.cp0.entry_lo1.g
+  );
+#endif
   tlb[i].pagemask = cpu.cp0.pagemask.mask;
   tlb[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask.mask;
   tlb[i].asid = cpu.cp0.entry_hi.asid;

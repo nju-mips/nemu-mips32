@@ -49,7 +49,7 @@ extern void print_registers();
 			  __FILE__, __LINE__, __func__, #cond); \
 	  print_instr_queue(); \
 	  eprintf("=========== dump registers =========\n"); \
-	  print_registers(); \
+	  print_registers(vaddr_read_safe(cpu.pc, 4)); \
 	  eprintf("=========== dump    end =========\n"); \
       eprintf("\e[1;31m" fmt "\e[0m\n", ## __VA_ARGS__); \
 	  Abort(); \
