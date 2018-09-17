@@ -153,6 +153,9 @@ static inline void write_handler(uint8_t *p, uint32_t len, uint32_t data) {
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
+#ifdef DEBUG
+  CPUAssert(addr >= 0x1000, "preventive check failed, try to load memory from addr %08x\n", addr);
+#endif
   uint32_t pa = prot_addr(addr, MMU_LOAD);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
 	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
@@ -166,6 +169,9 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
+#ifdef DEBUG
+  CPUAssert(addr >= 0x1000, "preventive check failed, try to store memory to addr %08x\n", addr);
+#endif
   uint32_t pa = prot_addr(addr, MMU_STORE);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
     addr = pa - DDR_BASE;
@@ -199,7 +205,8 @@ void signal_exception(int code) {
   }
 
   /* reference linux: arch/mips/kernel/cps-vec.S */
-  uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
+  // uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
+  uint32_t ebase = 0xbfc00000;
   cpu.need_br = true;
   // for loongson testcase, exception entry is 'h0380'
   switch(code) {
@@ -322,8 +329,8 @@ void cpu_exec(uint64_t n) {
 cpu_exec_end:
 
 #ifdef DEBUG
-    if(work_mode == MODE_LOG)
-	  print_registers(inst.val);
+	// eprintf("%08x: %08x\n", cpu.pc, inst.val);
+    if(work_mode == MODE_LOG) print_registers(inst.val);
 #endif
 
 	cpu_has_except = false;

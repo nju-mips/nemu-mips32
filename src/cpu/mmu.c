@@ -53,7 +53,8 @@ void tlb_read(uint32_t i) {
 
 void tlb_write(uint32_t i) {
 #if 0
-  printf("[NEMU] map v:[%08x, %08x] to p:[%08x, %08x], v:[%d %d], d:[%d, %d], g:[%d, %d]\n",
+  printf("[NEMU] map 0x282b990:%08x v:[%08x, %08x] to p:[%08x, %08x], v:[%d %d], d:[%d, %d], g:[%d, %d]\n",
+	  paddr_peek(0x282b990, 4),
 	  cpu.cp0.entry_hi.vpn << 13,
 	  (cpu.cp0.entry_hi.vpn << 13) + (4 * 1024),
 	  cpu.cp0.entry_lo0.pfn << 12,

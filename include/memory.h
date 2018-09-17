@@ -81,7 +81,8 @@ static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
 	return iomap(addr);
   } else {
 #if defined ENABLE_PAGING
-	return page_translate(addr, rwbit);
+	vaddr_t paddr = page_translate(addr, rwbit);
+	return paddr;
 #else
 	return addr;
 #endif
