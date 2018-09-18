@@ -10,8 +10,6 @@
 
 CPU_state cpu;
 
-static bool cpu_has_except = false;
-
 void signal_exception(int code);
 
 const char *regs[32] = {
@@ -186,7 +184,7 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 }
 
 void signal_exception(int code) {
-  cpu_has_except = true;
+  cpu.curr_instr_except = true;
 
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
@@ -309,6 +307,8 @@ void cpu_exec(uint64_t n) {
 
     Inst inst = { .val = instr_fetch(cpu.pc) };
 
+	cpu.curr_instr_except = false;
+
 #ifdef DEBUG
 	instr_enqueue_instr(inst.val);
 #endif
@@ -334,8 +334,6 @@ cpu_exec_end:
 	// eprintf("%08x: %08x\n", cpu.pc, inst.val);
     if(work_mode == MODE_LOG) print_registers(inst.val);
 #endif
-
-	cpu_has_except = false;
 
 	/* update pc */
 	cpu.pc += 4;
