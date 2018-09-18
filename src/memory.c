@@ -66,7 +66,8 @@ void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
   addr = prot_addr(addr, MMU_STORE);
   int idx = find_region(addr);
   if(idx == -1) return;
-  return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
+
+  mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {

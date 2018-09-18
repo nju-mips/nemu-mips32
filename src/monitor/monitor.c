@@ -182,14 +182,17 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 
 #ifdef DEBUG
   // send command to uboot
+  /*
   char cmd[1024], *p = cmd;
   p += sprintf(p, "set serverip 192.168.1.1\n");
   p += sprintf(p, "set ipaddr 192.168.1.107\n");
   p += sprintf(p, "ping 192.168.1.1\n");
   p += sprintf(cmd, "bootelf -p %08x\n", uimage_base);
   cmd[0] = 0;
+  p += sprintf(p, "I\nI\n");
   for(p = cmd; *p; p++)
 	serial_enqueue_ascii(*p);
+  */
 #endif
 
   /* Initialize this virtual computer system. */

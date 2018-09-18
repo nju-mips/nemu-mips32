@@ -25,6 +25,12 @@ void instr_enqueue_instr(uint32_t instr) {
   iq[instr_ptr].instr = instr;
 }
 
+uint32_t get_current_instr() {
+  if(iq[instr_ptr].instr_enq)
+    return iq[instr_ptr].instr;
+  return 0;
+}
+
 void print_instr_queue(void) {
   eprintf("last executed %ld instrs:\n", NR_IQ);
   int i = pc_ptr;

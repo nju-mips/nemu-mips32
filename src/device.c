@@ -31,8 +31,7 @@ static void device_update(int signum) {
 	  keyboard_enqueue(event.type, event.key.keysym.sym);
 	  break;
 	case SDL_QUIT:
-	  printf("[NEMU] receive SDL_QUIT, exit(0)\n");
-	  exit(0);
+	  printf("[NEMU] receive SDL_QUIT, exit(0), cpu run %u cycles\n", cpu.cp0.count[0]);
 	default:
 	  // do nothing
 	  break;

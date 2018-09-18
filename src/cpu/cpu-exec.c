@@ -204,6 +204,8 @@ void signal_exception(int code) {
 	cpu.cp0.epc = cpu.pc;
   }
 
+  // eprintf("signal exception %d@%08x, badvaddr:%08x\n", code, cpu.pc, cpu.cp0.badvaddr);
+
   /* reference linux: arch/mips/kernel/cps-vec.S */
   // uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
   uint32_t ebase = 0xbfc00000;
