@@ -26,7 +26,7 @@ CFLAGS += -DENABLE_PAGING
 # enable interrupt will lose about 400 marks
 CFLAGS += -DENABLE_INTR
 CFLAGS += -DENABLE_EXCEPTION
-# CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
+CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 CFLAGS += -DDEBUG
 

@@ -803,7 +803,7 @@ make_exec_handler(ll) ({
 make_exec_handler(sc) ({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
   vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
-  cpu.gpr[inst.rt] = 1;
+  if(!cpu.curr_instr_except) cpu.gpr[inst.rt] = 1;
   dsprintf(asm_buf_p, "sc %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
