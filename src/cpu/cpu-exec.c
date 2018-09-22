@@ -170,6 +170,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 #ifdef DEBUG
   CPUAssert(addr >= 0x1000, "preventive check failed, try to store memory to addr %08x\n", addr);
 #endif
+
   uint32_t pa = prot_addr(addr, MMU_STORE);
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
     addr = pa - DDR_BASE;
@@ -283,11 +284,6 @@ void cpu_exec(uint64_t n) {
 	update_cp0_timer();
 #endif
 
-	if(UNLIKELY(cpu.need_br)) {
-	  cpu.pc = cpu.br_target;
-	  cpu.need_br = false;
-	}
-
 #ifdef DEBUG
 	instr_enqueue_pc(cpu.pc);
 #endif
@@ -301,7 +297,7 @@ void cpu_exec(uint64_t n) {
 	if((cpu.pc & 0x3) != 0) {
 	  cpu.cp0.badvaddr = cpu.pc;
 	  signal_exception(EXC_AdEL);
-	  goto cpu_exec_end;
+	  goto inst_exec_end;
 	}
 #endif
 
@@ -315,7 +311,7 @@ void cpu_exec(uint64_t n) {
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
 	static bool ie = 0; /* fuck gcc */
-	ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
+	ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE && !cpu.is_delayslot;
 #endif
 
     asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
@@ -324,19 +320,24 @@ void cpu_exec(uint64_t n) {
 
 	if(cpu.is_delayslot) {
 	  cpu.need_br = true;
+	  cpu.is_delayslot = false; // clear this bits
 	}
 
-	cpu.is_delayslot = false; // clear this bits
-
-cpu_exec_end:
+inst_exec_end:
 
 #ifdef DEBUG
+	// if(0x60000000 <= cpu.pc && cpu.pc < 0x80000000)
 	// eprintf("%08x: %08x\n", cpu.pc, inst.val);
     if(work_mode == MODE_LOG) print_registers(inst.val);
 #endif
 
 	/* update pc */
-	cpu.pc += 4;
+	if(UNLIKELY(cpu.need_br)) {
+	  cpu.pc = cpu.br_target;
+	  cpu.need_br = false;
+	} else {
+	  cpu.pc += 4;
+	}
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
     check_ipbits(ie);

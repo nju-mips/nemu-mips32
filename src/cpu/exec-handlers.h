@@ -1,5 +1,5 @@
 /* @{{
- *   `cpu_exec_end'
+ *   `inst_exec_end'
  *   `cpu.pc' for jmp instruction
  *   `instr'  for special table
  * @}}
@@ -16,7 +16,7 @@
 
 #define exec_delayslot() \
 	cpu.is_delayslot = true; \
-	goto cpu_exec_end;
+	goto inst_exec_end;
 
 #ifdef ENABLE_EXCEPTION
 #define InstAssert(cond) do {    \
