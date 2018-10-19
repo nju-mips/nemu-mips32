@@ -8,8 +8,8 @@ SHARED ?= $(BUILD_DIR)/$(NAME).a
 .DEFAULT_GOAL = app
 
 # Compilation flags
-CC = g++
-LD = g++
+CC = gcc
+LD = $(CC)
 AR = ar
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)

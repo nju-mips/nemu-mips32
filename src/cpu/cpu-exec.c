@@ -301,7 +301,8 @@ void cpu_exec(uint64_t n) {
 	}
 #endif
 
-    Inst inst = { .val = instr_fetch(cpu.pc) };
+    Inst inst;
+	inst.val = instr_fetch(cpu.pc);
 
 	cpu.curr_instr_except = false;
 

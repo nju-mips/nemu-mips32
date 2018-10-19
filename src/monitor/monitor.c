@@ -71,7 +71,7 @@ void load_elf() {
 
 
   for(int i = 0; i < elf->e_phnum; i++) {
-	Elf32_Phdr *ph = (VoidPtr)buf + i * elf->e_phentsize + elf->e_phoff;
+	Elf32_Phdr *ph = buf + i * elf->e_phentsize + elf->e_phoff;
 	if(ph->p_type != PT_LOAD) { continue; }
 
 	VoidPtr p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);

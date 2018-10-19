@@ -7,6 +7,8 @@
 
 #ifdef __cplusplus
 
+#include <type_traits>
+
 /* arithmetic support for void * */
 class VoidPtr {
   void *ptr;

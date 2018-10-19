@@ -40,7 +40,7 @@ static const void * special_table[64] = {
   /* 0x18 */	&&mult, &&multu, &&divide, &&divu,
   /* 0x1c */	&&inv, &&inv, &&inv, &&inv,
   /* 0x20 */	&&add, &&addu, &&sub, &&subu,
-  /* 0x24 */	&&and, &&or, &&xor, &&nor,
+  /* 0x24 */	&&and_, &&or_, &&xor_, &&nor,
   /* 0x28 */	&&inv, &&inv, &&slt, &&sltu,
   /* 0x2c */	&&inv, &&inv, &&inv, &&inv,
   /* 0x30 */	&&tge, &&tgeu, &&tlt, &&tltu,
@@ -262,7 +262,7 @@ make_exec_handler(mtc0) ({
     case CPRS(CP0_BADVADDR, 0):
 	  break;
     case CPRS(CP0_STATUS, 0): {
-	  cp0_status_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_status_t *newVal = (cp0_status_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.status.CU = newVal->CU;
 	  cpu.cp0.status.RP = newVal->RP;
 	  cpu.cp0.status.RE = newVal->RE;
@@ -283,19 +283,19 @@ make_exec_handler(mtc0) ({
 	  break;
     case CPRS(CP0_CAUSE, 0): {
 	  uint32_t sw_ip_mask = 3;
-	  cp0_cause_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_cause_t *newVal = (cp0_cause_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.cause.IV = newVal->IV;
 	  cpu.cp0.cause.WP = newVal->WP;
 	  cpu.cp0.cause.IP = (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
 	  break;
     }
     case CPRS(CP0_PAGEMASK, 0): {
-	  cp0_pagemask_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_pagemask_t *newVal = (cp0_pagemask_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.pagemask.mask = newVal->mask;
 	  break;
 	}
     case CPRS(CP0_ENTRY_LO0, 0): {
-	  cp0_entry_lo_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_entry_lo_t *newVal = (cp0_entry_lo_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.entry_lo0.g = newVal->g;
 	  cpu.cp0.entry_lo0.v = newVal->v;
 	  cpu.cp0.entry_lo0.d = newVal->d;
@@ -304,7 +304,7 @@ make_exec_handler(mtc0) ({
 	  break;
 	}
     case CPRS(CP0_ENTRY_LO1, 0): {
-	  cp0_entry_lo_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_entry_lo_t *newVal = (cp0_entry_lo_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.entry_lo1.g = newVal->g;
 	  cpu.cp0.entry_lo1.v = newVal->v;
 	  cpu.cp0.entry_lo1.d = newVal->d;
@@ -313,7 +313,7 @@ make_exec_handler(mtc0) ({
 	  break;
     }
     case CPRS(CP0_ENTRY_HI, 0): {
-	  cp0_entry_hi_t *newVal = (void*)&(cpu.gpr[inst.rt]);
+	  cp0_entry_hi_t *newVal = (cp0_entry_hi_t *)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.entry_hi.asid = newVal->asid;
 	  cpu.cp0.entry_hi.vpn = newVal->vpn;
 	  break;
@@ -358,7 +358,7 @@ make_exec_handler(tgei) ({
 });
 
 make_exec_handler(tgeiu) ({
-  if(cpu.gpr[inst.rs] >= inst.simm) {
+  if(cpu.gpr[inst.rs] >= (uint32_t)inst.simm) {
     signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tgeiu $%s, %u", regs[inst.rs], inst.simm);
@@ -386,7 +386,7 @@ make_exec_handler(tlti) ({
 });
 
 make_exec_handler(tltiu) ({
-  if(cpu.gpr[inst.rs] < inst.simm) {
+  if(cpu.gpr[inst.rs] < (uint32_t)inst.simm) {
     signal_exception(EXC_TRAP);
   }
   dsprintf(asm_buf_p, "tltiu $%s, %u", regs[inst.rs], inst.simm);
@@ -430,9 +430,9 @@ make_exec_handler(name) ({                                 \
 	  regs[inst.rs], regs[inst.rt]);                       \
 });
 
-R_SIMPLE(or,   |, uint32_t)
-R_SIMPLE(xor,  ^, uint32_t)
-R_SIMPLE(and,  &, uint32_t)
+R_SIMPLE(or_,  |, uint32_t)
+R_SIMPLE(xor_, ^, uint32_t)
+R_SIMPLE(and_, &, uint32_t)
 R_SIMPLE(addu, +, uint32_t)
 R_SIMPLE(subu, -, uint32_t)
 R_SIMPLE(mul,  *, uint32_t)
@@ -654,7 +654,7 @@ make_exec_handler(xori) ({
 });
 
 make_exec_handler(sltiu) ({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.simm;
+  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < (uint32_t)inst.simm;
   dsprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
