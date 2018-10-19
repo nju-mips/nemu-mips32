@@ -265,7 +265,7 @@ void mii_transaction() {
 	inited = true;
   }
 
-  mdio_addr_t *mdio_addr = (void *)&(regs.mdioaddr);
+  mdio_addr_t *mdio_addr = (mdio_addr_t *)&(regs.mdioaddr);
   u32 phy = mdio_addr->phyaddr;
   u32 reg = mdio_addr->regnum;
   if(mdio_addr->op == 0) {

@@ -27,7 +27,7 @@ size_t get_file_size(const char *img_file) {
   struct stat file_status;
   lstat(img_file, &file_status);
   if(S_ISLNK(file_status.st_mode)) {
-	char *buf = malloc(file_status.st_size);
+	char *buf = (char *)malloc(file_status.st_size);
 	size_t size = readlink(img_file, buf, file_status.st_size);
 	size = get_file_size(buf);
 	free(buf);
@@ -44,7 +44,7 @@ void *read_file(const char *filename) {
 
   // malloc buf which should be freed by caller
   void *buf = malloc(size);
-  int len = 0;
+  size_t len = 0;
   while(len < size) {
 	len += read(fd, buf, size - len);
   }
@@ -59,24 +59,24 @@ void load_elf() {
   symbol_file = elf_file;
   const uint32_t elf_magic = 0x464c457f;
 
-  void *buf = read_file(elf_file);
+  VoidPtr buf = read_file(elf_file);
   Assert(buf, "elf file '%s' cannot be opened for read\n", elf_file);
 
-  Elf32_Ehdr *elf = buf;
+  Elf32_Ehdr *elf = (Elf32_Ehdr *)buf;
 
   elf_entry = elf->e_entry;
 
-  uint32_t *p_magic = buf;
+  uint32_t *p_magic = (uint32_t *)buf;
   assert(*p_magic == elf_magic);
 
 
   for(int i = 0; i < elf->e_phnum; i++) {
-	  Elf32_Phdr *ph = (void*)buf + i * elf->e_phentsize + elf->e_phoff;
-	  if(ph->p_type != PT_LOAD) { continue; }
+	Elf32_Phdr *ph = (VoidPtr)buf + i * elf->e_phentsize + elf->e_phoff;
+	if(ph->p_type != PT_LOAD) { continue; }
 
-	  void *p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
-	  memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
-	  memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+	VoidPtr p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
+	memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz); 
+	memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }
 
   free(buf);
@@ -97,8 +97,8 @@ static inline void assume_elf_file() {
   /* assume img_file is xxx.bin and elf_file is xxx */
   char *end = strrchr(img_file, '.');
   if(end) {
-	  *end = 0;
-	  elf_file = img_file;
+	*end = 0;
+	elf_file = img_file;
   }
 }
 
@@ -136,31 +136,31 @@ static void print_help(const char *file) {
 static inline void parse_args(int argc, char *argv[]) {
   int o;
   while ( (o = getopt_long(argc, argv, "-bcDe:i:S:u:h", long_options, NULL)) != -1) {
-    switch (o) {
+	switch (o) {
 	  case 'S': symbol_file = optarg; break;
 	  case 'u': kernel_img = optarg;
 				load_image(kernel_img, uimage_base);
 				break;
 	  case 'D': work_mode |= MODE_DIFF; break;
-      case 'b': work_mode |= MODE_BATCH; break;
-      case 'c': work_mode |= MODE_LOG; break;
-      case 'e':
-                if (elf_file != NULL)
+	  case 'b': work_mode |= MODE_BATCH; break;
+	  case 'c': work_mode |= MODE_LOG; break;
+	  case 'e':
+				if (elf_file != NULL)
 				  Log("too much argument '%s', ignored", optarg);
-                else
+				else
 				  elf_file = optarg;
-                break;
-      case 'i':
-                if (img_file != NULL)
+				break;
+	  case 'i':
+				if (img_file != NULL)
 				  Log("too much argument '%s', ignored", optarg);
-                else
+				else
 				  img_file = optarg;
-                break;
+				break;
 	  case 'h':
-      default:
+	  default:
 				print_help(argv[0]);
 				exit(0);
-    }
+	}
   }
 }
 
@@ -183,16 +183,16 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 #ifdef DEBUG
   // send command to uboot
   /*
-  char cmd[1024], *p = cmd;
-  p += sprintf(p, "set serverip 192.168.1.1\n");
-  p += sprintf(p, "set ipaddr 192.168.1.107\n");
-  p += sprintf(p, "ping 192.168.1.1\n");
-  p += sprintf(cmd, "bootelf -p %08x\n", uimage_base);
-  cmd[0] = 0;
-  p += sprintf(p, "I\nI\n");
-  for(p = cmd; *p; p++)
-	serial_enqueue_ascii(*p);
-  */
+	 char cmd[1024], *p = cmd;
+	 p += sprintf(p, "set serverip 192.168.1.1\n");
+	 p += sprintf(p, "set ipaddr 192.168.1.107\n");
+	 p += sprintf(p, "ping 192.168.1.1\n");
+	 p += sprintf(cmd, "bootelf -p %08x\n", uimage_base);
+	 cmd[0] = 0;
+	 p += sprintf(p, "I\nI\n");
+	 for(p = cmd; *p; p++)
+	 serial_enqueue_ascii(*p);
+	 */
 #endif
 
   /* Initialize this virtual computer system. */

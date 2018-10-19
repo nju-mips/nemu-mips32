@@ -37,13 +37,15 @@ static inline uint32_t RGB_M12_to_M32(uint32_t color) {
 }
 
 static inline void draw_pixel(int x, int y, uint32_t color) {
-  uint32_t (*pixel_buf)[WINDOW_W] = screen->pixels;
+  typedef uint32_t (*pixel_buf_t)[WINDOW_W];
+  pixel_buf_t pixel_buf = (pixel_buf_t)(screen->pixels);
   assert(x >= 0 && x < WINDOW_W && y >= 0 && y < WINDOW_H);
   pixel_buf[y][x] = RGB_M12_to_M32(color);
 }
 
 void update_screen() {
-  uint16_t (*vmem_ptr)[SCR_W] = (void *)vmem;
+  typedef uint16_t (*vmem_buf_t)[SCR_W];
+  vmem_buf_t vmem_ptr = (vmem_buf_t)vmem;
 
   for(int i = 0; i < SCR_H; i ++) {
 	for(int j = 0; j < SCR_W; j ++) {

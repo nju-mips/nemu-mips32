@@ -28,17 +28,17 @@ void bram_mapped_result(map_result_t *map) {
 
 uint32_t bram_read(paddr_t addr, int len) {
   check_bram(addr, len);
-  return *((uint32_t *)((void*)bram + addr)) & (~0u >> ((4 - len) << 3));
+  return read_masked_word(bram, addr, len);
 }
 
 void bram_write(paddr_t addr, int len, uint32_t data) {
   check_bram(addr, len);
-  memcpy((void *)bram + addr, &data, len);
+  write_masked_word(bram, addr, len, data);
 }
 
 void bram_init(vaddr_t entry) {
   if(!bram_mapped) {
-	uint32_t *p = (void*)bram;
+	uint32_t *p = (uint32_t*)bram;
 	p[0] = 0x3c080000 | (entry >> 16);    // lui t0, %hi(entry)
 	p[1] = 0x25080000 | (entry & 0xFFFF); // addiu t0, t0, %lo(entry)
 	p[2] = 0x01000008;  // jr t0

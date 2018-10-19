@@ -31,85 +31,88 @@ static int serial_f = 0, serial_r = 0;
 
 
 // wait to be completed
-const char *SDLK_to_ascii[SDLK_LAST] = {
-	[SDLK_ESCAPE]	= "\e",
-	[SDLK_F1]	= "\eOP", [SDLK_F2]	= "\eOQ",
-	[SDLK_F3]	= "\eOR", [SDLK_F4]	= "\eOS",
-	[SDLK_F5]	= "\e[15~", [SDLK_F6]	= "\e[17~",
-	[SDLK_F7]	= "\e[18~", [SDLK_F8]	= "\e[19~",
-	[SDLK_F9]	= "\e[20~", [SDLK_F10]	= "\e[21~",
-	[SDLK_F11]	= "\e[22~", [SDLK_F12]	= "\e[24~",
-	[SDLK_BACKQUOTE]	= "`",
-	[SDLK_1]	= "1", [SDLK_2]	= "2", [SDLK_3]	= "3",
-	[SDLK_4]	= "4", [SDLK_5]	= "5", [SDLK_6]	= "6",
-	[SDLK_7]	= "7", [SDLK_8]	= "8", [SDLK_9]	= "9",
-	[SDLK_0]	= "0",
-	[SDLK_MINUS]	= "-",
-	[SDLK_EQUALS]	= "=",
-	[SDLK_BACKSPACE]	= "\x8",
-	[SDLK_TAB]	= "\t",
-	[SDLK_q]	= "q",
-	[SDLK_w]	= "w",
-	[SDLK_e]	= "e",
-	[SDLK_r]	= "r",
-	[SDLK_t]	= "t",
-	[SDLK_y]	= "y",
-	[SDLK_u]	= "u",
-	[SDLK_i]	= "i",
-	[SDLK_o]	= "o",
-	[SDLK_p]	= "p",
-	[SDLK_LEFTBRACKET]	= "{",
-	[SDLK_RIGHTBRACKET]	= "}",
-	[SDLK_SLASH]	= "\\",
-	[SDLK_a]	= "a",
-	[SDLK_s]	= "s",
-	[SDLK_d]	= "d",
-	[SDLK_f]	= "f",
-	[SDLK_g]	= "g",
-	[SDLK_h]	= "h",
-	[SDLK_j]	= "j",
-	[SDLK_k]	= "k",
-	[SDLK_l]	= "l",
-	[SDLK_SEMICOLON]	= ";",
-	[SDLK_QUOTE]	= "'",
-	[SDLK_RETURN]	= "\n",
-	[SDLK_LSHIFT]	= "", // cannot be escaped
-	[SDLK_z]	= "z",
-	[SDLK_x]	= "x",
-	[SDLK_c]	= "c",
-	[SDLK_v]	= "v",
-	[SDLK_b]	= "b",
-	[SDLK_n]	= "n",
-	[SDLK_m]	= "m",
-	[SDLK_COMMA]	= ",",
-	[SDLK_PERIOD]	= ".",
-	[SDLK_BACKSLASH]	= "/",
-	[SDLK_RSHIFT]	= "", // cannot be escaped
-	[SDLK_LCTRL]	= "", // cannot be escaped
-	[SDLK_LALT]	= "", // cannot be escaped
-	[SDLK_SPACE]	= " ",
-	[SDLK_RALT]	= "", // cannot be escaped
-	[SDLK_RCTRL]	= "", // cannot be escaped
-	[SDLK_INSERT]	= "\e[2~",
-	[SDLK_HOME]	= "\e[1~",
-	[SDLK_PAGEUP]	= "\e[5~",
-	[SDLK_DELETE]	= "\x7f",
-	[SDLK_END]	= "\e[4~",
-	[SDLK_PAGEDOWN]	= "\e[6~",
-	[SDLK_UP]	= "\e[A",
-	[SDLK_LEFT]	= "\e[D",
-	[SDLK_DOWN]	= "\e[B",
-	[SDLK_RIGHT]	= "\e[C",
-	[SDLK_KP_DIVIDE]	= "/",
-	[SDLK_KP_MULTIPLY]	= "*",
-	[SDLK_KP_MINUS]	= "-",
-	[SDLK_KP_PLUS]	= "+",
-	[SDLK_KP7]	= "7", [SDLK_KP8]	= "8", [SDLK_KP9]	= "9",
-	[SDLK_KP4]	= "4", [SDLK_KP5]	= "5", [SDLK_KP6]	= "6",
-	[SDLK_KP1]	= "1", [SDLK_KP2]	= "2", [SDLK_KP3]	= "3",
-	[SDLK_KP0]	= "0",
-	[SDLK_KP_EQUALS]	= "=",
-	[SDLK_KP_ENTER]	= "\n",
+const char *SDLK_to_ascii(SDLKey key) {
+  switch(key) {
+	case SDLK_ESCAPE: return "\e";
+	case SDLK_F1: return "\eOP"; case SDLK_F2: return "\eOQ";
+	case SDLK_F3: return "\eOR"; case SDLK_F4: return "\eOS";
+	case SDLK_F5: return "\e[15~"; case SDLK_F6: return "\e[17~";
+	case SDLK_F7: return "\e[18~"; case SDLK_F8: return "\e[19~";
+	case SDLK_F9: return "\e[20~"; case SDLK_F10: return "\e[21~";
+	case SDLK_F11: return "\e[22~"; case SDLK_F12: return "\e[24~";
+	case SDLK_BACKQUOTE: return "`";
+	case SDLK_1: return "1"; case SDLK_2: return "2"; case SDLK_3: return "3";
+	case SDLK_4: return "4"; case SDLK_5: return "5"; case SDLK_6: return "6";
+	case SDLK_7: return "7"; case SDLK_8: return "8"; case SDLK_9: return "9";
+	case SDLK_0: return "0";
+	case SDLK_MINUS: return "-";
+	case SDLK_EQUALS: return "=";
+	case SDLK_BACKSPACE: return "\x8";
+	case SDLK_TAB: return "\t";
+	case SDLK_q: return "q";
+	case SDLK_w: return "w";
+	case SDLK_e: return "e";
+	case SDLK_r: return "r";
+	case SDLK_t: return "t";
+	case SDLK_y: return "y";
+	case SDLK_u: return "u";
+	case SDLK_i: return "i";
+	case SDLK_o: return "o";
+	case SDLK_p: return "p";
+	case SDLK_LEFTBRACKET: return "{";
+	case SDLK_RIGHTBRACKET: return "}";
+	case SDLK_SLASH: return "\\";
+	case SDLK_a: return "a";
+	case SDLK_s: return "s";
+	case SDLK_d: return "d";
+	case SDLK_f: return "f";
+	case SDLK_g: return "g";
+	case SDLK_h: return "h";
+	case SDLK_j: return "j";
+	case SDLK_k: return "k";
+	case SDLK_l: return "l";
+	case SDLK_SEMICOLON: return ";";
+	case SDLK_QUOTE: return "'";
+	case SDLK_RETURN: return "\n";
+	case SDLK_LSHIFT: return ""; // cannot be escaped
+	case SDLK_z: return "z";
+	case SDLK_x: return "x";
+	case SDLK_c: return "c";
+	case SDLK_v: return "v";
+	case SDLK_b: return "b";
+	case SDLK_n: return "n";
+	case SDLK_m: return "m";
+	case SDLK_COMMA: return ";";
+	case SDLK_PERIOD: return ".";
+	case SDLK_BACKSLASH: return "/";
+	case SDLK_RSHIFT: return ""; // cannot be escaped
+	case SDLK_LCTRL: return ""; // cannot be escaped
+	case SDLK_LALT: return ""; // cannot be escaped
+	case SDLK_SPACE: return " ";
+	case SDLK_RALT: return ""; // cannot be escaped
+	case SDLK_RCTRL: return ""; // cannot be escaped
+	case SDLK_INSERT: return "\e[2~";
+	case SDLK_HOME: return "\e[1~";
+	case SDLK_PAGEUP: return "\e[5~";
+	case SDLK_DELETE: return "\x7f";
+	case SDLK_END: return "\e[4~";
+	case SDLK_PAGEDOWN: return "\e[6~";
+	case SDLK_UP: return "\e[A";
+	case SDLK_LEFT: return "\e[D";
+	case SDLK_DOWN: return "\e[B";
+	case SDLK_RIGHT: return "\e[C";
+	case SDLK_KP_DIVIDE: return "/";
+	case SDLK_KP_MULTIPLY: return "*";
+	case SDLK_KP_MINUS: return "-";
+	case SDLK_KP_PLUS: return "+";
+	case SDLK_KP7: return "7"; case SDLK_KP8: return "8"; case SDLK_KP9: return "9";
+	case SDLK_KP4: return "4"; case SDLK_KP5: return "5"; case SDLK_KP6: return "6";
+	case SDLK_KP1: return "1"; case SDLK_KP2: return "2"; case SDLK_KP3: return "3";
+	case SDLK_KP0: return "0";
+	case SDLK_KP_EQUALS: return "=";
+	case SDLK_KP_ENTER: return "\n";
+	default: return "";
+  }
 };
 
 void serial_enqueue_ascii(char ch) {
@@ -136,7 +139,7 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 	return;
   }
 
-  const char *p = SDLK_to_ascii[key];
+  const char *p = SDLK_to_ascii(key);
   while(p && *p) {
 	int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
 	if(next != serial_f) { // if not full

@@ -128,7 +128,7 @@ static const void * opcode_table[64] = {
   /* 0x30 */	&&ll, &&inv, &&inv, &&pref,
   /* 0x34 */	&&inv, &&inv, &&inv, &&inv,
   /* 0x38 */	&&sc, &&inv, &&inv, &&inv,
-  /* 0x3c */	&&inv, &&inv, &&inv, &&inv,
+  /* 0x3c */	&&inv, &&inv, &&inv, &&cheat,
 };
 
 make_entry() {
@@ -998,6 +998,21 @@ make_exec_handler(j) ({
   cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
   exec_delayslot();
   dsprintf(asm_buf_p, "j %x", cpu.pc);
+});
+
+make_exec_handler(cheat) ({
+  // the meaning of cheat is a set of API to check consistence
+  switch(cpu.gpr[0]) {
+  /*
+    case NEMU_SAVE_GPR:
+	case NEMU_SAVE_MEM:
+	case NEMU_SAVE_CPR0:
+	case NEMU_CHECK_GPR:
+	case NEMU_CHECK_MEM:
+	case NEMU_CHECK_CPR0:
+	*/
+	default: break;
+  }
 });
 
 make_eoe() { } // end of execution

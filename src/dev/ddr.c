@@ -25,10 +25,10 @@ void ddr_mapped_result(map_result_t *map) {
 
 uint32_t ddr_read(paddr_t addr, int len) {
   check_ddr(addr, len);
-  return *((uint32_t *)((void*)ddr + addr)) & (~0u >> ((4 - len) << 3));
+  return read_masked_word(ddr, addr, len);
 }
 
 void ddr_write(paddr_t addr, int len, uint32_t data) {
   check_ddr(addr, len);
-  memcpy((uint8_t *)ddr + addr, &data, len);
+  write_masked_word(ddr, addr, len, data);
 }

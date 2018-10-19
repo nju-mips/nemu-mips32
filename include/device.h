@@ -5,6 +5,14 @@
 #include "device.h"
 #include "memory.h"
 
+static inline uint32_t read_masked_word(uint8_t *buf, paddr_t addr, int len) {
+  uint32_t mask = ~0u >> ((4 - len) << 3);
+  return *((uint32_t *)((void*)&buf[addr])) & mask;
+}
+
+static inline void write_masked_word(uint8_t *buf, paddr_t addr, int len, uint32_t data) {
+  memcpy((void *)&buf[addr], &data, len);
+}
 
 void *paddr_map(uint32_t paddr, uint32_t size);
 

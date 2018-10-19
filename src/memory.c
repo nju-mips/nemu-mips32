@@ -35,9 +35,9 @@ struct mmap_region {
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))
 
-uint32_t find_region(vaddr_t addr) {
+int find_region(vaddr_t addr) {
   int ret = -1;
-  for(int i = 0; i < NR_REGION; i++)
+  for(size_t i = 0; i < NR_REGION; i++)
 	if(addr >= mmap_table[i].start && addr < mmap_table[i].end) {
 	  ret = i;
 	  break;
@@ -107,8 +107,8 @@ static inline bool region_collide(uint32_t x, uint32_t y,
 }
 
 void init_mmio() {
-  for(int i = 0; i < NR_REGION; i++) {
-	for(int j = i + 1; j < NR_REGION; j++) {
+  for(size_t i = 0; i < NR_REGION; i++) {
+	for(size_t j = i + 1; j < NR_REGION; j++) {
 	  assert(!region_collide(mmap_table[i].start, 
 			mmap_table[i].end,
 			mmap_table[j].start,
