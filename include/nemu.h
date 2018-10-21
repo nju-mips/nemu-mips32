@@ -43,10 +43,14 @@ public:
   { return *this = this->operator-(dec); }
 
   template<class T>
+  bool operator!=(const T *nptr) const
+  { return this->ptr != static_cast<void *>(nptr); }
+
+  template<class T>
   operator T*()
   { return static_cast<T*>(ptr); }
 
-  bool operator !() const { return ptr != NULL; }
+  bool operator !() const { return ptr == nullptr; }
 };
 
 #else
