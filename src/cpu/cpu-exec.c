@@ -6,6 +6,7 @@
 #include "monitor.h"
 #include "memory.h"
 #include "mmu.h"
+#include "cheat.h"
 
 
 CPU_state cpu;
@@ -69,7 +70,6 @@ void print_registers(uint32_t instr) {
 /* if you run your os with multiple processes, disable this */
 #ifdef ENABLE_CAE_CHECK
 
-#define NR_GPR 32
 static uint32_t saved_gprs[NR_GPR];
 
 void save_usual_registers(void) {
@@ -150,34 +150,48 @@ static inline void write_handler(uint8_t *p, uint32_t len, uint32_t data) {
   }
 }
 
-static inline uint32_t load_mem(vaddr_t addr, int len) {
+static inline uint32_t *load_mem(vaddr_t addr, int len) {
 #ifdef DEBUG
   CPUAssert(addr >= 0x1000, "preventive check failed, try to load memory from addr %08x\n", addr);
 #endif
-  uint32_t pa = prot_addr(addr, MMU_LOAD);
+  static uint32_t data;
+
+  prot_info_t prot = {0};
+  prot.rwbit = MMU_LOAD;
+  uint32_t pa = prot_addr(addr, &prot);
+  if(prot->exbit) return NULL; /* prot except */
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
 	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
-	return read_handler(&ddr[addr], len);
+	data = read_handler(&ddr[addr], len);
   } else if(BRAM_BASE <= pa && pa < BRAM_BASE + BRAM_SIZE) {
     addr = pa - BRAM_BASE;
-	return read_handler(&bram[addr], len);
+	data = read_handler(&bram[addr], len);
+  } else {
+	data = vaddr_read(addr, len);
   }
-  return vaddr_read(addr, len);
+  return &data;
 }
 
-static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
+static inline bool store_mem(vaddr_t addr, int len, uint32_t data) {
 #ifdef DEBUG
   CPUAssert(addr >= 0x1000, "preventive check failed, try to store memory to addr %08x\n", addr);
 #endif
 
-  uint32_t pa = prot_addr(addr, MMU_STORE);
+  prot_info_t prot = {0};
+  prot.rwbit = MMU_STORE;
+
+  uint32_t pa = prot_addr(addr, &prot);
+
+  if(prot->exbit) return false;
+
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
     addr = pa - DDR_BASE;
 	write_handler(&ddr[addr], len, data);
   } else {
     vaddr_write(addr, len, data);
   }
+  return true;
 }
 
 static inline uint32_t instr_fetch(vaddr_t addr) {
@@ -185,8 +199,6 @@ static inline uint32_t instr_fetch(vaddr_t addr) {
 }
 
 void signal_exception(int code) {
-  cpu.curr_instr_except = true;
-
   if(code == EXC_TRAP) {
 	eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
 	exit(0);
@@ -303,8 +315,6 @@ void cpu_exec(uint64_t n) {
 
     Inst inst;
 	inst.val = instr_fetch(cpu.pc);
-
-	cpu.curr_instr_except = false;
 
 #ifdef DEBUG
 	instr_enqueue_instr(inst.val);

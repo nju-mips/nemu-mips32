@@ -2,7 +2,7 @@
 #define DEVICE_H
 
 #include <stdint.h>
-#include "device.h"
+#include "common.h"
 #include "memory.h"
 
 static inline uint32_t read_masked_word(uint8_t *buf, paddr_t addr, int len) {

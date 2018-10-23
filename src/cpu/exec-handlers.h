@@ -730,13 +730,13 @@ make_exec_handler(sb) ({
 make_exec_handler(lwl) ({
   uint32_t raddr = cpu.gpr[inst.rs] + inst.simm;
   int len = (raddr & 0x3) + 1;
-  uint32_t rdata = load_mem((raddr >> 2) << 2, len);
+  uint32_t *rdata_ptr = load_mem((raddr >> 2) << 2, len);
 
-  if(!cpu.curr_instr_except) {
+  if(rdata_ptr) {
 	if (len < 4)
-	  cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
+	  cpu.gpr[inst.rt] = *rdata_ptr << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
 	else
-	  cpu.gpr[inst.rt] = rdata;
+	  cpu.gpr[inst.rt] = *rdata_ptr;
 	dsprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
   }
 });
@@ -745,48 +745,48 @@ make_exec_handler(lwr) ({
   uint32_t raddr = cpu.gpr[inst.rs] + inst.simm;
   int idx = raddr & 0x3;
   int len = 4 - idx;
-  uint32_t rdata = load_mem(raddr, len);
-  if(!cpu.curr_instr_except) {
+  uint32_t *rdata_ptr = load_mem(raddr, len);
+  if(rdata_ptr) {
 	if (len < 4)
-	  cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
+	  cpu.gpr[inst.rt] = (*rdata_ptr << idx * 8) >> (idx * 8) | ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
 	else
-	  cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
+	  cpu.gpr[inst.rt] = (*rdata_ptr << idx * 8) >> (idx * 8);
   }
   dsprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lw) ({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
-  if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = *rdata_ptr; }
   dsprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lb) ({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = (int32_t)(int8_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
-  if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = (int32_t)(int8_t)*rdata_ptr; }
   dsprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lbu) ({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
-  if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = *rdata_ptr; }
   dsprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lh) ({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = (int32_t)(int16_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
-  if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = (int32_t)(int16_t)*rdata_ptr; }
   dsprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lhu) ({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
-  if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = *rdata_ptr; }
   dsprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
@@ -796,14 +796,14 @@ make_exec_handler(pref) ({
 
 make_exec_handler(ll) ({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
-  cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
+  uint32_t *rdata_ptr = load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
+  if(rdata_ptr) { cpu.gpr[inst.rt] = *rdata_ptr; }
   dsprintf(asm_buf_p, "ll %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sc) ({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
-  vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
-  if(!cpu.curr_instr_except) cpu.gpr[inst.rt] = 1;
+  cpu.gpr[inst.rt] = store_mem(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
   dsprintf(asm_buf_p, "sc %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
@@ -1002,17 +1002,12 @@ make_exec_handler(j) ({
 
 make_exec_handler(cheat) ({
   // the meaning of cheat is a set of API to check consistence
-  switch(cpu.gpr[0]) {
-  /*
-    case NEMU_SAVE_GPR:
-	case NEMU_SAVE_MEM:
-	case NEMU_SAVE_CPR0:
-	case NEMU_CHECK_GPR:
-	case NEMU_CHECK_MEM:
-	case NEMU_CHECK_CPR0:
-	*/
-	default: break;
-  }
+#ifdef ENABLE_CHEAT
+  cheat_under_nemu();
+#else
+  CPUAssert(0, "cheat instruction called under no-cheat mode...\n");
+  // InstAssert(0); // trigger instruction exception
+#endif
 });
 
 make_eoe() { } // end of execution

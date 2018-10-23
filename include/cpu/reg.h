@@ -234,9 +234,22 @@ typedef union {
 #define NEMU_STATIC_ASSERT _Static_assert
 #endif
 
+#define NR_GPR 32
 
 typedef struct {
-  uint32_t gpr[32];
+  union {
+	uint32_t gpr[NR_GPR];
+	struct {
+      uint32_t zero, at, v0, v1;
+      uint32_t a0, a1, a2, a3;
+      uint32_t t0, t1, t2, t3;
+      uint32_t t4, t5, t6, t7;
+      uint32_t s0, s1, s2, s3;
+      uint32_t s4, s5, s6, s7;
+      uint32_t t8, t9, k0, k1;
+      uint32_t gp, sp, fp, ra;
+	};
+  };
   uint32_t hi, lo;
   cp0_t cp0;
   vaddr_t pc;
