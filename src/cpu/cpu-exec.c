@@ -38,16 +38,31 @@ static uint64_t get_current_time() { // in us
   return t.tv_sec * 1000000 + t.tv_usec - nemu_start_time;
 }
 
-static int dsprintf(char *buf, const char *fmt, ...) {
+#if defined DEBUG && defined ENABLE_ASM_TRACER
+char asm_buf[512], *asm_buf_p = asm_buf;
+#endif
+
+/* 1th arg: fmt, 2th arg: params */
+int __attribute__((format(printf, 1, 2)))
+  trace_append(const char *fmt, ...) {
   int len = 0;
-#if 0
+#if defined DEBUG && defined ENABLE_ASM_TRACER
   va_list ap;
   va_start(ap, fmt);
-  len = vprintf(fmt, ap);
+  asm_buf_p += (len = vsprintf(asm_buf_p, fmt, ap));
   va_end(ap);
-  printf("\n");
+
+  /* check overflow */
+  assert(asm_buf_p <= &asm_buf[sizeof(asm_buf)]);
 #endif
   return len;
+}
+
+void trace_flush() {
+#if defined DEBUG && defined ENABLE_ASM_TRACER
+  asm_buf_p = asm_buf;
+  printf("%s\n", asm_buf);
+#endif
 }
 
 
@@ -80,7 +95,7 @@ void save_usual_registers(void) {
 void check_usual_registers(void) {
   for(int i = 0; i < NR_GPR; i++) {
 	if(i == 26 || i == 27) continue; // k0 and k1
-	CPUAssert(saved_gprs[i] == cpu.gpr[i],
+	CoreAssert(saved_gprs[i] == cpu.gpr[i],
 		"gpr[%d] %08x <> %08x after eret\n",
 		i, saved_gprs[i], cpu.gpr[i]);
   }
@@ -127,7 +142,7 @@ static inline uint32_t read_handler(uint8_t *p, int len) {
 	case 2: return (p[1] << 8) | p[0];
 	case 3: return (p[2] << 16) | (p[1] << 8) | p[0];
 	case 4: return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
-	default: CPUAssert(0, "invalid len %d\n", len); break;
+	default: CoreAssert(0, "invalid len %d\n", len); break;
   }
 }
 
@@ -146,13 +161,13 @@ static inline void write_handler(uint8_t *p, uint32_t len, uint32_t data) {
 			p[2] = (data >> 16) & 0xFF;
 			p[3] = (data >> 24) & 0xFF;
 			return;
-	default: CPUAssert(0, "invalid len %d\n", len); break;
+	default: CoreAssert(0, "invalid len %d\n", len); break;
   }
 }
 
 static inline uint32_t *load_mem(vaddr_t addr, int len) {
 #ifdef DEBUG
-  CPUAssert(addr >= 0x1000, "preventive check failed, try to load memory from addr %08x\n", addr);
+  CoreAssert(addr >= 0x1000, "preventive check failed, try to load memory from addr %08x\n", addr);
 #endif
   static uint32_t data;
 
@@ -175,7 +190,7 @@ static inline uint32_t *load_mem(vaddr_t addr, int len) {
 
 static inline bool store_mem(vaddr_t addr, int len, uint32_t data) {
 #ifdef DEBUG
-  CPUAssert(addr >= 0x1000, "preventive check failed, try to store memory to addr %08x\n", addr);
+  CoreAssert(addr >= 0x1000, "preventive check failed, try to store memory to addr %08x\n", addr);
 #endif
 
   prot_info_t prot = {0};
@@ -300,9 +315,8 @@ void cpu_exec(uint64_t n) {
 	instr_enqueue_pc(cpu.pc);
 #endif
 
-#if 0
-    asm_buf_p = asm_buf;
-    asm_buf_p += dsprintf(asm_buf_p, "%8x:    ", cpu.pc);
+#if defined DEBUG && defined ENABLE_ASM_TRACER
+    trace_append("%08x:    ", cpu.pc);
 #endif
 
 #ifdef ENABLE_EXCEPTION
@@ -325,7 +339,10 @@ void cpu_exec(uint64_t n) {
 	ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE && !cpu.is_delayslot;
 #endif
 
-    asm_buf_p += dsprintf(asm_buf_p, "%08x    ", inst.val);
+#if defined DEBUG && defined ENABLE_ASM_TRACER
+    trace_append("%08x    ", inst.val);
+	trace_flush();
+#endif
 
 #include "exec-handlers.h"
 
@@ -337,8 +354,6 @@ void cpu_exec(uint64_t n) {
 inst_exec_end:
 
 #ifdef DEBUG
-	// if(0x60000000 <= cpu.pc && cpu.pc < 0x80000000)
-	// eprintf("%08x: %08x\n", cpu.pc, inst.val);
     if(work_mode == MODE_LOG) print_registers(inst.val);
 #endif
 

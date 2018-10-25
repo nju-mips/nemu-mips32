@@ -16,7 +16,7 @@ extern SDL_Surface *screen;
 static uint8_t vmem[VMEM_SIZE];
 
 #define check_vga(addr, len) \
-  CPUAssert(addr >= 0 && addr < VMEM_SIZE && addr + len <= VMEM_SIZE, \
+  CoreAssert(addr >= 0 && addr < VMEM_SIZE && addr + len <= VMEM_SIZE, \
 	  "address(0x%08x) is out side DDR", addr);
 
 uint32_t vga_read(paddr_t addr, int len) {

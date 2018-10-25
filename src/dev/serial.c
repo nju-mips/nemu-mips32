@@ -153,7 +153,7 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 #define check_input(addr, len) \
-  CPUAssert(addr >= 0 && addr <= SERIAL_SIZE, \
+  CoreAssert(addr >= 0 && addr <= SERIAL_SIZE, \
 	  "UART: address(0x%08x) is out side", addr); \
 
 uint32_t serial_peek(paddr_t addr, int len) {
@@ -166,7 +166,7 @@ uint32_t serial_peek(paddr_t addr, int len) {
 	case UARTLITE_CTRL:
 	  return uartlite_ctrl_reg;
 	default:
-	  CPUAssert(false, "uart: address(0x%08x) is not readable", addr);
+	  CoreAssert(false, "uart: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;
@@ -191,7 +191,7 @@ void serial_write(paddr_t addr, int len, uint32_t data) {
 	  uartlite_ctrl_reg = data;
 	  break;
 	default:
-	  CPUAssert(false, "uart: address(0x%08x) is not writable", addr);
+	  CoreAssert(false, "uart: address(0x%08x) is not writable", addr);
 	  break;
   }
 }

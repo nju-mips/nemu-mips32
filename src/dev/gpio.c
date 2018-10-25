@@ -4,8 +4,8 @@
 
 
 #define check_gpio(addr, len) \
-  CPUAssert(addr == 0, "address(0x%08x) is out side GPIO", addr); \
-  CPUAssert(len == 1, "GPIO only allow byte read/write");
+  CoreAssert(addr == 0, "address(0x%08x) is out side GPIO", addr); \
+  CoreAssert(len == 1, "GPIO only allow byte read/write");
 
 void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_gpio(addr, len);

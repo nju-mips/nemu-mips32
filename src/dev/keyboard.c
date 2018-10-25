@@ -138,9 +138,9 @@ void keyboard_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 #define check_input(addr, len) \
-  CPUAssert(addr >= 0 && addr <= KB_SIZE, \
+  CoreAssert(addr >= 0 && addr <= KB_SIZE, \
 	  "input: address(0x%08x) is out side", addr); \
-  CPUAssert(len == 4, "input only allow byte read/write");
+  CoreAssert(len == 4, "input only allow byte read/write");
 
 uint32_t kb_read(paddr_t addr, int len) {
   /* CTRL not yet implemented, only allow byte read/write */
@@ -154,7 +154,7 @@ uint32_t kb_read(paddr_t addr, int len) {
 	  return code;
 	}
 	default:
-	  CPUAssert(false, "keyboard: address(0x%08x) is not readable", addr);
+	  CoreAssert(false, "keyboard: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;

@@ -46,7 +46,7 @@ extern void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
     } \
   } while (0)
 
-#define CPUAssert(cond, fmt, ...) do { \
+#define CoreAssert(cond, fmt, ...) do { \
     if (!(cond)) { \
 	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
 			  __FILE__, __LINE__, __func__, #cond); \

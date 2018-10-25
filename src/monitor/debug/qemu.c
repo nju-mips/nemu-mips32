@@ -233,16 +233,16 @@ void qemu_diff() {
 	  }
 
 	  // diff
-	  CPUAssert(regs.pc == cpu.pc, "differ at pc:{%08x <> %08x}\n", cpu.pc, regs.pc);
+	  CoreAssert(regs.pc == cpu.pc, "differ at pc:{%08x <> %08x}\n", cpu.pc, regs.pc);
 
 	  // diff general registers
 	  for(int i = 0; i < 32; i++) {
-		CPUAssert(regs.gpr[i] == cpu.gpr[i], "differ at %08x, gpr[%d]:{%08x <> %08x}\n", cpu.pc, i, regs.gpr[i], cpu.gpr[i]);
+		CoreAssert(regs.gpr[i] == cpu.gpr[i], "differ at %08x, gpr[%d]:{%08x <> %08x}\n", cpu.pc, i, regs.gpr[i], cpu.gpr[i]);
 	  }
 
-	  CPUAssert(regs.hi == cpu.hi, "differ at %08x, hi:{%08x <> %08x}\n", cpu.pc, regs.hi, cpu.hi);
+	  CoreAssert(regs.hi == cpu.hi, "differ at %08x, hi:{%08x <> %08x}\n", cpu.pc, regs.hi, cpu.hi);
 
-	  CPUAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
+	  CoreAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
 	}
   } else {
     // install a parent death signal in the child

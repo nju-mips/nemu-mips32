@@ -10,7 +10,7 @@ bool bram_mapped = false;
 /* fake spi flash */
 
 #define check_bram(addr, len) \
-  CPUAssert(addr >= 0 && addr < BRAM_SIZE && addr + len <= BRAM_SIZE, \
+  CoreAssert(addr >= 0 && addr < BRAM_SIZE && addr + len <= BRAM_SIZE, \
 	  "address(0x%08x) is out side BRAM", addr);
 
 
