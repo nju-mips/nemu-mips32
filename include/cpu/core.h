@@ -1,5 +1,5 @@
-#ifndef __REG_H__
-#define __REG_H__
+#ifndef CPU_CORE_H
+#define CPU_CORE_H
 
 #include <stddef.h>
 #include "common.h"

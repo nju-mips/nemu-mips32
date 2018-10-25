@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "cpu/reg.h"
+#include "cpu/core.h"
 
 #define NR_TLB_ENTRY 512
 

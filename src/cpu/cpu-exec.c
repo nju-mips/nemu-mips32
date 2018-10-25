@@ -5,8 +5,8 @@
 #include "device.h"
 #include "monitor.h"
 #include "memory.h"
-#include "mmu.h"
 #include "cheat.h"
+#include "cpu/mmu.h"
 
 
 CPU_state cpu;
@@ -159,7 +159,7 @@ static inline uint32_t *load_mem(vaddr_t addr, int len) {
   prot_info_t prot = {0};
   prot.rwbit = MMU_LOAD;
   uint32_t pa = prot_addr(addr, &prot);
-  if(prot->exbit) return NULL; /* prot except */
+  if(prot.exbit) return NULL; /* prot except */
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
 	// Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
     addr = pa - DDR_BASE;
@@ -183,7 +183,7 @@ static inline bool store_mem(vaddr_t addr, int len, uint32_t data) {
 
   uint32_t pa = prot_addr(addr, &prot);
 
-  if(prot->exbit) return false;
+  if(prot.exbit) return false;
 
   if(LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
     addr = pa - DDR_BASE;
@@ -195,7 +195,7 @@ static inline bool store_mem(vaddr_t addr, int len, uint32_t data) {
 }
 
 static inline uint32_t instr_fetch(vaddr_t addr) {
-  return load_mem(addr, 4);
+  return *load_mem(addr, 4);
 }
 
 void signal_exception(int code) {

@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "common.h"
-#include "memory.h"
 
 static inline uint32_t read_masked_word(uint8_t *buf, paddr_t addr, int len) {
   uint32_t mask = ~0u >> ((4 - len) << 3);

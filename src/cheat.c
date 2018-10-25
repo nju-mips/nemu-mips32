@@ -1,6 +1,9 @@
+#include "common.h"
 #include "cheat.h"
+#include "cpu/core.h"
 
 
+/*
 static uint32_t saved_gprs[32];
 
 static void nemu_save_gpr() {
@@ -22,6 +25,7 @@ static void nemu_check_mem() {
 
 static void nemu_check_cpr0() {
 }
+*/
 
 void cheat_under_nemu(void) {
   switch(cpu.gpr[0]) {

@@ -1,6 +1,3 @@
-#include "nemu.h"
-#include "monitor.h"
-#include "device.h"
 #include <elf.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -9,6 +6,11 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <getopt.h>
+
+#include "nemu.h"
+#include "monitor.h"
+#include "device.h"
+#include "cpu/mmu.h"
 
 vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 32 * 1024 * 1024;
 void serial_enqueue_ascii(char);

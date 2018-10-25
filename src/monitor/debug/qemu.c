@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "protocol.h"
-#include "cpu/reg.h"
+#include "cpu/core.h"
 #include "memory.h"
 #include "device.h"
 

@@ -3,8 +3,18 @@
 #include "nemu.h"
 #include "monitor.h"
 #include "device.h"
-#include "memory.h"
+#include "cpu/mmu.h"
 
+
+uint32_t invalid_read(paddr_t addr, int len) {
+  Assert(0, "invalid read %08x\n", addr);
+  return 0;
+}
+
+void invalid_write(paddr_t addr, int len, uint32_t data) {
+  Assert(0, "invalid write %08x\n", addr);
+  return;
+}
 
 uint32_t badp_read(paddr_t addr, int len) {
   return 0;
@@ -70,17 +80,17 @@ uint32_t paddr_read(paddr_t addr, int len) {
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
-uint32_t paddr_write(paddr_t addr, int len, uint32_t data) {
+void paddr_write(paddr_t addr, int len, uint32_t data) {
   int idx = find_region_with_check(addr);
   return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {
-  return paddr_read(prot_addr_rw_except(addr, MMU_LOAD));
+  return paddr_read(prot_addr_rw_except(addr, MMU_LOAD), len);
 }
 
 void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  return paddr_write(prot_addr_rw_except(addr, MMU_STORE));
+  return paddr_write(prot_addr_rw_except(addr, MMU_STORE), len, data);
 }
 
 /* safe vaddr rw handler (no assertion, no exception), for gdb */

@@ -1,5 +1,6 @@
-#include "device.h"
 #include "nemu.h"
+#include "device.h"
+#include "cpu/mmu.h"
 
 
 uint8_t bram[BRAM_SIZE];

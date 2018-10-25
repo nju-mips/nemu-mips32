@@ -1,4 +1,4 @@
-#include "cpu/reg.h"
+#include "cpu/core.h"
 #include "cpu/mmu.h"
 #include "common.h"
 #include "memory.h"

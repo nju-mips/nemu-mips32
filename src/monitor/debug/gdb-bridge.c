@@ -12,7 +12,7 @@
 #include <sys/signal.h>
 #include <unistd.h>
 
-#include "debug.h"
+#include "common.h"
 #include "protocol.h"
 
 extern char *symbol_file;
