@@ -259,9 +259,7 @@ typedef struct {
 
   vaddr_t br_target;
   bool is_delayslot;
-  bool need_br;
-
-  bool curr_instr_except;
+  bool br_executed;
 } CPU_state;
 
 

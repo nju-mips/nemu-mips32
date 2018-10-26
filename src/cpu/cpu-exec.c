@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include <setjmp.h>
+#include <stdarg.h>
 
 #include "nemu.h"
 #include "device.h"
@@ -29,8 +30,6 @@ nemu_state_t nemu_state = NEMU_STOP;
 
 static uint64_t nemu_start_time = 0;
 
-char asm_buf[80], *asm_buf_p;
-
 // 1s = 10^3 ms = 10^6 us
 static uint64_t get_current_time() { // in us
   struct timeval t;
@@ -43,8 +42,7 @@ char asm_buf[512], *asm_buf_p = asm_buf;
 #endif
 
 /* 1th arg: fmt, 2th arg: params */
-int __attribute__((format(printf, 1, 2)))
-  trace_append(const char *fmt, ...) {
+int __attribute__((format(printf, 1, 2))) trace_append(const char *fmt, ...) {
   int len = 0;
 #if defined DEBUG && defined ENABLE_ASM_TRACER
   va_list ap;
@@ -225,7 +223,7 @@ void signal_exception(int code) {
 
   if(cpu.is_delayslot) {
 	cpu.cp0.epc = cpu.pc - 4;
-	cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
+	cpu.cp0.cause.BD = cpu.cp0.status.EXL == 0;
   } else {
 	cpu.cp0.epc = cpu.pc;
   }
@@ -235,28 +233,27 @@ void signal_exception(int code) {
   /* reference linux: arch/mips/kernel/cps-vec.S */
   // uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 : 0x80000000;
   uint32_t ebase = 0xbfc00000;
-  cpu.need_br = true;
   // for loongson testcase, exception entry is 'h0380'
   switch(code) {
 	case EXC_INTR:
 #ifdef __ARCH_LOONGSON__
-	  cpu.br_target = ebase + 0x0380;
+	  cpu.pc = ebase + 0x0380;
 #else
 	  if(cpu.cp0.cause.IV) {
-		cpu.br_target = ebase + 0x0200;
+		cpu.pc = ebase + 0x0200;
 	  } else {
-		cpu.br_target = ebase + 0x0180;
+		cpu.pc = ebase + 0x0180;
 	  }
 #endif
 	  break;
 	case EXC_TLBM:
 	case EXC_TLBL:
-	case EXC_TLBS: cpu.br_target = ebase + 0x0000; break;
+	case EXC_TLBS: cpu.pc = ebase + 0x0000; break;
 	default: /* usual exception */
 #ifdef __ARCH_LOONGSON__
-				   cpu.br_target = ebase + 0x0380;
+				   cpu.pc = ebase + 0x0380;
 #else
-				   cpu.br_target = ebase + 0x0180; break;
+				   cpu.pc = ebase + 0x0180; break;
 #endif
   }
 
@@ -290,6 +287,65 @@ void update_cp0_timer() {
   }
 }
 
+static inline void single_instruction() {
+#ifdef ENABLE_INTR
+  update_cp0_timer();
+#endif
+
+#ifdef DEBUG
+  instr_enqueue_pc(cpu.pc);
+#endif
+
+#if defined DEBUG && defined ENABLE_ASM_TRACER
+  trace_append("%08x:    ", cpu.pc);
+#endif
+
+#ifdef ENABLE_EXCEPTION
+  if((cpu.pc & 0x3) != 0) {
+	cpu.cp0.badvaddr = cpu.pc;
+	signal_exception(EXC_AdEL);
+	return;
+  }
+#endif
+
+  Inst inst;
+
+  inst.val = instr_fetch(cpu.pc);
+  cpu.pc += 4;
+
+  if(cpu.br_executed) {
+	cpu.is_delayslot = true;
+	cpu.br_executed = false; // clear this bits
+  }
+
+#ifdef DEBUG
+  /* delayslot instruction may cause exception */
+  instr_enqueue_instr(inst.val);
+#endif
+
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+  bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE && !cpu.br_executed;
+#endif
+
+  trace_append("%08x    ", inst.val);
+
+  /* ======================================= */
+#include "exec-handlers.h"
+  /* ======================================= */
+
+  if(cpu.is_delayslot) { cpu.pc = cpu.br_target; }
+
+  trace_flush();
+
+#ifdef DEBUG
+  if(work_mode == MODE_LOG) print_registers(inst.val);
+#endif
+
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+  check_ipbits(ie);
+#endif
+}
+
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
   if(work_mode == MODE_GDB && nemu_state != NEMU_END) {
@@ -300,76 +356,16 @@ void cpu_exec(uint64_t n) {
   }
 
   if (nemu_state == NEMU_END) {
-    printf("Program execution has ended. To restart the program, exit NEMU and run again.\n");
-    return;
+	printf("Program execution has ended. To restart the program, exit NEMU and run again.\n");
+	return;
   }
 
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n --) {
-#ifdef ENABLE_INTR
-	update_cp0_timer();
-#endif
+	single_instruction();
 
-#ifdef DEBUG
-	instr_enqueue_pc(cpu.pc);
-#endif
-
-#if defined DEBUG && defined ENABLE_ASM_TRACER
-    trace_append("%08x:    ", cpu.pc);
-#endif
-
-#ifdef ENABLE_EXCEPTION
-	if((cpu.pc & 0x3) != 0) {
-	  cpu.cp0.badvaddr = cpu.pc;
-	  signal_exception(EXC_AdEL);
-	  goto inst_exec_end;
-	}
-#endif
-
-    Inst inst;
-	inst.val = instr_fetch(cpu.pc);
-
-#ifdef DEBUG
-	instr_enqueue_instr(inst.val);
-#endif
-
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-	static bool ie = 0; /* fuck gcc */
-	ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE && !cpu.is_delayslot;
-#endif
-
-#if defined DEBUG && defined ENABLE_ASM_TRACER
-    trace_append("%08x    ", inst.val);
-	trace_flush();
-#endif
-
-#include "exec-handlers.h"
-
-	if(cpu.is_delayslot) {
-	  cpu.need_br = true;
-	  cpu.is_delayslot = false; // clear this bits
-	}
-
-inst_exec_end:
-
-#ifdef DEBUG
-    if(work_mode == MODE_LOG) print_registers(inst.val);
-#endif
-
-	/* update pc */
-	if(UNLIKELY(cpu.need_br)) {
-	  cpu.pc = cpu.br_target;
-	  cpu.need_br = false;
-	} else {
-	  cpu.pc += 4;
-	}
-
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-    check_ipbits(ie);
-#endif
-
-    if (nemu_state != NEMU_RUNNING) { return; }
+	if (nemu_state != NEMU_RUNNING) { return; }
   }
 
   if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }

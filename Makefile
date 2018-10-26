@@ -29,6 +29,7 @@ CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 CFLAGS += -DDEBUG
+# CFLAGS += -DENABLE_ASM_TRACER
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
