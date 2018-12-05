@@ -22,7 +22,7 @@ void *bram_map(uint32_t addr, uint32_t len) {
   return &bram[addr];
 }
 
-void bram_mapped_result(map_result_t *map) {
+void bram_mapped_result(mmio_image_t *map) {
   map->p = bram;
   map->size = bram_mapped_size;
 }

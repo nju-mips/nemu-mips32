@@ -8,13 +8,17 @@
 // checked delayslot: jal, jalr, 
 
 
-#define make_entry()
+#define make_entry() entry:;
 
 #define make_exec_handler(name) name: make_exec_wrapper
 #define make_exec_wrapper(...) __VA_ARGS__; goto eoe;
 #define make_eoe() eoe:;
 
-#define mark_delayslot() cpu.br_executed = true;
+#define exec_delayslot() \
+  inst = instr_fetch(); \
+  cpu.pc = br_target; \
+  cpu.is_delayslot = true; \
+  goto entry;
 
 #ifdef ENABLE_EXCEPTION
 #define InstAssert(cond) do {    \
@@ -417,8 +421,8 @@ make_exec_handler(tnei) ({
 
 make_exec_handler(jr) ({
   InstAssert(inst.rt == 0 && inst.rd == 0);
-  cpu.br_target = cpu.gpr[inst.rs];
-  mark_delayslot();
+  br_target = cpu.gpr[inst.rs];
+  exec_delayslot();
   trace_append("jr %s", regs[inst.rs]);
 });
 
@@ -604,8 +608,8 @@ make_exec_handler(mtlo) ({
 make_exec_handler(jalr) ({
   InstAssert(inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.pc + 4;
-  cpu.br_target = cpu.gpr[inst.rs];
-  mark_delayslot();
+  br_target = cpu.gpr[inst.rs];
+  exec_delayslot();
   trace_append("jalr %s,%s", regs[inst.rd], regs[inst.rs]);
 });
 
@@ -816,26 +820,50 @@ make_exec_handler(sync) ({
   trace_append("sync");
 });
 
+#define BR_INSTR(name, exp)
+
+
+/*
+make_exec_handler(beql) ({
+  if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt]) {
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
+  } else {
+    br_target = cpu.pc;
+  }
+  trace_append("beql %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+});
+
+make_exec_handler(beq) ({
+  if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
+	br_target = cpu.pc + (inst.simm << 2);
+  else
+    br_target = cpu.pc + 4;
+  exec_delayslot();
+  trace_append("beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
+});
+*/
+
 
 //////////////////////////////////////////////////////////////
 //                      likely branch                       //
 //////////////////////////////////////////////////////////////
 make_exec_handler(beql) ({
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt]) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc;
+    br_target = cpu.pc;
   }
   trace_append("beql %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bnel) ({
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt]) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bnel %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
@@ -843,40 +871,40 @@ make_exec_handler(bnel) ({
 make_exec_handler(blezl) ({
   InstAssert(inst.rt == 0);
   if ((int32_t)cpu.gpr[inst.rs] <= 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtzl) ({
   if ((int32_t)cpu.gpr[inst.rs] > 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzl) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezl) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -884,10 +912,10 @@ make_exec_handler(bgezl) ({
 make_exec_handler(bgezall) ({
   cpu.gpr[31] = cpu.pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] >= 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bgezall %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -895,10 +923,10 @@ make_exec_handler(bgezall) ({
 make_exec_handler(bltzall) ({
   cpu.gpr[31] = cpu.pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] < 0) {
-	cpu.br_target = cpu.pc + (inst.simm << 2);
-	mark_delayslot();
+	br_target = cpu.pc + (inst.simm << 2);
+	exec_delayslot();
   } else {
-    cpu.br_target = cpu.pc + 4;
+    br_target = cpu.pc + 4;
   }
   trace_append("bltzall %s,0x%x", regs[inst.rs], inst.simm);
 });
@@ -909,89 +937,89 @@ make_exec_handler(bltzall) ({
 //////////////////////////////////////////////////////////////
 make_exec_handler(beq) ({
   if (cpu.gpr[inst.rs] == cpu.gpr[inst.rt])
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bne) ({
   if (cpu.gpr[inst.rs] != cpu.gpr[inst.rt])
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bne %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(blez) ({
   InstAssert(inst.rt == 0);
   if ((int32_t)cpu.gpr[inst.rs] <= 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtz) ({
   if ((int32_t)cpu.gpr[inst.rs] > 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltz) ({
   if ((int32_t)cpu.gpr[inst.rs] < 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgez) ({
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezal) ({
   cpu.gpr[31] = cpu.pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] >= 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bgezal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzal) ({
   cpu.gpr[31] = cpu.pc + 4;
   if ((int32_t)cpu.gpr[inst.rs] < 0)
-	cpu.br_target = cpu.pc + (inst.simm << 2);
+	br_target = cpu.pc + (inst.simm << 2);
   else
-    cpu.br_target = cpu.pc + 4;
-  mark_delayslot();
+    br_target = cpu.pc + 4;
+  exec_delayslot();
   trace_append("bltzal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(jal) ({
   cpu.gpr[31] = cpu.pc + 4;
-  cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
-  mark_delayslot();
+  br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
+  exec_delayslot();
   trace_append("jal %x", cpu.pc);
 });
 
 make_exec_handler(j) ({
-  cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
-  mark_delayslot();
+  br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
+  exec_delayslot();
   trace_append("j %x", cpu.pc);
 });
 
@@ -1001,7 +1029,7 @@ make_exec_handler(cheat) ({
   cheat_under_nemu();
 #else
   CoreAssert(0, "cheat instruction called under no-cheat mode...\n");
-  // InstAssert(0); // trigger instruction exception
+  // CoreAssert(0); // trigger instruction exception
 #endif
 });
 

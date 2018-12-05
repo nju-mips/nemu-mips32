@@ -19,7 +19,7 @@ void *ddr_map(uint32_t addr, uint32_t len) {
   return &ddr[addr];
 }
 
-void ddr_mapped_result(map_result_t *map) {
+void ddr_mapped_result(mmio_image_t *map) {
   map->p = ddr;
   map->size = ddr_mapped_size;
 }

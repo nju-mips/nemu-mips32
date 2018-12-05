@@ -95,7 +95,7 @@ extern uint8_t bram[];
 typedef struct {
   void *p;
   size_t size;
-} map_result_t;
+} mmio_image_t;
 
 /* for nemu core */
 uint32_t vaddr_read(vaddr_t, int);

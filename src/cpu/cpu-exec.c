@@ -207,8 +207,11 @@ static inline bool store_mem(vaddr_t addr, int len, uint32_t data) {
   return true;
 }
 
-static inline uint32_t instr_fetch(vaddr_t addr) {
-  return *load_mem(addr, 4);
+static inline Inst instr_fetch() {
+  Inst inst;
+  inst.val = *load_mem(cpu.pc, 4);
+  cpu.pc += 4;
+  return inst;
 }
 
 void signal_exception(int code) {
@@ -222,8 +225,10 @@ void signal_exception(int code) {
 #endif
 
   if(cpu.is_delayslot) {
-	cpu.cp0.epc = cpu.pc - 4;
+	cpu.cp0.epc = cpu.pc - 8;
 	cpu.cp0.cause.BD = cpu.cp0.status.EXL == 0;
+  } else if(code != EXC_INTR) {
+	cpu.cp0.epc = cpu.pc - 4;
   } else {
 	cpu.cp0.epc = cpu.pc;
   }
@@ -308,15 +313,8 @@ static inline void single_instruction() {
   }
 #endif
 
-  Inst inst;
-
-  inst.val = instr_fetch(cpu.pc);
-  cpu.pc += 4;
-
-  if(cpu.br_executed) {
-	cpu.is_delayslot = true;
-	cpu.br_executed = false; // clear this bits
-  }
+  Inst inst = instr_fetch();
+  uint32_t br_target = cpu.pc;
 
 #ifdef DEBUG
   /* delayslot instruction may cause exception */
@@ -324,7 +322,7 @@ static inline void single_instruction() {
 #endif
 
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-  bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE && !cpu.br_executed;
+  bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
 #endif
 
   trace_append("%08x    ", inst.val);
@@ -333,7 +331,7 @@ static inline void single_instruction() {
 #include "exec-handlers.h"
   /* ======================================= */
 
-  if(cpu.is_delayslot) { cpu.pc = cpu.br_target; }
+  cpu.is_delayslot = false;
 
   trace_flush();
 
