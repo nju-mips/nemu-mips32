@@ -27,8 +27,8 @@ static void device_update(int signum) {
 	// If a key was pressed
 	case SDL_KEYUP:
 	case SDL_KEYDOWN:
-	  serial_enqueue((SDL_EventType)event.type, event.key.keysym.sym);
-	  keyboard_enqueue((SDL_EventType)event.type, event.key.keysym.sym);
+	  serial_enqueue(event.type, event.key.keysym.sym);
+	  keyboard_enqueue(event.type, event.key.keysym.sym);
 	  break;
 	case SDL_QUIT:
 	  printf("[NEMU] receive SDL_QUIT, exit(0), cpu run %u cycles\n", cpu.cp0.count[0]);

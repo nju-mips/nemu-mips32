@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "protocol.h"
-#include "cpu/core.h"
+#include "cpu/reg.h"
 #include "memory.h"
 #include "device.h"
 
@@ -52,7 +52,7 @@ bool gdb_connect_qemu(int port) {
 }
 
 static bool qemu_memcpy_to_qemu_small(uint32_t dest, void *src, int len) {
-  char *buf = (char *)malloc(len * 2 + 128);
+  char *buf = malloc(len * 2 + 128);
   assert(buf != NULL);
   int p = sprintf(buf, "M0x%x,%x:", dest, len);
   int i;
@@ -77,7 +77,7 @@ bool qemu_memcpy_to_qemu(uint32_t dest, void *src, int len) {
   while (len > mtu) {
     ok &= qemu_memcpy_to_qemu_small(dest, src, mtu);
     dest += mtu;
-    src = &((uint8_t *)src)[mtu];
+    src += mtu;
     len -= mtu;
   }
   ok &= qemu_memcpy_to_qemu_small(dest, src, len);
@@ -89,9 +89,10 @@ bool qemu_getregs(gdb_regs_t *r) {
   size_t size;
   uint8_t *reply = gdb_recv(conn, &size);
 
+  int i;
   uint8_t *p = reply;
   uint8_t c;
-  for (size_t i = 0; i < sizeof(gdb_regs_t) / sizeof(uint32_t); i ++) {
+  for (i = 0; i < sizeof(gdb_regs_t) / sizeof(uint32_t); i ++) {
     c = p[8];
     p[8] = '\0';
     r->array[i] = gdb_decode_hex_str(p);
@@ -106,13 +107,14 @@ bool qemu_getregs(gdb_regs_t *r) {
 
 bool qemu_setregs(gdb_regs_t *r) {
   int len = sizeof(gdb_regs_t);
-  char *buf = (char *)malloc(len * 2 + 128);
+  char *buf = malloc(len * 2 + 128);
   assert(buf != NULL);
   buf[0] = 'G';
 
   void *src = r;
   int p = 1;
-  for (int i = 0; i < len; i ++) {
+  int i;
+  for (i = 0; i < len; i ++) {
     p += sprintf(buf + p, "%c%c", hex_encode(((uint8_t *)src)[i] >> 4), hex_encode(((uint8_t *)src)[i] & 0xf));
   }
 
@@ -181,8 +183,7 @@ void print_qemu_registers(gdb_regs_t *regs) {
 }
 
 static bool is_branch_inst(vaddr_t pc) {
-  Inst inst;
-  inst.val = vaddr_read_safe(pc, 4);
+  Inst inst = { .val = vaddr_read_safe(pc, 4) };
   if(0x3 <= inst.op && inst.op <= 0x7) return true;
   if(0x14 <= inst.op && inst.op <= 0x17) return true;
 
@@ -233,16 +234,16 @@ void qemu_diff() {
 	  }
 
 	  // diff
-	  CoreAssert(regs.pc == cpu.pc, "differ at pc:{%08x <> %08x}\n", cpu.pc, regs.pc);
+	  CPUAssert(regs.pc == cpu.pc, "differ at pc:{%08x <> %08x}\n", cpu.pc, regs.pc);
 
 	  // diff general registers
 	  for(int i = 0; i < 32; i++) {
-		CoreAssert(regs.gpr[i] == cpu.gpr[i], "differ at %08x, gpr[%d]:{%08x <> %08x}\n", cpu.pc, i, regs.gpr[i], cpu.gpr[i]);
+		CPUAssert(regs.gpr[i] == cpu.gpr[i], "differ at %08x, gpr[%d]:{%08x <> %08x}\n", cpu.pc, i, regs.gpr[i], cpu.gpr[i]);
 	  }
 
-	  CoreAssert(regs.hi == cpu.hi, "differ at %08x, hi:{%08x <> %08x}\n", cpu.pc, regs.hi, cpu.hi);
+	  CPUAssert(regs.hi == cpu.hi, "differ at %08x, hi:{%08x <> %08x}\n", cpu.pc, regs.hi, cpu.hi);
 
-	  CoreAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
+	  CPUAssert(regs.lo == cpu.lo, "differ at %08x, lo:{%08x <> %08x}\n", cpu.pc, regs.lo, cpu.lo);
 	}
   } else {
     // install a parent death signal in the child

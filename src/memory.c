@@ -3,18 +3,8 @@
 #include "nemu.h"
 #include "monitor.h"
 #include "device.h"
-#include "cpu/mmu.h"
+#include "memory.h"
 
-
-uint32_t invalid_read(paddr_t addr, int len) {
-  Assert(0, "invalid read %08x\n", addr);
-  return 0;
-}
-
-void invalid_write(paddr_t addr, int len, uint32_t data) {
-  Assert(0, "invalid write %08x\n", addr);
-  return;
-}
 
 uint32_t badp_read(paddr_t addr, int len) {
   return 0;
@@ -45,9 +35,9 @@ struct mmap_region {
 
 #define NR_REGION (sizeof(mmap_table) / sizeof(mmap_table[0]))
 
-int find_region(vaddr_t addr) {
+uint32_t find_region(vaddr_t addr) {
   int ret = -1;
-  for(size_t i = 0; i < NR_REGION; i++)
+  for(int i = 0; i < NR_REGION; i++)
 	if(addr >= mmap_table[i].start && addr < mmap_table[i].end) {
 	  ret = i;
 	  break;
@@ -55,60 +45,59 @@ int find_region(vaddr_t addr) {
   return ret;
 }
 
-int find_region_with_check(vaddr_t addr) {
-  int idx = find_region(addr);
-  Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
-  return idx;
-}
-
 void *paddr_map(uint32_t addr, uint32_t len) {
   // only unmapped address can be map
   Assert(is_unmapped(addr), "addr %08x should be unmapped\n", addr);
 
-  int idx = find_region_with_check(iomap(addr));
+  int idx = find_region(iomap(addr));
+  Assert(idx != -1, "address(0x%08x) is out of bound, pc(0x%08x)\n", addr, cpu.pc);
   Assert(mmap_table[idx].map, "cannot find map handler for address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
   return mmap_table[idx].map(iomap(addr) - mmap_table[idx].start, len);
 }
 
-uint32_t paddr_peek(paddr_t addr, int len) {
-  int idx = find_region_with_check(addr);
-  return mmap_table[idx].peek(addr - mmap_table[idx].start, len);
-}
-
-uint32_t paddr_read(paddr_t addr, int len) {
-  int idx = find_region_with_check(addr);
-  return mmap_table[idx].read(addr - mmap_table[idx].start, len);
-}
-
-void paddr_write(paddr_t addr, int len, uint32_t data) {
-  int idx = find_region_with_check(addr);
-  return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
-}
-
-uint32_t vaddr_read(vaddr_t addr, int len) {
-  return paddr_read(prot_addr_rw_except(addr, MMU_LOAD), len);
-}
-
-void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  return paddr_write(prot_addr_rw_except(addr, MMU_STORE), len, data);
-}
-
-/* safe vaddr rw handler (no assertion, no exception), for gdb */
 uint32_t vaddr_read_safe(vaddr_t addr, int len) {
-  addr = prot_addr_rw_noexcept(addr, MMU_LOAD);
+  addr = prot_addr(addr, MMU_LOAD);
   int idx = find_region(addr);
   if(idx == -1) return 0;
   return mmap_table[idx].read(addr - mmap_table[idx].start, len);
 }
 
 void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
-  addr = prot_addr_rw_noexcept(addr, MMU_STORE);
+  addr = prot_addr(addr, MMU_STORE);
   int idx = find_region(addr);
   if(idx == -1) return;
 
   mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
 }
 
+uint32_t vaddr_read(vaddr_t addr, int len) {
+  addr = prot_addr(addr, MMU_LOAD);
+  int idx = find_region(addr);
+  CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
+  return mmap_table[idx].read(addr - mmap_table[idx].start, len);
+}
+
+uint32_t paddr_peek(paddr_t addr, int len) {
+  int idx = find_region(addr);
+  CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
+  return mmap_table[idx].peek(addr - mmap_table[idx].start, len);
+}
+
+void vaddr_write(vaddr_t addr, int len, uint32_t data) {
+  addr = prot_addr(addr, MMU_STORE);
+  int idx = find_region(addr);
+  CPUAssert(idx != -1, "address(0x%08x:0x%08x) is out of bound, pc(0x%08x)\n", addr, addr, cpu.pc);
+  return mmap_table[idx].write(addr - mmap_table[idx].start, len, data);
+}
+
+
+uint32_t invalid_read(paddr_t addr, int len) {
+  CPUAssert(false, "invalid read at address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
+}
+
+void invalid_write(paddr_t addr, int len, uint32_t data) {
+  CPUAssert(false, "invalid write at address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
+}
 
 static inline bool region_collide(uint32_t x, uint32_t y,
 	uint32_t a, uint32_t b) {
@@ -118,8 +107,8 @@ static inline bool region_collide(uint32_t x, uint32_t y,
 }
 
 void init_mmio() {
-  for(size_t i = 0; i < NR_REGION; i++) {
-	for(size_t j = i + 1; j < NR_REGION; j++) {
+  for(int i = 0; i < NR_REGION; i++) {
+	for(int j = i + 1; j < NR_REGION; j++) {
 	  assert(!region_collide(mmap_table[i].start, 
 			mmap_table[i].end,
 			mmap_table[j].start,

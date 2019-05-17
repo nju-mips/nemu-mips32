@@ -1,6 +1,5 @@
-#include "nemu.h"
 #include "device.h"
-#include "cpu/mmu.h"
+#include "nemu.h"
 
 
 uint8_t ddr[DDR_SIZE];
@@ -9,7 +8,7 @@ static uint32_t ddr_mapped_size = 0;
 /* Memory accessing interfaces */
 
 #define check_ddr(addr, len) \
-  CoreAssert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
+  CPUAssert(addr >= 0 && addr < DDR_SIZE && addr + len <= DDR_SIZE, \
 	  "address(0x%08x) is out side DDR", addr);
 
 void *ddr_map(uint32_t addr, uint32_t len) {
@@ -19,17 +18,17 @@ void *ddr_map(uint32_t addr, uint32_t len) {
   return &ddr[addr];
 }
 
-void ddr_mapped_result(mmio_image_t *map) {
+void ddr_mapped_result(map_result_t *map) {
   map->p = ddr;
   map->size = ddr_mapped_size;
 }
 
 uint32_t ddr_read(paddr_t addr, int len) {
   check_ddr(addr, len);
-  return read_masked_word(ddr, addr, len);
+  return *((uint32_t *)((void*)ddr + addr)) & (~0u >> ((4 - len) << 3));
 }
 
 void ddr_write(paddr_t addr, int len, uint32_t data) {
   check_ddr(addr, len);
-  write_masked_word(ddr, addr, len, data);
+  memcpy((uint8_t *)ddr + addr, &data, len);
 }

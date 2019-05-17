@@ -1,5 +1,5 @@
-#include "cpu/core.h"
-#include "cpu/mmu.h"
+#include "mmu.h"
+#include "cpu/reg.h"
 #include "common.h"
 #include "memory.h"
 #include "device.h"
@@ -14,7 +14,10 @@ extern void signal_exception(int);
 static inline bool match_vpn_and_asid(int idx, uint32_t vpn, uint32_t asid) {
   bool vpn_match = (tlb[idx].vpn & VPN_MASK) == (vpn & VPN_MASK);
   bool asid_match = tlb[idx].asid == asid;
-  return (vpn_match && (asid_match || tlb[idx].g));
+  if(vpn_match && (asid_match || tlb[idx].g)) {
+	return true;
+  }
+  return false;
 }
 
 void tlb_present() {
@@ -78,17 +81,8 @@ void tlb_write(uint32_t i) {
   tlb[i].p1.v = cpu.cp0.entry_lo1.v;
 }
 
-paddr_t page_translate(vaddr_t vaddr, prot_info_t *prot) {
-#define PROT_EXCEPT(__excode) ({   \
-  if(!prot->igbit) {               \
-	signal_exception(__excode);    \
-	cpu.cp0.badvaddr = vaddr;      \
-  }                                \
-  prot->exbit = 1;                 \
-  BADP_ADDR;                       \
-})
-
-  uint32_t excode = prot->rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
+vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
+  uint32_t exccode = rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
   vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
   for(int i = 0; i < NR_TLB_ENTRY; i++) {
 	if(!match_vpn_and_asid(i, mapped->vpn, cpu.cp0.entry_hi.asid)) {
@@ -98,11 +92,15 @@ paddr_t page_translate(vaddr_t vaddr, prot_info_t *prot) {
 	/* match the vpn and asid */
 	tlb_phyn_t *phyn = mapped->oddbit ? &(tlb[i].p1) : &(tlb[i].p0);
 	if(phyn->v == 0) {
-	  // printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, excode);
-	  return PROT_EXCEPT(excode);
-	} else if(prot->rwbit == MMU_STORE && phyn->d == 0) {
-	  // printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, excode);
-	  return PROT_EXCEPT(EXC_TLBM);
+	  // printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
+	  cpu.cp0.badvaddr = vaddr;
+	  signal_exception(exccode);
+	  return BADP_ADDR;
+	} else if(rwbit == MMU_STORE && phyn->d == 0) {
+	  // printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
+	  cpu.cp0.badvaddr = vaddr;
+	  signal_exception(EXC_TLBM);
+	  return BADP_ADDR;
 	} else {
 	  // printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc, vaddr, (phyn->pfn << 12) | (vaddr & PAGE_MASK));
 	  return (phyn->pfn << 12) | (vaddr & PAGE_MASK);
@@ -110,6 +108,7 @@ paddr_t page_translate(vaddr_t vaddr, prot_info_t *prot) {
   }
 
   // printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
-  return PROT_EXCEPT(excode);
-#undef PROT_EXCEPT
+  cpu.cp0.badvaddr = vaddr;
+  signal_exception(exccode);
+  return BADP_ADDR;
 }

@@ -265,7 +265,7 @@ void mii_transaction() {
 	inited = true;
   }
 
-  mdio_addr_t *mdio_addr = (mdio_addr_t *)&(regs.mdioaddr);
+  mdio_addr_t *mdio_addr = (void *)&(regs.mdioaddr);
   u32 phy = mdio_addr->phyaddr;
   u32 reg = mdio_addr->regnum;
   if(mdio_addr->op == 0) {
@@ -284,7 +284,7 @@ void mii_transaction() {
 		}
 		break;
 	  default:
-		CoreAssert(0, "unsupported MII reg %d write\n", reg);
+		CPUAssert(0, "unsupported MII reg %d write\n", reg);
 	}
   } else {
 	/* read */
@@ -294,7 +294,7 @@ void mii_transaction() {
 }
 
 #define check_mac(addr, len) \
-  CoreAssert(addr >= 0 && addr < MAC_SIZE && addr + len <= MAC_SIZE, \
+  CPUAssert(addr >= 0 && addr < MAC_SIZE && addr + len <= MAC_SIZE, \
 	  "address(0x%08x) is out side mac", addr);
 
 
@@ -314,7 +314,7 @@ uint32_t mac_read(paddr_t addr, int len) {
 	case MDIO_CTRL:
 	  return regs.mdioctrl;
 	default:
-	  CoreAssert(false, "mac: address(0x%08x) is not readable", addr);
+	  CPUAssert(false, "mac: address(0x%08x) is not readable", addr);
 	  break;
   }
   return 0;
@@ -370,7 +370,7 @@ void mac_write(paddr_t addr, int len, uint32_t data) {
 	  regs.mdiowr = data;
 	  break;
 	default:
-	  CoreAssert(false, "mac: address(0x%08x) is not writable", addr);
+	  CPUAssert(false, "mac: address(0x%08x) is not writable", addr);
 	  break;
   }
 }

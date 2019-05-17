@@ -4,7 +4,7 @@
 
 void init_mmio();
 void init_device();
-work_mode_t init_monitor(int, char *[]);
+int init_monitor(int, char *[]);
 void gdb_mainloop();
 void qemu_diff();
 void cpu_exec(uint64_t);

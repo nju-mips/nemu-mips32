@@ -12,7 +12,7 @@
 #include <sys/signal.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "debug.h"
 #include "protocol.h"
 
 extern char *symbol_file;
@@ -39,17 +39,17 @@ void start_bridge(int port, int serv_port) {
   size_t size = 0;
   char *data = NULL;
   while(1) {
-	data = (char *)gdb_recv(client, &size);
+	data = (void*)gdb_recv(client, &size);
 	printf("$ message: client --> server:%lx:\n", size);
 	printf("'%s'\n", data);
 	printf("\n");
-	gdb_send(server, (uint8_t *)data, size);
+	gdb_send(server, (void*)data, size);
 	free(data);
 
-	data = (char *)gdb_recv(server, &size);
+	data = (void*)gdb_recv(server, &size);
 	printf("$ message: server --> client:%lx:\n", size);
 	printf("'%s'\n", data);
-	gdb_send(client, (uint8_t *)data, size);
+	gdb_send(client, (void*)data, size);
 	printf("\n\n");
 	free(data);
   }
@@ -60,7 +60,7 @@ int get_free_servfd() {
   struct sockaddr_in sa = {
     .sin_family = AF_INET,
     .sin_port = 0,
-	.sin_addr = { .s_addr = htonl(INADDR_ANY), },
+	.sin_addr.s_addr = htonl(INADDR_ANY),
   };
 
   // open the socket and start the tcp connection

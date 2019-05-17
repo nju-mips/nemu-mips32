@@ -16,7 +16,7 @@ extern SDL_Surface *screen;
 static uint8_t vmem[VMEM_SIZE];
 
 #define check_vga(addr, len) \
-  CoreAssert(addr >= 0 && addr < VMEM_SIZE && addr + len <= VMEM_SIZE, \
+  CPUAssert(addr >= 0 && addr < VMEM_SIZE && addr + len <= VMEM_SIZE, \
 	  "address(0x%08x) is out side DDR", addr);
 
 uint32_t vga_read(paddr_t addr, int len) {
@@ -37,15 +37,13 @@ static inline uint32_t RGB_M12_to_M32(uint32_t color) {
 }
 
 static inline void draw_pixel(int x, int y, uint32_t color) {
-  typedef uint32_t (*pixel_buf_t)[WINDOW_W];
-  pixel_buf_t pixel_buf = (pixel_buf_t)(screen->pixels);
+  uint32_t (*pixel_buf)[WINDOW_W] = screen->pixels;
   assert(x >= 0 && x < WINDOW_W && y >= 0 && y < WINDOW_H);
   pixel_buf[y][x] = RGB_M12_to_M32(color);
 }
 
 void update_screen() {
-  typedef uint16_t (*vmem_buf_t)[SCR_W];
-  vmem_buf_t vmem_ptr = (vmem_buf_t)vmem;
+  uint16_t (*vmem_ptr)[SCR_W] = (void *)vmem;
 
   for(int i = 0; i < SCR_H; i ++) {
 	for(int j = 0; j < SCR_W; j ++) {

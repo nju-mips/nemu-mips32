@@ -1,6 +1,9 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
+#include "debug.h"
+#include "macro.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
@@ -16,9 +19,6 @@ typedef uint16_t ioaddr_t;
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
-
-#include "debug.h"
-#include "macro.h"
 
 #define BIT(nr)		(1 << (nr))
 #define GENMASK(h, l) \

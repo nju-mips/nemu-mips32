@@ -12,10 +12,7 @@
 extern void instr_enqueue_pc(uint32_t pc);
 extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);
-extern void print_registers(uint32_t instr);
-/* for gdb debugger */
-extern uint32_t vaddr_read_safe(vaddr_t, int);
-extern void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
+extern void print_registers(uint32_t);
 
 #define eprintf(...) fprintf(stderr, ## __VA_ARGS__)
 
@@ -46,7 +43,7 @@ extern void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
     } \
   } while (0)
 
-#define CoreAssert(cond, fmt, ...) do { \
+#define CPUAssert(cond, fmt, ...) do { \
     if (!(cond)) { \
 	  eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
 			  __FILE__, __LINE__, __func__, #cond); \

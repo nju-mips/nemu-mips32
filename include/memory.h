@@ -1,55 +1,8 @@
-#ifndef CPU_MMU_H
-#define CPU_MMU_H
+#ifndef __MEMORY_H__
+#define __MEMORY_H__
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "cpu/core.h"
-
-#define NR_TLB_ENTRY 512
-
-typedef struct {
-  uint32_t pfn : 24;
-  uint32_t c   : 3;  // cache coherency
-  uint32_t d   : 1;  // dirty
-  uint32_t v   : 1;  // valid
-} tlb_phyn_t;
-
-typedef struct {
-  uint16_t pagemask;
-
-  struct {
-	uint32_t vpn : 19;
-	uint32_t g    : 1;
-	uint32_t asid : 8;
-  };
-
-  tlb_phyn_t p0;
-  tlb_phyn_t p1;
-} tlb_entry_t;
-
-typedef union {
-  struct {
-	uint32_t off    : 12;
-	uint32_t oddbit : 1;
-	uint32_t vpn    : 19;
-  };
-  uint32_t val;
-} vaddr_mapped_t;
-
-typedef union {
-#define MMU_LOAD  0
-#define MMU_STORE 1
-  struct {
-	int exbit : 1; /* indicate whether exception triggered*/
-	int igbit : 1; /* ignore exception: default 0 */
-	int rwbit : 1;
-  };
-  int val;
-} prot_info_t;
-
-void tlb_present();
-void tlb_read(uint32_t i);
-void tlb_write(uint32_t i);
+#include "common.h"
+#include "cpu/reg.h"
 
 /* 
  * FFFF FFFF -\
@@ -95,7 +48,7 @@ extern uint8_t bram[];
 typedef struct {
   void *p;
   size_t size;
-} mmio_image_t;
+} map_result_t;
 
 /* for nemu core */
 uint32_t vaddr_read(vaddr_t, int);
@@ -104,13 +57,19 @@ void vaddr_write(vaddr_t, int, uint32_t);
 /* for npc diff */
 uint32_t paddr_peek(paddr_t, int);
 
-vaddr_t page_translate(vaddr_t, prot_info_t *);
+/* for gdb debugger */
+uint32_t vaddr_read_safe(vaddr_t, int);
+void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
+
+vaddr_t page_translate(vaddr_t, bool rwbit);
 
 static inline vaddr_t iomap(vaddr_t vaddr) {
   return vaddr & 0x1FFFFFFF;
 }
 
-static inline vaddr_t prot_addr(vaddr_t addr, prot_info_t *prot) {
+enum { MMU_LOAD, MMU_STORE };
+
+static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
 #ifdef ENABLE_SEGMENT
   addr += cpu.base;
 #endif
@@ -122,26 +81,12 @@ static inline vaddr_t prot_addr(vaddr_t addr, prot_info_t *prot) {
 	return iomap(addr);
   } else {
 #if defined ENABLE_PAGING
-	return page_translate(addr, prot);
+	vaddr_t paddr = page_translate(addr, rwbit);
+	return paddr;
 #else
 	return addr;
 #endif
   }
-}
-
-/* read/write/exception */
-static inline vaddr_t prot_addr_rw_except(vaddr_t addr, bool rwbit) {
-  prot_info_t prot = {0};
-  prot.rwbit = rwbit;
-  return prot_addr(addr, &prot);
-}
-
-/* read/write/noexcept */
-static inline vaddr_t prot_addr_rw_noexcept(vaddr_t addr, bool rwbit) {
-  prot_info_t prot = {0};
-  prot.rwbit = rwbit;
-  prot.igbit = 1;
-  return prot_addr(addr, &prot);
 }
 
 #endif

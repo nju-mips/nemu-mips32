@@ -8,7 +8,7 @@
 #include <malloc.h>
 #include <arpa/inet.h>
 
-int find_region(vaddr_t addr);
+uint32_t find_region(vaddr_t addr);
 void cpu_exec(uint64_t);
 
 jmp_buf gdb_mode_top_caller;
@@ -102,14 +102,14 @@ static char mips_32bit_cp0_xml[] =
 ;
 
 
-typedef const char *(*gdb_cmd_handler_t)(char *args, int arglen);
+typedef char *(*gdb_cmd_handler_t)(char *args, int arglen);
 
 
-const char *gdb_question(char *args, int arglen) {
+char *gdb_question(char *args, int arglen) {
   return "T05thread:01;";
 }
 
-const char *gdb_xfer_handler(char *args) {
+char *gdb_xfer_handler(char *args) {
   char *category = args;
   if(!category || strcmp(category, "features") == 0) {
 	char *op = strtok(NULL, ":");
@@ -138,7 +138,7 @@ const char *gdb_xfer_handler(char *args) {
   }
 }
 
-const char *gdb_general_query(char *args, int arglen) {
+char *gdb_general_query(char *args, int arglen) {
   char *kind = strtok(args, ":");
   if(strcmp(kind, "Supported") == 0) {
 	return "PacketSize=1000;qXfer:features:read+";
@@ -161,7 +161,7 @@ const char *gdb_general_query(char *args, int arglen) {
   }
 }
 
-const char *gdb_vCont_handler(char *args) {
+char *gdb_vCont_handler(char *args) {
   if(strcmp(args, "?") == 0) {
 	return "vCont;c;C;s;S";
   } else if(args[0] == ';') {
@@ -195,7 +195,7 @@ const char *gdb_vCont_handler(char *args) {
   }
 }
 
-const char *gdb_extend_commands(char *args, int arglen) {
+char *gdb_extend_commands(char *args, int arglen) {
   if(strcmp(args, "MustReplyEmpty") == 0) {
 	return "";
   } else if(strncmp(args, "Cont", 4) == 0) {
@@ -207,11 +207,11 @@ const char *gdb_extend_commands(char *args, int arglen) {
   }
 }
 
-const char *gdb_continue(char *args, int arglen) {
+char *gdb_continue(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_read_registers(char *args, int arglen) {
+char *gdb_read_registers(char *args, int arglen) {
   static char regs[32 * 8 + 25];
   int len = 0;
   for(int i = 0; i < 32; i++) {
@@ -233,19 +233,19 @@ const char *gdb_read_registers(char *args, int arglen) {
   return regs;
 }
 
-const char *gdb_write_registers(char *args, int arglen) {
+char *gdb_write_registers(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_set_thread(char *args, int arglen) {
+char *gdb_set_thread(char *args, int arglen) {
   return "OK";
 }
 
-const char *gdb_step(char *args, int arglen) {
+char *gdb_step(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_read_memory(char *args, int arglen) {
+char *gdb_read_memory(char *args, int arglen) {
   // m<addr>,len
   static char mem[4096];
 
@@ -253,7 +253,7 @@ const char *gdb_read_memory(char *args, int arglen) {
   sscanf(args, "%x,%x", &addr, &size);
 
   int len = 0;
-  for(size_t i = 0; i < size; i++) {
+  for(int i = 0; i < size; i++) {
 	if(find_region(addr) == -1) {
 	  len += snprintf(&mem[len], sizeof(mem) - len, "00");
 	} else {
@@ -265,13 +265,13 @@ const char *gdb_read_memory(char *args, int arglen) {
   return mem;
 }
 
-const char *gdb_write_memory(char *args, int arglen) {
+char *gdb_write_memory(char *args, int arglen) {
   // M<addr>,len:<HEX>
   uint32_t addr = 0, size = 0;
   sscanf(args, "%x,%x:", &addr, &size);
 
   char *hex = strchr(args, ':');
-  for(size_t i = 0; i < size; i++) {
+  for(int i = 0; i < size; i++) {
 	if(find_region(addr + i) == -1) {
 	  // do nothing
 	} else if(hex != NULL) {
@@ -288,7 +288,7 @@ const char *gdb_write_memory(char *args, int arglen) {
   return "OK";
 }
 
-const char *gdb_read_register(char *args, int arglen) {
+char *gdb_read_register(char *args, int arglen) {
   static char reg_value[32];
 
   int reg_no = 0;
@@ -313,23 +313,23 @@ const char *gdb_read_register(char *args, int arglen) {
   return reg_value;
 }
 
-const char *gdb_write_register(char *args, int arglen) {
+char *gdb_write_register(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_reset(char *args, int arglen) {
+char *gdb_reset(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_single_step(char *args, int arglen) {
+char *gdb_single_step(char *args, int arglen) {
   return NULL;
 }
 
-const char *gdb_detach(char *args, int arglen) {
+char *gdb_detach(char *args, int arglen) {
   return "OK";
 }
 
-const char *gdb_write_memory_hex(char *args, int arglen) {
+char *gdb_write_memory_hex(char *args, int arglen) {
   // X<addr>,len:<BIN>
   uint32_t addr = 0, size = 0;
   sscanf(args, "%x,%x:", &addr, &size);
@@ -340,7 +340,7 @@ const char *gdb_write_memory_hex(char *args, int arglen) {
 	printf("%02hhx ", *p);
   printf("'\n");
 
-  for(size_t i = 0; i < size; i++) {
+  for(int i = 0; i < size; i++) {
 	if(find_region(addr + i) == -1) {
 	  // do nothing
 	} else if(hex != NULL) {
@@ -363,11 +363,11 @@ struct break_point_t {
   uint32_t value;
 } break_points[NR_BREAK_POINTS];
 
-const char *gdb_remove_break_point(char *args, int arglen) {
-  uint32_t type = 0, addr = 0, kind = 0;
+char *gdb_remove_break_point(char *args, int arglen) {
+  int type = 0, addr = 0, kind = 0;
   sscanf(args, "%x,%x,%x", &type, &addr, &kind);
   // let gdb to maintain the breakpoints, :)
-  for(size_t i = 0; i < NR_BREAK_POINTS; i++) {
+  for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(break_points[i].used && break_points[i].addr == addr) {
 	  break_points[i].used = false;
 	  vaddr_write_safe(addr, 4, break_points[i].value);
@@ -377,11 +377,11 @@ const char *gdb_remove_break_point(char *args, int arglen) {
   return "";
 }
 
-const char *gdb_insert_break_point(char *args, int arglen) {
+char *gdb_insert_break_point(char *args, int arglen) {
   int type = 0, addr = 0, kind = 0;
   sscanf(args, "%x,%x,%x", &type, &addr, &kind);
   // let gdb to maintain the breakpoints, :)
-  for(size_t i = 0; i < NR_BREAK_POINTS; i++) {
+  for(int i = 0; i < NR_BREAK_POINTS; i++) {
 	if(!break_points[i].used) {
 	  break_points[i].addr = addr;
 	  break_points[i].value = vaddr_read_safe(addr, 4);
@@ -393,51 +393,48 @@ const char *gdb_insert_break_point(char *args, int arglen) {
   return "";
 }
 
-static gdb_cmd_handler_t get_handlers(char no) {
-  switch(no) {
-	case '?': return gdb_question;
-	case 'c': return gdb_continue;
-	case 'g': return gdb_read_registers;
-	case 'G': return gdb_write_registers;
-	case 'H': return gdb_set_thread;
-	case 'i': return gdb_step;
-	case 'm': return gdb_read_memory;
-	case 'M': return gdb_write_memory;
-	case 'D': return gdb_detach;
-	case 'p': return gdb_read_register;
-	case 'P': return gdb_write_register;
-	case 'q': return gdb_general_query;
-	case 'r': return gdb_reset;
-	case 'R': return gdb_reset;
-	case 's': return gdb_single_step;
-	case 'v': return gdb_extend_commands;
-	case 'X': return gdb_write_memory_hex;
-	case 'z': return gdb_remove_break_point;
-	case 'Z': return gdb_insert_break_point;
-	default:  return NULL;
-  }
+static gdb_cmd_handler_t handlers[128] = {
+	['?'] = gdb_question,
+	['c'] = gdb_continue,
+	['g'] = gdb_read_registers,
+	['G'] = gdb_write_registers,
+	['H'] = gdb_set_thread,
+	['i'] = gdb_step,
+	['m'] = gdb_read_memory,
+	['M'] = gdb_write_memory,
+	['D'] = gdb_detach,
+	['p'] = gdb_read_register,
+	['P'] = gdb_write_register,
+	['q'] = gdb_general_query,
+	['r'] = gdb_reset,
+	['R'] = gdb_reset,
+	['s'] = gdb_single_step,
+	['v'] = gdb_extend_commands,
+	['X'] = gdb_write_memory_hex,
+	['z'] = gdb_remove_break_point,
+	['Z'] = gdb_insert_break_point,
 };
 
 void gdb_server_mainloop(int servfd) {
   struct gdb_conn *gdb = gdb_begin_server(servfd);
   while(1) {
 	size_t size = 0;
-	char *data = (char *)gdb_recv(gdb, &size);
+	char *data = (void*)gdb_recv(gdb, &size);
 
-	gdb_cmd_handler_t handler = get_handlers(data[0]);
+	gdb_cmd_handler_t handler = handlers[(int)data[0]];
 	if(handler) {
-	  const char *resp = handler(&data[1], size);
+	  char *resp = handler(&data[1], size);
 	  // printf("[NEMU] Client request '%s'\n", data);
 	  if(resp) {
 		// printf("[NEMU] Server response '%s'\n", resp);
-		gdb_send(gdb, (const uint8_t *)resp, strlen(resp));
+		gdb_send(gdb, (void*)resp, strlen(resp));
 	  } else {
-		gdb_send(gdb, (const uint8_t *)"", 0);
+		gdb_send(gdb, (void*)"", 0);
 	  }
 	  free(data);
 	} else {
 	  printf("[NEMU] WARNING: Unsupport gdb request '%s'\n", data);
-	  gdb_send(gdb, (const uint8_t *)"", 0);
+	  gdb_send(gdb, (void*)"", 0);
 	  free(data);
 	}
   }

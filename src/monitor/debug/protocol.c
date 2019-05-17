@@ -73,9 +73,9 @@ uint64_t gdb_decode_hex_str(uint8_t *bytes) {
 
 
 static struct gdb_conn* gdb_begin(int fd) {
-  struct gdb_conn *conn = (struct gdb_conn *)malloc(sizeof(struct gdb_conn));
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
   if (conn == NULL)
-    err(1, "malloc");
+    err(1, "calloc");
 
   conn->ack = true;
 
@@ -114,9 +114,9 @@ struct gdb_conn *gdb_begin_server(int fd) {
     err(1, "accept");
   }
 
-  struct gdb_conn *conn = (struct gdb_conn *)malloc(sizeof(struct gdb_conn));
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
   if (conn == NULL)
-    err(1, "malloc");
+    err(1, "calloc");
 
   conn->ack = true;
 
@@ -144,7 +144,7 @@ struct gdb_conn *gdb_server_start(uint16_t port) {
   struct sockaddr_in sa = {
     .sin_family = AF_INET,
     .sin_port = port,
-	.sin_addr = { .s_addr = htonl(INADDR_ANY), },
+	.sin_addr.s_addr = htonl(INADDR_ANY),
   };
 
   // open the socket and start the tcp connection
@@ -163,8 +163,8 @@ struct gdb_conn *gdb_server_start(uint16_t port) {
 
   if(connfd < 0) { err(1, "accept"); }
 
-  struct gdb_conn *conn = (struct gdb_conn *)malloc(sizeof(struct gdb_conn));
-  if (conn == NULL) err(1, "malloc");
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
+  if (conn == NULL) err(1, "calloc");
 
   conn->ack = true;
 
@@ -266,7 +266,7 @@ void gdb_send(struct gdb_conn *conn, const uint8_t *command, size_t size) {
 static uint8_t* recv_packet(FILE *in, size_t *ret_size, bool* ret_sum_ok) {
   size_t i = 0;
   size_t size = 4096;
-  uint8_t *reply = (uint8_t *)malloc(size);
+  uint8_t *reply = malloc(size);
   if (reply == NULL)
     err(1, "malloc");
 
@@ -297,7 +297,7 @@ static uint8_t* recv_packet(FILE *in, size_t *ret_size, bool* ret_sum_ok) {
 
         // terminate it for good measure
         if (i == size) {
-          reply = (uint8_t *)realloc(reply, size + 1);
+          reply = realloc(reply, size + 1);
           if (reply == NULL)
             err(1, "realloc");
         }
@@ -326,7 +326,7 @@ static uint8_t* recv_packet(FILE *in, size_t *ret_size, bool* ret_sum_ok) {
             // get a bigger buffer if needed
             if (i + count > size) {
               size *= 2;
-              reply = (uint8_t *)realloc(reply, size);
+              reply = realloc(reply, size);
               if (reply == NULL)
                 err(1, "realloc");
             }
@@ -349,7 +349,7 @@ static uint8_t* recv_packet(FILE *in, size_t *ret_size, bool* ret_sum_ok) {
     // get a bigger buffer if needed
     if (i == size) {
       size *= 2;
-      reply = (uint8_t *)realloc(reply, size);
+      reply = realloc(reply, size);
       if (reply == NULL)
         err(1, "realloc");
     }

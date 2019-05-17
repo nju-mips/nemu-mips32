@@ -1,7 +1,6 @@
-#ifndef CPU_CORE_H
-#define CPU_CORE_H
+#ifndef __REG_H__
+#define __REG_H__
 
-#include <stddef.h>
 #include "common.h"
 
 #define CPU_INIT_PC 0xbfc00000
@@ -226,30 +225,8 @@ typedef union {
   };
 } cp0_t;
 
-#ifdef __cplusplus
-/* for c++ */
-#define NEMU_STATIC_ASSERT static_assert
-#else
-/* for c11 */
-#define NEMU_STATIC_ASSERT _Static_assert
-#endif
-
-#define NR_GPR 32
-
 typedef struct {
-  union {
-	uint32_t gpr[NR_GPR];
-	struct {
-      uint32_t zero, at, v0, v1;
-      uint32_t a0, a1, a2, a3;
-      uint32_t t0, t1, t2, t3;
-      uint32_t t4, t5, t6, t7;
-      uint32_t s0, s1, s2, s3;
-      uint32_t s4, s5, s6, s7;
-      uint32_t t8, t9, k0, k1;
-      uint32_t gp, sp, fp, ra;
-	};
-  };
+  uint32_t gpr[32];
   uint32_t hi, lo;
   cp0_t cp0;
   vaddr_t pc;
@@ -257,7 +234,11 @@ typedef struct {
   vaddr_t base;
 #endif
 
+  vaddr_t br_target;
   bool is_delayslot;
+  bool need_br;
+
+  bool curr_instr_except;
 } CPU_state;
 
 
@@ -316,42 +297,5 @@ typedef struct {
 
 extern CPU_state cpu;
 int init_cpu(vaddr_t entry);
-
-
-#ifdef DEBUG
-
-/* check offsetof */
-NEMU_STATIC_ASSERT(offsetof(cp0_t, index) == offsetof(cp0_t, cpr[CP0_INDEX][0]), "index position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, random) == offsetof(cp0_t, cpr[CP0_RANDOM][0]), "random position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, entry_lo0) == offsetof(cp0_t, cpr[CP0_ENTRY_LO0][0]), "entry_lo0 position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, entry_lo1) == offsetof(cp0_t, cpr[CP0_ENTRY_LO1][0]), "entry_lo1 position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, context) == offsetof(cp0_t, cpr[CP0_CONTEXT][0]), "context position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, wired) == offsetof(cp0_t, cpr[CP0_WIRED][0]), "wired position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, badvaddr) == offsetof(cp0_t, cpr[CP0_BADVADDR][0]), "badvaddr position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, count[0]) == offsetof(cp0_t, cpr[CP0_COUNT][0]), "count0 position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, count[1]) == offsetof(cp0_t, cpr[CP0_COUNT][1]), "count1 position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, entry_hi) == offsetof(cp0_t, cpr[CP0_ENTRY_HI][0]), "entry_hi position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, compare) == offsetof(cp0_t, cpr[CP0_COMPARE][0]), "compare position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, status) == offsetof(cp0_t, cpr[CP0_STATUS][0]), "status position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, cause) == offsetof(cp0_t, cpr[CP0_CAUSE][0]), "cause position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, epc) == offsetof(cp0_t, cpr[CP0_EPC][0]), "epc position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, prid) == offsetof(cp0_t, cpr[CP0_PRID][0]), "prid position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, config) == offsetof(cp0_t, cpr[CP0_CONFIG][0]), "config0 position error");
-NEMU_STATIC_ASSERT(offsetof(cp0_t, config1) == offsetof(cp0_t, cpr[CP0_CONFIG][1]), "config1 position error");
-
-/* check cpr */
-#define CPR_SIZE sizeof(cpu.cp0.cpr[0][0])
-NEMU_STATIC_ASSERT(sizeof(Inst) == sizeof(uint32_t), "assertion of sizeof(Inst) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_status_t) == CPR_SIZE, "assertion of sizeof(cp0_status_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_cause_t) == CPR_SIZE, "assertion of sizeof(cp0_cause_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_prid_t) == CPR_SIZE, "assertion of sizeof(cp0_prid_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_config_t) == CPR_SIZE, "assertion of sizeof(cp0_config_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_config1_t) == CPR_SIZE, "assertion of sizeof(cp0_config1_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_entry_hi_t) == CPR_SIZE, "assertion of sizeof(cp0_entry_hi_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_entry_lo_t) == CPR_SIZE, "assertion of sizeof(cp0_entry_lo_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_page_mask_t) == CPR_SIZE, "assertion of sizeof(cp0_page_mask_t) failed");
-NEMU_STATIC_ASSERT(sizeof(cp0_wired_t) == CPR_SIZE, "assertion of sizeof(cp0_wired_t) failed");
-
-#endif
 
 #endif
