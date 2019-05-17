@@ -1,43 +1,31 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-#include <stdint.h>
 #include "device.h"
 #include "memory.h"
+#include <stdint.h>
 
+static inline void check_ioaddr(uint32_t addr,
+                                uint32_t size,
+                                const char *dev) {
+  CPUAssert(
+      addr < size,
+      "%s: address(0x%08x) is out of side or unaligned",
+      dev, addr);
+}
 
 void *paddr_map(uint32_t paddr, uint32_t size);
 
-typedef void* (*map_func) (uint32_t vaddr, uint32_t size);
-typedef uint32_t (*read_func) (paddr_t addr, int len);
-typedef uint32_t (*peek_func) (paddr_t addr, int len);
-typedef void (*write_func)(paddr_t addr, int len, uint32_t data);
-
-void *ddr_map(uint32_t vaddr, uint32_t size);
-uint32_t ddr_read(paddr_t addr, int len);
-void ddr_write(paddr_t addr, int len, uint32_t data);
-
 /* uartlite protocol */
-uint32_t serial_read(paddr_t addr, int len);
-uint32_t serial_peek(paddr_t addr, int len);
-void serial_write(paddr_t addr, int len, uint32_t data);
 
-void gpio_write(paddr_t addr, int len, uint32_t data);
-
-uint32_t vga_read(paddr_t addr, int len);
-void vga_write(paddr_t addr, int len, uint32_t data);
-
-uint32_t invalid_read(paddr_t addr, int len);
-void invalid_write(paddr_t addr, int len, uint32_t data);
-
-uint32_t mac_read(paddr_t addr, int len);
-void mac_write(paddr_t addr, int len, uint32_t data);
-
-uint32_t kb_read(paddr_t addr, int len);
-
-void *bram_map(uint32_t vaddr, uint32_t size);
-uint32_t bram_read(paddr_t addr, int len);
-void bram_write(paddr_t addr, int len, uint32_t data);
+typedef struct {
+  const char *name;
+  uint32_t start, end;
+  uint32_t (*read)(paddr_t addr, int len);
+  void (*write)(paddr_t addr, int len, uint32_t data);
+  void *(*map)(uint32_t vaddr, uint32_t size);
+  uint32_t (*peek)(paddr_t addr, int len);
+} device_t;
 
 /*
 void *spi_map(uint32_t vaddr, uint32_t size);
@@ -58,7 +46,7 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 
 // UART
 #define SERIAL_ADDR 0x1fe50000
-#define SERIAL_SIZE  0x10
+#define SERIAL_SIZE 0x10
 
 // SPI
 #define SPI_ADDR 0x1fe80000

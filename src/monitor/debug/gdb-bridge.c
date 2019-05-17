@@ -17,7 +17,7 @@
 
 extern char *symbol_file;
 
-void init_device();
+void init_sdl();
 void gdb_server_mainloop(int port);
 
 int start_gdb(int port) {
@@ -93,7 +93,7 @@ void gdb_mainloop() {
 
   int pid = fork();
   if(pid == 0) {
-	init_device();
+	init_sdl();
 	gdb_server_mainloop(servfd);
   } else {
     close(servfd);

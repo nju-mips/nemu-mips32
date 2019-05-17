@@ -71,11 +71,3 @@ void init_sdl() {
   ret = setitimer(ITIMER_VIRTUAL, &it, NULL);
   Assert(ret == 0, "Can not set timer");
 }
-
-
-/////////////////////////////////////////////////////////////////
-//                       dev simulation                        //
-/////////////////////////////////////////////////////////////////
-void init_device() {
-  init_sdl();
-}
