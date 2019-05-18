@@ -105,13 +105,13 @@ vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
       // cpu.pc, exccode);
       cpu.cp0.badvaddr = vaddr;
       signal_exception(exccode);
-      return BLACKHOLE_ADDR;
+      return blackhole_dev.start;
     } else if (rwbit == MMU_STORE && phyn->d == 0) {
       // printf("[TLB@%08x] modified phyn, signal(%d)\n",
       // cpu.pc, exccode);
       cpu.cp0.badvaddr = vaddr;
       signal_exception(EXC_TLBM);
-      return BLACKHOLE_ADDR;
+      return blackhole_dev.start;
     } else {
       // printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc,
       // vaddr, (phyn->pfn << 12) | (vaddr & PAGE_MASK));
@@ -122,5 +122,5 @@ vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
   // printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
   cpu.cp0.badvaddr = vaddr;
   signal_exception(exccode);
-  return BLACKHOLE_ADDR;
+  return blackhole_dev.start;
 }

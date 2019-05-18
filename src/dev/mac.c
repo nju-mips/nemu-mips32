@@ -1,6 +1,10 @@
 #include "device.h"
 #include "nemu.h"
 
+// emaclite
+#define MAC_ADDR 0x1ff00000
+#define MAC_SIZE 0x10000
+
 /* emaclite protocol */
 #define ENET_ADDR_LENGTH 6
 #define ETH_FCS_LEN 4 /* Octets in the FCS */

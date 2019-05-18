@@ -4,10 +4,14 @@
 #include "device.h"
 #include "nemu.h"
 
-#define UARTLITE_Rx 0x0
-#define UARTLITE_Tx 0x4
-#define UARTLITE_STAT 0x8
-#define UARTLITE_CTRL 0xC
+// UART
+#define SERIAL_ADDR 0x1fe50000
+#define SERIAL_SIZE 0x10
+
+#define Rx 0x0
+#define Tx 0x4
+#define STAT 0x8
+#define CTRL 0xC
 
 static uint32_t uartlite_ctrl_reg = 0;
 
@@ -125,9 +129,9 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
 
 uint32_t serial_peek(paddr_t addr, int len) {
   switch (addr) {
-  case UARTLITE_Rx: return serial_queue[serial_f];
-  case UARTLITE_STAT: return serial_f == serial_r ? 0 : 1;
-  case UARTLITE_CTRL: return uartlite_ctrl_reg;
+  case Rx: return serial_queue[serial_f];
+  case STAT: return serial_f == serial_r ? 0 : 1;
+  case CTRL: return uartlite_ctrl_reg;
   default:
     CPUAssert(false,
               "uart: address(0x%08x) is not readable",
@@ -140,7 +144,7 @@ uint32_t serial_peek(paddr_t addr, int len) {
 uint32_t serial_read(paddr_t addr, int len) {
   check_ioaddr(addr, SERIAL_SIZE, "serial");
   uint32_t data = serial_peek(addr, len);
-  if (addr == UARTLITE_Rx && serial_f != serial_r)
+  if (addr == Rx && serial_f != serial_r)
     serial_f = (serial_f + 1) % SERIAL_QUEUE_LEN;
   return data;
 }
@@ -148,11 +152,11 @@ uint32_t serial_read(paddr_t addr, int len) {
 void serial_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, SERIAL_SIZE, "serial");
   switch (addr) {
-  case UARTLITE_Tx:
+  case Tx:
     putchar((char)data);
     fflush(stdout);
     break;
-  case UARTLITE_CTRL: uartlite_ctrl_reg = data; break;
+  case CTRL: uartlite_ctrl_reg = data; break;
   default:
     CPUAssert(false,
               "uart: address(0x%08x) is not writable",

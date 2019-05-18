@@ -2,6 +2,8 @@
 #include "nemu.h"
 #include <SDL/SDL.h>
 
+#define SCREEN_ADDR 0x10003000
+
 extern SDL_Surface *screen;
 
 uint32_t screen_read(paddr_t addr, int len) {

@@ -4,6 +4,11 @@
 #include "device.h"
 #include "nemu.h"
 
+#define KB_ADDR 0x1fe94000
+#define KB_CODE 0x0
+#define KB_STAT 0x4
+#define KB_SIZE 0x10
+
 /////////////////////////////////////////////////////////////////
 //                     keyboard simulation //
 /////////////////////////////////////////////////////////////////

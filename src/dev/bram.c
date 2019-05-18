@@ -1,6 +1,11 @@
 #include "device.h"
 #include "nemu.h"
 
+
+// block ram
+#define BRAM_BASE 0x1fc00000
+#define BRAM_SIZE (1024 * 1024)
+
 uint8_t bram[BRAM_SIZE];
 static uint32_t bram_mapped_size = 0;
 bool bram_mapped = false;

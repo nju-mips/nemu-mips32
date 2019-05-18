@@ -3,6 +3,8 @@
 #include <SDL/SDL.h>
 #include <stdio.h>
 
+#define VGA_BASE 0x10400000
+#define VGA_SIZE 0x100000
 #define VMEM_SIZE (WINDOW_H * WINDOW_W)
 
 extern SDL_Surface *screen;

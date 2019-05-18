@@ -3,6 +3,10 @@
 #include "nemu.h"
 #include <stdlib.h>
 
+// SCREEN width and height config
+#define RTC_ADDR 0x10002000
+#define RTC_SIZE 0x4
+
 uint64_t get_current_time(); // us
 
 uint32_t rtc_read(paddr_t addr, int len) {

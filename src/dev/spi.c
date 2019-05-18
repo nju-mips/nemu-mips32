@@ -5,6 +5,8 @@
 #include "nemu.h"
 #include "device.h"
 
+#define SPI_ADDR 0x1fe80000
+#define SPI_SIZE 0x1000
 
 #if 0
 /* SPI Control Register (spicr), [1] p9, [2] p8 */

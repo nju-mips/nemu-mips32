@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-vaddr_t uimage_base = UNMAPPED_BASE + DDR_BASE + 32 * 1024 * 1024;
 void serial_enqueue_ascii(char);
 uint32_t elf_entry = 0xbfc00000;
 
@@ -28,8 +27,9 @@ size_t get_file_size(const char *img_file) {
   lstat(img_file, &file_status);
   if (S_ISLNK(file_status.st_mode)) {
     char *buf = malloc(file_status.st_size + 1);
-    size_t size = readlink(img_file, buf, file_status.st_size);
-		buf[file_status.st_size] = 0;
+    size_t size =
+        readlink(img_file, buf, file_status.st_size);
+    buf[file_status.st_size] = 0;
     size = get_file_size(buf);
     free(buf);
     return size;
@@ -59,7 +59,8 @@ void load_elf() {
   const uint32_t elf_magic = 0x464c457f;
 
   void *buf = read_file(elf_file);
-  Assert(buf, "elf file '%s' cannot be opened for read\n", elf_file);
+  Assert(buf, "elf file '%s' cannot be opened for read\n",
+         elf_file);
 
   Elf32_Ehdr *elf = buf;
 
@@ -69,18 +70,21 @@ void load_elf() {
   assert(*p_magic == elf_magic);
 
   for (int i = 0; i < elf->e_phnum; i++) {
-    Elf32_Phdr *ph = (void *)buf + i * elf->e_phentsize + elf->e_phoff;
+    Elf32_Phdr *ph =
+        (void *)buf + i * elf->e_phentsize + elf->e_phoff;
     if (ph->p_type != PT_LOAD) { continue; }
 
     void *p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
     memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz);
-    memset(p_vaddr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+    memset(p_vaddr + ph->p_filesz, 0,
+           ph->p_memsz - ph->p_filesz);
   }
 
   free(buf);
 }
 
-static inline void load_image(const char *img, vaddr_t vaddr) {
+static inline void load_image(const char *img,
+                              vaddr_t vaddr) {
   Assert(img, "Need an image file");
   Log("The image is %s\n", img);
 
@@ -117,27 +121,36 @@ const struct option long_options[] = {
 static void print_help(const char *file) {
   printf("Usage: %s [OPTION...]\n", file);
   printf("\n");
-  printf("  -S, --symbol=FILE     use this file to produce symbols\n");
+  printf(
+      "  -S, --symbol=FILE     use this file to produce "
+      "symbols\n");
   printf("  -u, --uImage=FILE     specify uImage file\n");
-  printf("  -D, --diff-with-qemu  run diff tests with qemu\n");
+  printf(
+      "  -D, --diff-with-qemu  run diff tests with qemu\n");
   printf("  -b, --batch           run on batch mode\n");
-  printf("  -c, --commit          commit all executed instructions\n");
-  printf("  -i, --image=FILE      run with this image file\n");
-  printf("  -e, --elf=FILE        run with this elf file\n");
-  printf("  -h, --help            print program help info\n");
+  printf(
+      "  -c, --commit          commit all executed "
+      "instructions\n");
+  printf(
+      "  -i, --image=FILE      run with this image file\n");
+  printf(
+      "  -e, --elf=FILE        run with this elf file\n");
+  printf(
+      "  -h, --help            print program help info\n");
   printf("\n");
   printf("Report bugs to 141242068@smail.nju.edu.cn.\n");
 }
 
 static inline void parse_args(int argc, char *argv[]) {
   int o;
-  while ((o = getopt_long(argc, argv, "-bcDe:i:S:u:h", long_options, NULL)) !=
-         -1) {
+  while ((o = getopt_long(argc, argv, "-bcDe:i:S:u:h",
+                          long_options, NULL)) != -1) {
     switch (o) {
     case 'S': symbol_file = optarg; break;
     case 'u':
       kernel_img = optarg;
-      load_image(kernel_img, uimage_base);
+      load_image(kernel_img, UNMAPPED_BASE + ddr_dev.start +
+                                 32 * 1024 * 1024);
       break;
     case 'D': work_mode |= MODE_DIFF; break;
     case 'b': work_mode |= MODE_BATCH; break;
@@ -173,7 +186,8 @@ work_mode_t init_monitor(int argc, char *argv[]) {
     load_image(img_file, CPU_INIT_PC);
   }
 
-  if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
+  if (!(work_mode & MODE_BATCH))
+    signal(SIGINT, sigint_handler);
 
 #ifdef DEBUG
     // send command to uboot

@@ -1,6 +1,9 @@
 #include "device.h"
 #include "nemu.h"
 
+#define DDR_BASE (0x00000000)
+#define DDR_SIZE (128 * 1024 * 1024) // 0x08000000
+
 uint8_t ddr[DDR_SIZE];
 static uint32_t ddr_mapped_size = 0;
 

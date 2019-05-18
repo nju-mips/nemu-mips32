@@ -142,51 +142,13 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-static inline uint32_t read_handler(uint8_t *p, int len) {
-  return *((uint32_t *)((void *)p)) &
-         (~0u >> ((4 - len) << 3));
-}
-
-static inline void write_handler(uint8_t *p, uint32_t len,
-                                 uint32_t data) {
-  memcpy(p, &data, len);
-}
-
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-#ifdef DEBUG
-  CPUAssert(addr >= 0x1000,
-            "preventive check failed, try to load memory "
-            "from addr %08x\n",
-            addr);
-#endif
-  uint32_t pa = prot_addr(addr, MMU_LOAD);
-  if (LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
-    // Assert(0, "addr:%08x, pa:%08x\n", addr, pa);
-    addr = pa - DDR_BASE;
-    return read_handler(&ddr[addr], len);
-  } else if (BRAM_BASE <= pa &&
-             pa < BRAM_BASE + BRAM_SIZE) {
-    addr = pa - BRAM_BASE;
-    return read_handler(&bram[addr], len);
-  }
   return vaddr_read(addr, len);
 }
 
 static inline void store_mem(vaddr_t addr, int len,
                              uint32_t data) {
-#ifdef DEBUG
-  CPUAssert(addr >= 0x1000,
-            "preventive check failed, try to store memory "
-            "to addr %08x\n",
-            addr);
-#endif
-  uint32_t pa = prot_addr(addr, MMU_STORE);
-  if (LIKELY(DDR_BASE <= pa && pa < DDR_BASE + DDR_SIZE)) {
-    addr = pa - DDR_BASE;
-    write_handler(&ddr[addr], len, data);
-  } else {
-    vaddr_write(addr, len, data);
-  }
+  vaddr_write(addr, len, data);
 }
 
 static inline uint32_t instr_fetch(vaddr_t addr) {

@@ -16,8 +16,6 @@ static inline void check_ioaddr(uint32_t addr,
 
 void *paddr_map(uint32_t paddr, uint32_t size);
 
-/* uartlite protocol */
-
 typedef struct {
   const char *name;
   uint32_t start, end;
@@ -27,59 +25,8 @@ typedef struct {
   uint32_t (*peek)(paddr_t addr, int len);
 } device_t;
 
-/*
-void *spi_map(uint32_t vaddr, uint32_t size);
-uint32_t spi_read(paddr_t addr, int len);
-void spi_write(paddr_t addr, int len, uint32_t data);
-*/
-
 #define KSEG0_BASE 0x80000000
 #define KSEG1_BASE 0xA0000000
-
-// block ram
-#define BRAM_BASE 0x1fc00000
-#define BRAM_SIZE (1024 * 1024)
-
-// DDR
-#define DDR_BASE (0x00000000)
-#define DDR_SIZE (128 * 1024 * 1024) // 0x08000000
-
-// UART
-#define SERIAL_ADDR 0x1fe50000
-#define SERIAL_SIZE 0x10
-
-// SPI
-#define SPI_ADDR 0x1fe80000
-#define SPI_SIZE 0x1000
-
-// KEYBOARD
-#define KB_ADDR 0x1fe94000
-#define KB_CODE 0x0
-#define KB_STAT 0x4
-#define KB_SIZE 0x10
-
-// perf counter
-#define PERF_ADDR 0x1fe95000
-#define PERF_SIZE 0x1000
-
-// bad phsical address
-#define BLACKHOLE_ADDR 0x1fe96000
-#define BLACKHOLE_SIZE 0x1000
-
-// emaclite
-#define MAC_ADDR 0x1ff00000
-#define MAC_SIZE 0x10000
-
-// SCREEN width and height config
-#define RTC_ADDR 0x10002000
-#define RTC_SIZE 0x4
-
-// SCREEN width and height config
-#define SCREEN_ADDR 0x10003000
-
-// VGA
-#define VGA_BASE 0x10400000
-#define VGA_SIZE 0x100000
 
 #define SCR_W 400
 #define SCR_H 300
@@ -88,20 +35,20 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 #define VGA_HZ 25
 #define TIMER_HZ 100
 
-// GPIO
-#define GPIO_BASE 0x10000000
-#define GPIO_SIZE 0x1000
-
-#define DEVOP(_)     \
-  _(bram_dev)        \
-  _(ddr_dev)         \
-  _(gpio_dev)        \
-  _(keyboard_dev)    \
-  _(mac_dev)         \
-  _(serial_dev)      \
-  _(vga_dev)         \
-  _(blackhole_dev)   \
-  _(screen_dev)      \
+#define DEVOP(_)   \
+  _(bram_dev)      \
+  _(ddr_dev)       \
+  _(gpio_dev)      \
+  _(keyboard_dev)  \
+  _(mac_dev)       \
+  _(serial_dev)    \
+  _(vga_dev)       \
+  _(blackhole_dev) \
+  _(screen_dev)    \
   _(rtc_dev)
+
+#define DECL(_) extern device_t _;
+DEVOP(DECL)
+#undef DECL
 
 #endif
