@@ -17,11 +17,11 @@ else
   exit
 fi
 
-files=`ls $AM_HOME/tests/cputest/build/*-mips32-npc`
+files=`ls $AM_HOME/tests/cputest/build/*-mips32-npc.elf`
 ori_log="build/nemu-log.txt"
 
 for file in $files; do
-  base=`basename $file | sed -e 's/-mips32-npc.bin//'`
+  base=`basename $file | sed -e 's/-mips32-npc.elf//'`
   printf "[%14s] " $base
   logfile=$base-log.txt
   $nemu -b -e $file &> $logfile
