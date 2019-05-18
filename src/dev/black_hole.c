@@ -1,16 +1,16 @@
 #include "device.h"
 #include "nemu.h"
 
-uint32_t badp_read(paddr_t addr, int len) { return 0; }
+uint32_t blackhole_read(paddr_t addr, int len) { return 0; }
 
-void badp_write(paddr_t addr, int len, uint32_t data) {
+void blackhole_write(paddr_t addr, int len, uint32_t data) {
   return;
 }
 
 device_t blackhole_dev = {
-    .name = "<bad>",
-    .start = BADP_ADDR,
-    .end = BADP_ADDR + BADP_SIZE,
-    .read = badp_read,
-    .write = badp_write,
+    .name = "<BAD>",
+    .start = BLACKHOLE_ADDR,
+    .end = BLACKHOLE_ADDR + BLACKHOLE_SIZE,
+    .read = blackhole_read,
+    .write = blackhole_write,
 };

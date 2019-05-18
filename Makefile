@@ -52,6 +52,7 @@ app: $(BINARY) $(SHARED)
 # IMG ?= $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
 # IMG = ~/linux-4.11.4/vmlinux-mips
 IMG = ~/u-boot/u-boot
+ARGS ?= -b -e $(IMG)
 
 # Command to execute NEMU
 
@@ -64,13 +65,13 @@ $(SHARED): $(OBJS)
 	@$(AR) -r -o $@ $^
 
 run: $(BINARY)
-	$(BINARY) -b -e $(IMG)
+	$(BINARY) $(ARGS)
 
 debug: $(BINARY)
 	$(BINARY) -e $(IMG)
 
 gdb: $(BINARY)
-	gdb -s $(BINARY) --args $(NEMU_EXEC)
+	gdb -s $(BINARY) --args $(ARGS)
 
 clean: 
 	rm -rf $(BUILD_DIR)

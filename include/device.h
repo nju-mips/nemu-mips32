@@ -63,12 +63,19 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 #define PERF_SIZE 0x1000
 
 // bad phsical address
-#define BADP_ADDR 0x1fe96000
-#define BADP_SIZE 0x1000
+#define BLACKHOLE_ADDR 0x1fe96000
+#define BLACKHOLE_SIZE 0x1000
 
 // emaclite
 #define MAC_ADDR 0x1ff00000
 #define MAC_SIZE 0x10000
+
+// SCREEN width and height config
+#define RTC_ADDR 0x10002000
+#define RTC_SIZE 0x4
+
+// SCREEN width and height config
+#define SCREEN_ADDR 0x10003000
 
 // VGA
 #define VGA_BASE 0x10400000
@@ -84,5 +91,17 @@ void spi_write(paddr_t addr, int len, uint32_t data);
 // GPIO
 #define GPIO_BASE 0x10000000
 #define GPIO_SIZE 0x1000
+
+#define DEVOP(_)     \
+  _(bram_dev)        \
+  _(ddr_dev)         \
+  _(gpio_dev)        \
+  _(keyboard_dev)    \
+  _(mac_dev)         \
+  _(serial_dev)      \
+  _(vga_dev)         \
+  _(blackhole_dev)   \
+  _(screen_dev)      \
+  _(rtc_dev)
 
 #endif

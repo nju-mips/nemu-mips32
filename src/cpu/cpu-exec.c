@@ -29,7 +29,7 @@ static uint64_t nemu_start_time = 0;
 char asm_buf[80], *asm_buf_p;
 
 // 1s = 10^3 ms = 10^6 us
-static uint64_t get_current_time() { // in us
+uint64_t get_current_time() { // in us
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec * 1000000 + t.tv_usec - nemu_start_time;
@@ -143,37 +143,13 @@ int init_cpu(vaddr_t entry) {
 }
 
 static inline uint32_t read_handler(uint8_t *p, int len) {
-  switch (len) {
-  case 1: return p[0];
-  case 2: return (p[1] << 8) | p[0];
-  case 3: return (p[2] << 16) | (p[1] << 8) | p[0];
-  case 4:
-    return (p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0];
-  default: CPUAssert(0, "invalid len %d\n", len); break;
-  }
+  return *((uint32_t *)((void *)p)) &
+         (~0u >> ((4 - len) << 3));
 }
 
 static inline void write_handler(uint8_t *p, uint32_t len,
                                  uint32_t data) {
-  switch (len) {
-  case 1: p[0] = data; return;
-  case 2:
-    p[0] = data & 0xFF;
-    p[1] = (data >> 8) & 0xFF;
-    return;
-  case 3:
-    p[0] = data & 0xFF;
-    p[1] = (data >> 8) & 0xFF;
-    p[2] = (data >> 16) & 0xFF;
-    return;
-  case 4:
-    p[0] = data & 0xFF;
-    p[1] = (data >> 8) & 0xFF;
-    p[2] = (data >> 16) & 0xFF;
-    p[3] = (data >> 24) & 0xFF;
-    return;
-  default: CPUAssert(0, "invalid len %d\n", len); break;
-  }
+  memcpy(p, &data, len);
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {

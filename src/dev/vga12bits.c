@@ -3,6 +3,8 @@
 #include <SDL/SDL.h>
 #include <stdio.h>
 
+#if 0
+
 /////////////////////////////////////////////////////////////////
 //                       vga simulation //
 /////////////////////////////////////////////////////////////////
@@ -13,13 +15,14 @@ extern SDL_Surface *screen;
 
 static uint8_t vmem[VMEM_SIZE];
 
-uint32_t vga_read(paddr_t addr, int len) {
+static uint32_t vga_read(paddr_t addr, int len) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
   return *((uint32_t *)&vmem[addr]) &
          (~0u >> ((4 - len) << 3));
 }
 
-void vga_write(paddr_t addr, int len, uint32_t data) {
+static void vga_write(paddr_t addr, int len,
+                      uint32_t data) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
   memcpy(&vmem[addr], &data, len);
 }
@@ -37,7 +40,7 @@ static inline void draw_pixel(int x, int y,
   pixel_buf[y][x] = RGB_M12_to_M32(color);
 }
 
-void update_screen() {
+static void update_screen() {
   uint16_t(*vmem_ptr)[SCR_W] = (void *)vmem;
 
   for (int i = 0; i < SCR_H; i++) {
@@ -52,10 +55,12 @@ void update_screen() {
   SDL_Flip(screen);
 }
 
-device_t vga_dev = {
+device_t vga12bits_dev = {
     .name = "VGA",
     .start = VGA_BASE,
     .end = VGA_BASE + VGA_SIZE,
     .read = vga_read,
     .write = vga_write,
 };
+
+#endif

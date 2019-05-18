@@ -5,13 +5,13 @@
 
 void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, 4, "GPIO");
-  if ((unsigned char)data == 0) {
+  if (data == 0) {
     eprintf(ANSI_WIDTHOR_GREEN
             "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);
   } else {
     eprintf(ANSI_WIDTHOR_RED
             "HIT BAD TRAP code: %d\n" ANSI_WIDTHOR_RESET,
-            (unsigned char)data == 0);
+            data);
   }
 
   nemu_state = NEMU_END;

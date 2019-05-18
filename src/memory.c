@@ -88,14 +88,9 @@ void vaddr_write(vaddr_t addr, int len, uint32_t data) {
 }
 
 void init_mmio() {
-  extern device_t bram_dev, ddr_dev, gpio_dev, keyboard_dev,
-      mac_dev, serial_dev, vga_dev, blackhole_dev;
-  register_device(&bram_dev);
-  register_device(&ddr_dev);
-  register_device(&gpio_dev);
-  register_device(&keyboard_dev);
-  register_device(&mac_dev);
-  register_device(&serial_dev);
-  register_device(&vga_dev);
-  register_device(&blackhole_dev);
+#define X(dev)         \
+  extern device_t dev; \
+  register_device(&dev);
+
+  DEVOP(X);
 }
