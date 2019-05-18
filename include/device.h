@@ -50,6 +50,7 @@ device_t *find_device(paddr_t addr);
   _(blackhole_dev) \
   _(screen_dev)    \
   _(spi_dev)       \
+  _(perf_dev)      \
   _(rtc_dev)
 
 #define DECL(_) extern device_t _;

@@ -9,30 +9,56 @@
 
 extern SDL_Surface *screen;
 
-static inline uint32_t read_pixel(unsigned x, unsigned y) {
-  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
-  assert (pixel_buf && x < SCR_W && y < SCR_H);
-  return pixel_buf[2 * y][2 * x];
+typedef struct {
+  uint8_t *ptr[4];
+} four_pixel_t;
+
+static inline uint32_t get_x(uint32_t addr) {
+  return (addr / 4) % SCR_W;
 }
 
-static inline void draw_pixel(unsigned x, unsigned y,
-                              uint32_t pixel) {
+static inline uint32_t get_y(uint32_t addr) {
+  return (addr / 4) / SCR_W;
+}
+
+static inline four_pixel_t get_pixels(uint32_t addr) {
+  uint32_t offset = addr % 4;
+  uint32_t x = get_x(addr);
+  uint32_t y = get_y(addr);
   uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
   assert (pixel_buf && x < SCR_W && y < SCR_H);
-  pixel_buf[2 * y][2 * x] = pixel;
-  pixel_buf[2 * y + 1][2 * x] = pixel;
-  pixel_buf[2 * y][2 * x + 1] = pixel;
-  pixel_buf[2 * y + 1][2 * x + 1] = pixel;
+
+  return (four_pixel_t) {
+	{
+	  (uint8_t *)&pixel_buf[2 * y][2 * x] + offset,
+	  (uint8_t *)&pixel_buf[2 * y + 1][2 * x] + offset,
+	  (uint8_t *)&pixel_buf[2 * y][2 * x + 1] + offset,
+	  (uint8_t *)&pixel_buf[2 * y + 1][2 * x + 1] + offset,
+	}
+  };
 }
 
 static uint32_t vga_read(paddr_t addr, int len) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
-  return read_pixel((addr / 4) % SCR_W, addr / SCR_W);
+
+  uint32_t offset = addr % 4;
+  uint32_t x = get_x(addr);
+  uint32_t y = get_y(addr);
+  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
+  assert (pixel_buf && x < SCR_W && y < SCR_H);
+
+  return *((uint32_t *)((void *)&pixel_buf[2 * y][2 * x]
+		   + addr)) & (~0u >> ((4 - len) << 3));
 }
 
 static void vga_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
-  draw_pixel((addr / 4) % SCR_W, (addr / 4) / SCR_W, data);
+
+  four_pixel_t pixels = get_pixels(addr);
+  memcpy(pixels.ptr[0], &data, len);
+  memcpy(pixels.ptr[1], &data, len);
+  memcpy(pixels.ptr[2], &data, len);
+  memcpy(pixels.ptr[3], &data, len);
 }
 
 device_t vga_dev = {
