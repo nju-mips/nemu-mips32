@@ -67,7 +67,6 @@ uint32_t vaddr_read(vaddr_t addr, int len) {
 }
 
 uint32_t paddr_peek(paddr_t addr, int len) {
-  addr = prot_addr(addr, MMU_LOAD);
   device_t *dev = find_device(addr);
   CPUAssert(dev && dev->peek, "bad addr %08x\n", addr);
   return dev->peek(addr - dev->start, len);
