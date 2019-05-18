@@ -62,7 +62,6 @@ void load_rom(uint32_t entry) {
 
 void load_elf() {
   Assert(elf_file, "Need an elf file");
-  printf("The elf is %s\n", elf_file);
 
   /* set symbol file to elf_file */
   symbol_file = elf_file;
