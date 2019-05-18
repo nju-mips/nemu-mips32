@@ -20,6 +20,8 @@ void register_device(device_t *dev) {
     assert(memory_regions[mr_index(i)] == NULL);
     memory_regions[mr_index(i)] = dev;
   }
+
+  if (dev->init) dev->init();
 }
 
 device_t *find_device(paddr_t addr) {

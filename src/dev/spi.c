@@ -1,5 +1,8 @@
 #include <SDL/SDL.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "common.h"
 #include "nemu.h"
@@ -8,7 +11,6 @@
 #define SPI_ADDR 0x1fe80000
 #define SPI_SIZE 0x1000
 
-#if 0
 /* SPI Control Register (spicr), [1] p9, [2] p8 */
 #define SPICR_LSB_FIRST		BIT(9)
 #define SPICR_MASTER_INHIBIT	BIT(8)
@@ -95,7 +97,8 @@ struct xilinx_spi_regs {
 static int flash;
 static struct xilinx_spi_regs spi_regs;
 
-void init_spi(const char *filename) {
+static void spi_init(const char *filename) {
+  assert (0);
   flash = open(filename, O_RDONLY);
   Assert(flash > 0, "failed to open '%s' as flash\n", filename);
 
@@ -103,12 +106,14 @@ void init_spi(const char *filename) {
   spi_regs.spisr = 0x25;
 }
 
-uint32_t ddr_read(paddr_t addr, int len) {
-  check_ddr(addr, len);
-  return *((uint32_t *)((uint8_t *)ddr + addr)) & (~0u >> ((4 - len) << 3));
+static uint32_t spi_read(paddr_t addr, int len) {
+  assert (0);
+  check_ioaddr(addr, SPI_SIZE, "spi.read");
+  return 0;
 }
 
-void ddr_write(paddr_t addr, int len, uint32_t data) {
+static void spi_write(paddr_t addr, int len, uint32_t data) {
+  assert (0);
   switch(addr) {
 	case SRR:    spi_regs.srr = data;    break;
 	case SPICR:  spi_regs.spicr = data;  break;
@@ -116,4 +121,12 @@ void ddr_write(paddr_t addr, int len, uint32_t data) {
 	case SPISSR: spi_regs.spissr = data; break;
   }
 }
-#endif
+
+device_t spi_dev = {
+  .name = "spi",
+  .start = SPI_ADDR,
+  .end = SPI_ADDR + SPI_SIZE,
+  .init = spi_init,
+  .read = spi_read,
+  .write = spi_write,
+};

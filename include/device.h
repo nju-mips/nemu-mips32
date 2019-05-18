@@ -20,6 +20,7 @@ void load_rom(uint32_t entry);
 typedef struct {
   const char *name;
   uint32_t start, end;
+  void (*init)();
   uint32_t (*read)(paddr_t addr, int len);
   void (*write)(paddr_t addr, int len, uint32_t data);
   void *(*map)(uint32_t vaddr, uint32_t size);
@@ -48,6 +49,7 @@ device_t *find_device(paddr_t addr);
   _(vga_dev)       \
   _(blackhole_dev) \
   _(screen_dev)    \
+  _(spi_dev)       \
   _(rtc_dev)
 
 #define DECL(_) extern device_t _;

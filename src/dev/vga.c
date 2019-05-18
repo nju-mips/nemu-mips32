@@ -25,12 +25,12 @@ static inline void draw_pixel(unsigned x, unsigned y,
   pixel_buf[2 * y + 1][2 * x + 1] = pixel;
 }
 
-uint32_t vga_read(paddr_t addr, int len) {
+static uint32_t vga_read(paddr_t addr, int len) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
   return read_pixel((addr / 4) % SCR_W, addr / SCR_W);
 }
 
-void vga_write(paddr_t addr, int len, uint32_t data) {
+static void vga_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
   draw_pixel((addr / 4) % SCR_W, (addr / 4) / SCR_W, data);
 }

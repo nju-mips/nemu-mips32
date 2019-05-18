@@ -9,7 +9,7 @@
 
 uint64_t get_current_time(); // us
 
-uint32_t rtc_read(paddr_t addr, int len) {
+static uint32_t rtc_read(paddr_t addr, int len) {
   check_ioaddr(addr, RTC_SIZE, "RTC");
   return get_current_time() / 1000;
 }

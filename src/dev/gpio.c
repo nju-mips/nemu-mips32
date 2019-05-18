@@ -7,7 +7,7 @@
 #define GPIO_BASE 0x10000000
 #define GPIO_SIZE 0x1000
 
-void gpio_write(paddr_t addr, int len, uint32_t data) {
+static void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, 4, "GPIO");
   if (data == 0) {
     eprintf(ANSI_WIDTHOR_GREEN

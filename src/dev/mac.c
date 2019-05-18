@@ -323,30 +323,29 @@ struct emaclite_regs {
 static struct emaclite_regs regs;
 static u16 phy_regs[32][32]; /* phy_regs[phy][reg] */
 
-void mii_transaction() {
 #define ACTIVE_PHY 1
-  static bool inited = false;
-  if (!inited) {
-    phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
-    phy_regs[ACTIVE_PHY][MII_PHYSID2] = 0xb8a0;
-    phy_regs[ACTIVE_PHY][PHY_DETECT_REG] = PHY_DETECT_MASK;
 
-    phy_regs[ACTIVE_PHY][MII_BMCR] =
-        BMCR_SPEED100 | BMCR_ANENABLE | BMCR_FULLDPLX;
-    phy_regs[ACTIVE_PHY][MII_BMSR] =
-        BMSR_100FULL | BMSR_100HALF | BMSR_10FULL |
-        BMSR_10HALF | BMSR_ANEGCAPABLE | BMSR_ERCAP | 0x40;
-    phy_regs[ACTIVE_PHY][MII_ADVERTISE] =
-        ADVERTISE_100FULL | ADVERTISE_100HALF |
-        ADVERTISE_10FULL | ADVERTISE_10HALF |
-        ADVERTISE_CSMA;
-    phy_regs[ACTIVE_PHY][MII_LPA] =
-        LPA_LPACK | LPA_PAUSE_ASYM | LPA_PAUSE_CAP |
-        LPA_1000XPAUSE_ASYM | LPA_100HALF | LPA_10FULL |
-        LPA_10HALF | 0x1;
-    inited = true;
-  }
+static void mac_init() {
+  phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
+  phy_regs[ACTIVE_PHY][MII_PHYSID2] = 0xb8a0;
+  phy_regs[ACTIVE_PHY][PHY_DETECT_REG] = PHY_DETECT_MASK;
 
+  phy_regs[ACTIVE_PHY][MII_BMCR] =
+	  BMCR_SPEED100 | BMCR_ANENABLE | BMCR_FULLDPLX;
+  phy_regs[ACTIVE_PHY][MII_BMSR] =
+	  BMSR_100FULL | BMSR_100HALF | BMSR_10FULL |
+	  BMSR_10HALF | BMSR_ANEGCAPABLE | BMSR_ERCAP | 0x40;
+  phy_regs[ACTIVE_PHY][MII_ADVERTISE] =
+	  ADVERTISE_100FULL | ADVERTISE_100HALF |
+	  ADVERTISE_10FULL | ADVERTISE_10HALF |
+	  ADVERTISE_CSMA;
+  phy_regs[ACTIVE_PHY][MII_LPA] =
+	  LPA_LPACK | LPA_PAUSE_ASYM | LPA_PAUSE_CAP |
+	  LPA_1000XPAUSE_ASYM | LPA_100HALF | LPA_10FULL |
+	  LPA_10HALF | 0x1;
+}
+
+static void mii_transaction() {
   mdio_addr_t *mdio_addr = (void *)&(regs.mdioaddr);
   u32 phy = mdio_addr->phyaddr;
   u32 reg = mdio_addr->regnum;
@@ -379,7 +378,7 @@ void mii_transaction() {
   }
 }
 
-uint32_t mac_read(paddr_t addr, int len) {
+static uint32_t mac_read(paddr_t addr, int len) {
   switch (addr) {
   case TX_PING_TSR: return regs.tx_ping_tsr;
   case TX_PONG_TSR: return regs.tx_pong_tsr;
@@ -397,7 +396,7 @@ uint32_t mac_read(paddr_t addr, int len) {
   return 0;
 }
 
-void mac_write(paddr_t addr, int len, uint32_t data) {
+static void mac_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
   case TX_PING_TSR:
     regs.tx_ping_tsr = data;
@@ -447,6 +446,7 @@ device_t mac_dev = {
     .name = "MAC",
     .start = MAC_ADDR,
     .end = MAC_ADDR + MAC_SIZE,
+	.init = mac_init,
     .read = mac_read,
     .write = mac_write,
     .map = NULL,

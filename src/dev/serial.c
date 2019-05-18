@@ -127,7 +127,7 @@ void serial_enqueue(SDL_EventType type, SDLKey key) {
   }
 }
 
-uint32_t serial_peek(paddr_t addr, int len) {
+static uint32_t serial_peek(paddr_t addr, int len) {
   switch (addr) {
   case Rx: return serial_queue[serial_f];
   case STAT: return serial_f == serial_r ? 0 : 1;
@@ -141,7 +141,7 @@ uint32_t serial_peek(paddr_t addr, int len) {
   return 0;
 }
 
-uint32_t serial_read(paddr_t addr, int len) {
+static uint32_t serial_read(paddr_t addr, int len) {
   check_ioaddr(addr, SERIAL_SIZE, "serial");
   uint32_t data = serial_peek(addr, len);
   if (addr == Rx && serial_f != serial_r)
@@ -149,7 +149,7 @@ uint32_t serial_read(paddr_t addr, int len) {
   return data;
 }
 
-void serial_write(paddr_t addr, int len, uint32_t data) {
+static void serial_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, SERIAL_SIZE, "serial");
   switch (addr) {
   case Tx:
