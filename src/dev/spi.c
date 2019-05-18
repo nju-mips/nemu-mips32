@@ -94,16 +94,15 @@ struct xilinx_spi_regs {
 	u32 spirfor;	/* SPI Receive FIFO Occupancy Register (SPIRFOR) */
 };
 
-static int flash;
 static struct xilinx_spi_regs spi_regs;
 
 static void spi_init(const char *filename) {
-  assert (0);
-  flash = open(filename, O_RDONLY);
-  Assert(flash > 0, "failed to open '%s' as flash\n", filename);
+#if 0
+  int fd = open(filename, O_RDONLY);
 
   spi_regs.spicr = 0x180;
   spi_regs.spisr = 0x25;
+#endif
 }
 
 static uint32_t spi_read(paddr_t addr, int len) {
