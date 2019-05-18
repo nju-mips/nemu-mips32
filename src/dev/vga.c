@@ -3,21 +3,34 @@
 #include <SDL/SDL.h>
 #include <stdio.h>
 
-#define VMEM_SIZE (4 * WINDOW_H * WINDOW_W)
+#define VMEM_SIZE (WINDOW_H * WINDOW_W)
 
 extern SDL_Surface *screen;
 
+static inline uint32_t read_pixel(unsigned x, unsigned y) {
+  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
+  assert (pixel_buf && x < SCR_W && y < SCR_H);
+  return pixel_buf[2 * y][2 * x];
+}
+
+static inline void draw_pixel(unsigned x, unsigned y,
+                              uint32_t pixel) {
+  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
+  assert (pixel_buf && x < SCR_W && y < SCR_H);
+  pixel_buf[2 * y][2 * x] = pixel;
+  pixel_buf[2 * y + 1][2 * x] = pixel;
+  pixel_buf[2 * y][2 * x + 1] = pixel;
+  pixel_buf[2 * y + 1][2 * x + 1] = pixel;
+}
+
 uint32_t vga_read(paddr_t addr, int len) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
-  uint32_t *pixel_buf = screen->pixels;
-  return *((uint32_t *)&pixel_buf[addr]) &
-         (~0u >> ((4 - len) << 3));
+  return read_pixel((addr / 4) % SCR_W, addr / SCR_W);
 }
 
 void vga_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, VMEM_SIZE, "VGA");
-  uint32_t *pixel_buf = screen->pixels;
-  memcpy(&pixel_buf[addr], &data, len);
+  draw_pixel((addr / 4) % SCR_W, (addr / 4) / SCR_W, data);
 }
 
 device_t vga_dev = {

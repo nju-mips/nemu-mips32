@@ -71,7 +71,7 @@ debug: $(BINARY)
 	$(BINARY) -e $(IMG)
 
 gdb: $(BINARY)
-	gdb -s $(BINARY) --args $(ARGS)
+	gdb -s $(BINARY) --args $(BINARY) $(ARGS)
 
 clean: 
 	rm -rf $(BUILD_DIR)
