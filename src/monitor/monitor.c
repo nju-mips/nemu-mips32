@@ -1,6 +1,3 @@
-#include "device.h"
-#include "monitor.h"
-#include "nemu.h"
 #include <elf.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -9,6 +6,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "device.h"
+#include "memory.h"
+#include "monitor.h"
+#include "nemu.h"
 
 void serial_enqueue_ascii(char);
 uint32_t elf_entry = 0xbfc00000;
@@ -19,8 +21,6 @@ static char *img_file = NULL;
 static char *kernel_img = NULL;
 
 work_mode_t work_mode = MODE_GDB;
-
-void bram_init(vaddr_t entry);
 
 size_t get_file_size(const char *img_file) {
   struct stat file_status;
@@ -205,8 +205,18 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 #endif
 
   /* Initialize this virtual computer system. */
-  bram_init(elf_entry);
-  init_cpu(CPU_INIT_PC);
+#if 0
+  uint32_t *p = paddr_map(CPU_INIT_PC, 0);
+  if (p[0] != 0) {
+    p[0] = 0x3c080000 | (elf_entry >> 16); // lui t0, %hi(entry)
+    p[1] = 0x25080000 |
+           (elf_entry & 0xFFFF); // addiu t0, t0, %lo(entry)
+    p[2] = 0x01000008;           // jr t0
+    p[3] = 0x00000000;           // nop
+  }
+#endif
+
+  init_cpu(elf_entry);
 
   return work_mode;
 }

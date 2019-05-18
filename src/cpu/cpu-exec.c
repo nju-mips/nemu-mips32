@@ -142,13 +142,45 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
+struct {
+  vaddr_t vaddr;
+  uint8_t *ptr;
+} softmmu;
+
+static inline void update_softmmu(vaddr_t vaddr,
+                                  paddr_t paddr,
+                                  device_t *dev) {
+  if (dev->map) {
+    softmmu.vaddr = vaddr & ~0xFFF;
+    softmmu.ptr =
+        dev->map((paddr & ~0xFFF) - dev->start, 0);
+  }
+}
+
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  return vaddr_read(addr, len);
+  if (softmmu.vaddr == (addr & ~0xFFF)) {
+    return *((uint32_t *)&softmmu.ptr[addr & 0xFFF]) &
+           (~0u >> ((4 - len) << 3));
+  } else {
+    paddr_t paddr = prot_addr(addr, MMU_LOAD);
+    device_t *dev = find_device(paddr);
+    CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
+    update_softmmu(addr, paddr, dev);
+    return dev->read(paddr - dev->start, len);
+  }
 }
 
 static inline void store_mem(vaddr_t addr, int len,
                              uint32_t data) {
-  vaddr_write(addr, len, data);
+  if (softmmu.vaddr == (addr & ~0xFFF)) {
+    memcpy(&softmmu.ptr[addr & 0xFFF], &data, len);
+  } else {
+    paddr_t paddr = prot_addr(addr, MMU_STORE);
+    device_t *dev = find_device(paddr);
+    CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
+    dev->write(paddr - dev->start, len, data);
+    update_softmmu(addr, paddr, dev);
+  }
 }
 
 static inline uint32_t instr_fetch(vaddr_t addr) {

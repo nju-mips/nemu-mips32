@@ -42,9 +42,6 @@ static inline bool is_uncached(uint32_t addr) {
   return UNCACHED_BASE <= addr && addr < UNCACHED_END;
 }
 
-extern uint8_t ddr[];
-extern uint8_t bram[];
-
 typedef struct {
   void *p;
   size_t size;

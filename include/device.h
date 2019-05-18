@@ -25,6 +25,8 @@ typedef struct {
   uint32_t (*peek)(paddr_t addr, int len);
 } device_t;
 
+device_t *find_device(paddr_t addr);
+
 #define KSEG0_BASE 0x80000000
 #define KSEG1_BASE 0xA0000000
 

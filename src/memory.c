@@ -22,7 +22,7 @@ void register_device(device_t *dev) {
   }
 }
 
-static inline device_t *find_device(vaddr_t addr) {
+device_t *find_device(paddr_t addr) {
   return memory_regions[mr_index(iomap(addr))];
 }
 
