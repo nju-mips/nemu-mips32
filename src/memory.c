@@ -26,7 +26,7 @@ device_t *find_device(paddr_t addr) {
   return memory_regions[mr_index(iomap(addr))];
 }
 
-void *paddr_map(paddr_t addr, uint32_t len) {
+void *vaddr_map(paddr_t addr, uint32_t len) {
   // only unmapped address can be map
   Assert(is_unmapped(addr),
          "addr %08x should be unmapped\n", addr);

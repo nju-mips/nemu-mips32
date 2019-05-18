@@ -14,7 +14,8 @@ static inline void check_ioaddr(uint32_t addr,
       dev, addr);
 }
 
-void *paddr_map(uint32_t paddr, uint32_t size);
+void *vaddr_map(vaddr_t vaddr, uint32_t size);
+void load_rom(uint32_t entry);
 
 typedef struct {
   const char *name;

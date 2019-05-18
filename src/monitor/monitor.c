@@ -13,13 +13,13 @@
 #include "nemu.h"
 
 void serial_enqueue_ascii(char);
-uint32_t elf_entry = 0xbfc00000;
 
 char *elf_file = NULL;
 char *symbol_file = NULL;
 static char *img_file = NULL;
 static char *kernel_img = NULL;
 
+vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
 
 size_t get_file_size(const char *img_file) {
@@ -50,6 +50,16 @@ void *read_file(const char *filename) {
   return buf;
 }
 
+void load_rom(uint32_t entry) {
+  uint32_t *p = vaddr_map(CPU_INIT_PC, 16);
+  assert (p);
+  p[0] = 0x3c080000 | (entry >> 16); // lui t0, %hi(entry)
+  p[1] = 0x25080000 |
+         (entry & 0xFFFF); // addiu t0, t0, %lo(entry)
+  p[2] = 0x01000008;       // jr t0
+  p[3] = 0x00000000;       // nop
+}
+
 void load_elf() {
   Assert(elf_file, "Need an elf file");
   printf("The elf is %s\n", elf_file);
@@ -74,11 +84,13 @@ void load_elf() {
         (void *)buf + i * elf->e_phentsize + elf->e_phoff;
     if (ph->p_type != PT_LOAD) { continue; }
 
-    void *p_vaddr = paddr_map(ph->p_vaddr, ph->p_memsz);
-    memcpy(p_vaddr, buf + ph->p_offset, ph->p_filesz);
-    memset(p_vaddr + ph->p_filesz, 0,
+    void *ptr = vaddr_map(ph->p_vaddr, ph->p_memsz);
+    memcpy(ptr, buf + ph->p_offset, ph->p_filesz);
+    memset(ptr + ph->p_filesz, 0,
            ph->p_memsz - ph->p_filesz);
   }
+
+  if (elf->e_entry != CPU_INIT_PC) load_rom(elf->e_entry);
 
   free(buf);
 }
@@ -90,8 +102,8 @@ static inline void load_image(const char *img,
 
   size_t size = get_file_size(img);
   void *buf = read_file(img);
-  void *paddr = paddr_map(vaddr, size);
-  memcpy(paddr, buf, size);
+  void *ptr = vaddr_map(vaddr, size);
+  memcpy(ptr, buf, size);
   free(buf);
 }
 
@@ -205,18 +217,7 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 #endif
 
   /* Initialize this virtual computer system. */
-#if 0
-  uint32_t *p = paddr_map(CPU_INIT_PC, 0);
-  if (p[0] != 0) {
-    p[0] = 0x3c080000 | (elf_entry >> 16); // lui t0, %hi(entry)
-    p[1] = 0x25080000 |
-           (elf_entry & 0xFFFF); // addiu t0, t0, %lo(entry)
-    p[2] = 0x01000008;           // jr t0
-    p[3] = 0x00000000;           // nop
-  }
-#endif
-
-  init_cpu(elf_entry);
+  init_cpu(CPU_INIT_PC);
 
   return work_mode;
 }
