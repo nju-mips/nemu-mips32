@@ -5,11 +5,7 @@
 #include <SDL/SDL.h>
 #include <stdlib.h>
 
-static device_t *memory_regions[1024 * 1024]; /* 8 MB */
-
-static inline uint32_t mr_index(uint32_t addr) {
-  return addr / (4 * 1024);
-}
+device_t *memory_regions[1024 * 1024]; /* 8 MB */
 
 void register_device(device_t *dev) {
   assert(dev && (dev->start & 0xFFF) == 0);
@@ -24,22 +20,14 @@ void register_device(device_t *dev) {
   if (dev->init) dev->init();
 }
 
-device_t *find_device(paddr_t addr) {
-  return memory_regions[mr_index(iomap(addr))];
-}
-
 void *vaddr_map(paddr_t addr, uint32_t len) {
   // only unmapped address can be map
   Assert(is_unmapped(addr),
          "addr %08x should be unmapped\n", addr);
 
   device_t *dev = find_device(addr);
-  Assert(dev,
-         "address(0x%08x) is out of bound, pc(0x%08x)\n",
-         addr, cpu.pc);
-  Assert(dev->map,
-         "cannot find map handler for address(0x%08x), "
-         "pc(0x%08x)\n",
+  Assert(dev && dev->map,
+         "invalid address(0x%08x), pc(0x%08x)\n",
          addr, cpu.pc);
   return dev->map(iomap(addr) - dev->start, len);
 }

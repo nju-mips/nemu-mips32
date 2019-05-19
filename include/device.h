@@ -27,7 +27,14 @@ typedef struct {
   uint32_t (*peek)(paddr_t addr, int len);
 } device_t;
 
-device_t *find_device(paddr_t addr);
+static inline uint32_t mr_index(uint32_t addr) {
+  return addr / (4 * 1024);
+}
+
+static inline device_t *find_device(paddr_t addr) {
+  extern device_t *memory_regions[1024 * 1024];
+  return memory_regions[mr_index(iomap(addr))];
+}
 
 #define KSEG0_BASE 0x80000000
 #define KSEG1_BASE 0xA0000000
