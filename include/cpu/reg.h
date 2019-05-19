@@ -199,31 +199,45 @@ typedef struct {
 typedef union {
   uint32_t cpr[32][8];
 
+#define _ glue(__, __LINE__)
   struct {
-	struct { cp0_index_t index;         uint32_t _0 [7]; };
-	struct { uint32_t random;           uint32_t _1 [7]; };
-	struct { cp0_entry_lo_t entry_lo0;  uint32_t _2 [7]; };
-	struct { cp0_entry_lo_t entry_lo1;  uint32_t _3 [7]; };
-	struct { uint32_t context;          uint32_t _4 [7]; };
-	struct { cp0_pagemask_t pagemask;   uint32_t _5 [7]; };
-	struct { cp0_wired_t wired;         uint32_t _6 [7]; };
+	struct { cp0_index_t index;         uint32_t _[7]; };
+	struct { uint32_t random;           uint32_t _[7]; };
+	struct { cp0_entry_lo_t entry_lo0;  uint32_t _[7]; };
+	struct { cp0_entry_lo_t entry_lo1;  uint32_t _[7]; };
+	struct { uint32_t context;          uint32_t _[7]; };
+	struct { cp0_pagemask_t pagemask;   uint32_t _[7]; };
+	struct { cp0_wired_t wired;         uint32_t _[7]; };
 	uint32_t reserved[8];                 /* reserved */
-	struct { uint32_t badvaddr;         uint32_t _8 [7]; };
-	struct { uint32_t count[2];         uint32_t _9 [6]; };
-	struct { cp0_entry_hi_t entry_hi;   uint32_t _10[7]; };
-	struct { uint32_t compare;          uint32_t _11[7]; };
-	struct { cp0_status_t status;       uint32_t _12[7]; };
-	struct { cp0_cause_t cause;         uint32_t _13[7]; };
-	struct { vaddr_t epc;               uint32_t _14[7]; };
+	struct { uint32_t badvaddr;         uint32_t _[7]; };
+	struct { uint32_t count[2];         uint32_t _[6]; };
+	struct { cp0_entry_hi_t entry_hi;   uint32_t _[7]; };
+	struct { uint32_t compare;          uint32_t _[7]; };
+	struct { cp0_status_t status;       uint32_t _[7]; };
+	struct { cp0_cause_t cause;         uint32_t _[7]; };
+	struct { vaddr_t epc;               uint32_t _[7]; };
 	struct { cp0_prid_t prid;
-	         vaddr_t ebase;             uint32_t _15[6]; };
+	         vaddr_t ebase;             uint32_t _[6]; };
 	struct {
 	  cp0_config_t config;
 	  cp0_config1_t config1;
-	  uint32_t _16[6];
+	  uint32_t _[6];
 	};
   };
+#undef _
 } cp0_t;
+
+
+enum {
+  R_zero, R_at, R_v0, R_v1,
+  R_a0, R_a1, R_a2, R_a3,
+  R_t0, R_t1, R_t2, R_t3,
+  R_t4, R_t5, R_t6, R_t7,
+  R_s0, R_s1, R_s2, R_s3,
+  R_s4, R_s5, R_s6, R_s7,
+  R_t8, R_t9, R_k0, R_k1,
+  R_gp, R_sp, R_fp, R_ra,
+};
 
 typedef struct {
   uint32_t gpr[32];
@@ -235,7 +249,7 @@ typedef struct {
 #endif
 
   vaddr_t br_target;
-  bool is_delayslot;
+  bool is_br;
   bool need_br;
 
   bool curr_instr_except;
@@ -259,40 +273,26 @@ typedef struct {
 #define EXC_OV      12   /* arithmetic overflow */
 #define EXC_TRAP    13   /* trap */
 
-
 typedef struct {
-	union {
-		uint32_t val;
-		// R-type
-		struct {
-			uint32_t func  :6;
-			uint32_t shamt :5;
-			uint32_t rd    :5;
-			uint32_t rt    :5;
-			uint32_t rs    :5;
-			uint32_t op    :6;
-		};
-
-		// I-type
-		struct {
-			uint32_t uimm   :16;
-		};
-
-		// SI-type
-		struct {
-			int32_t simm :16;
-		};
-
-		// J-type
-		struct {
-			uint32_t addr  :26;
-		};
-
-		// MFC0
-		struct {
-			uint32_t sel:3;
-		};
+  union {
+	uint32_t val;
+	// R-type
+	struct {
+	  uint32_t func  :6;
+	  uint32_t shamt :5;
+	  uint32_t rd    :5;
+	  uint32_t rt    :5;
+	  uint32_t rs    :5;
+	  uint32_t op    :6;
 	};
+
+	uint32_t uimm :16; // I-type
+
+	int32_t simm  :16; // SI-type
+
+	uint32_t addr :26; // J-type
+	uint32_t sel  :3;  // MFC0
+  };
 } Inst; // Instruction
 
 extern CPU_state cpu;

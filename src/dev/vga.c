@@ -23,10 +23,10 @@ static uint32_t vga_read(paddr_t addr, int len) {
   uint32_t offset = addr % 4;
   uint32_t x = get_x(addr);
   uint32_t y = get_y(addr);
-  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
-  assert(pixel_buf && x < SCR_W && y < SCR_H);
+  uint32_t(*ptr)[WINDOW_W] = screen->pixels;
+  assert(ptr && x < SCR_W && y < SCR_H);
 
-  return *((uint32_t *)((void *)&pixel_buf[2 * y][2 * x] + offset)) &
+  return *((uint32_t *)((void *)&ptr[2 * y][2 * x] + offset)) &
          (~0u >> ((4 - len) << 3));
 }
 
@@ -36,14 +36,13 @@ static void vga_write(paddr_t addr, int len, uint32_t data) {
   uint32_t offset = addr % 4;
   uint32_t x = get_x(addr);
   uint32_t y = get_y(addr);
-  uint32_t(*pixel_buf)[WINDOW_W] = screen->pixels;
-  assert(pixel_buf && x < SCR_W && y < SCR_H);
+  uint32_t(*ptr)[WINDOW_W] = screen->pixels;
+  assert(ptr && x < SCR_W && y < SCR_H);
 
-  memcpy((void *)&pixel_buf[2 * y][2 * x] + offset, &data, len);
-  memcpy((void *)&pixel_buf[2 * y + 1][2 * x] + offset, &data, len);
-  memcpy((void *)&pixel_buf[2 * y][2 * x + 1] + offset, &data, len);
-  memcpy((void *)&pixel_buf[2 * y + 1][2 * x + 1] + offset, &data,
-         len);
+  memcpy((void *)&ptr[2 * y][2 * x] + offset, &data, len);
+  memcpy((void *)&ptr[2 * y + 1][2 * x] + offset, &data, len);
+  memcpy((void *)&ptr[2 * y][2 * x + 1] + offset, &data, len);
+  memcpy((void *)&ptr[2 * y + 1][2 * x + 1] + offset, &data, len);
 }
 
 device_t vga_dev = {

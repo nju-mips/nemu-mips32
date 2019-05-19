@@ -20,6 +20,9 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+#define glue_impl(a, b) a ## b
+#define glue(a, b) glue_impl(a, b)
+
 #define BIT(nr)		(1 << (nr))
 #define GENMASK(h, l) \
 	(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))

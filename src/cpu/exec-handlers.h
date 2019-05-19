@@ -1,5 +1,5 @@
 /* @{{
- *   `cpu_exec_end'
+ *   `skip_need_br_check'
  *   `cpu.pc' for jmp instruction
  *   `instr'  for special table
  * @}}
@@ -15,13 +15,13 @@
 #define make_eoe() eoe:;
 
 #define exec_delayslot() \
-	cpu.is_delayslot = true; \
-	goto cpu_exec_end;
+	cpu.is_br = true; \
+	goto skip_need_br_check;
 
 #ifdef ENABLE_EXCEPTION
 #define InstAssert(cond) do {    \
   if(!(cond)) {                  \
-	cpu.cp0.badvaddr = cpu.pc;    \
+	cpu.cp0.badvaddr = cpu.pc;   \
 	signal_exception(EXC_RI);    \
 	goto eoe;                    \
   }                              \
@@ -184,18 +184,19 @@ make_exec_handler(tlbwi) ({
   uint32_t i = cpu.cp0.index.idx;
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n", i, NR_TLB_ENTRY);
   tlb_write(i);
+  clear_softmmu();
 });
 
 make_exec_handler(tlbwr) ({
   uint32_t i = rand() % NR_TLB_ENTRY;
   cpu.cp0.random = i;
   tlb_write(i);
+  clear_softmmu();
 });
 
 /* temporary strategy: store timer registers in C0 */
 make_exec_handler(syscall) ({
   signal_exception(EXC_SYSCALL);
-  dsprintf(asm_buf_p, "syscall");
 });
 
 make_exec_handler(breakpoint) ({
@@ -204,7 +205,6 @@ make_exec_handler(breakpoint) ({
   } else {
     signal_exception(EXC_BP);
   }
-  dsprintf(asm_buf_p, "break");
 });
 
 make_exec_handler(eret) ({
@@ -221,7 +221,6 @@ make_exec_handler(eret) ({
   cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
 #endif
 
-  dsprintf(asm_buf_p, "eret");
 });
 
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
@@ -245,8 +244,6 @@ make_exec_handler(mfc0) ({
     cpu.gpr[inst.rt] = cpu.cp0.cpr[inst.rd][inst.sel];
   }
 #endif
-  dsprintf(asm_buf_p, "mfc0 $%s, $%d, %d", regs[inst.rt],
-	  inst.rd, inst.sel);
 });
 
 make_exec_handler(mtc0) ({
@@ -275,8 +272,7 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.status.ERL = newVal->ERL;
 	  cpu.cp0.status.EXL = newVal->EXL;
 	  cpu.cp0.status.IE = newVal->IE;
-	  break;
-	}
+	} break;
     case CPRS(CP0_COMPARE, 0):
 	  cpu.cp0.compare = cpu.gpr[inst.rt];
 	  cpu.cp0.cause.IP &= ~(CAUSE_IP_TIMER);
@@ -287,8 +283,7 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.cause.IV = newVal->IV;
 	  cpu.cp0.cause.WP = newVal->WP;
 	  cpu.cp0.cause.IP = (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
-	  break;
-    }
+    } break;
     case CPRS(CP0_PAGEMASK, 0): {
 	  cp0_pagemask_t *newVal = (void*)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.pagemask.mask = newVal->mask;
@@ -301,8 +296,7 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.entry_lo0.d = newVal->d;
 	  cpu.cp0.entry_lo0.c = newVal->c;
 	  cpu.cp0.entry_lo0.pfn = newVal->pfn;
-	  break;
-	}
+	} break;
     case CPRS(CP0_ENTRY_LO1, 0): {
 	  cp0_entry_lo_t *newVal = (void*)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.entry_lo1.g = newVal->g;
@@ -310,21 +304,16 @@ make_exec_handler(mtc0) ({
 	  cpu.cp0.entry_lo1.d = newVal->d;
 	  cpu.cp0.entry_lo1.c = newVal->c;
 	  cpu.cp0.entry_lo1.pfn = newVal->pfn;
-	  break;
-    }
+    } break;
     case CPRS(CP0_ENTRY_HI, 0): {
 	  cp0_entry_hi_t *newVal = (void*)&(cpu.gpr[inst.rt]);
 	  cpu.cp0.entry_hi.asid = newVal->asid;
 	  cpu.cp0.entry_hi.vpn = newVal->vpn;
-	  break;
-    }
+    } break;
 	default:
 	  cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
 	  break;
   }
-
-  dsprintf(asm_buf_p, "mtc0 $%s, $%d, %d", regs[inst.rt],
-	  inst.rd, inst.sel);
 });
 
 
@@ -333,84 +322,72 @@ make_exec_handler(teq) ({
   if((int32_t)cpu.gpr[inst.rs] == (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "teq $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(teqi) ({
   if((int32_t)cpu.gpr[inst.rs] == inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "teqi $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tge) ({
   if((int32_t)cpu.gpr[inst.rs] >= (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tge $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tgei) ({
   if((int32_t)cpu.gpr[inst.rs] >= inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tgei $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tgeiu) ({
   if(cpu.gpr[inst.rs] >= inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tgeiu $%s, %u", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tgeu) ({
   if(cpu.gpr[inst.rs] >= cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tgeu $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tlt) ({
   if((int32_t)cpu.gpr[inst.rs] < (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tlt $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tlti) ({
   if((int32_t)cpu.gpr[inst.rs] < inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tlti $%s, %d", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tltiu) ({
   if(cpu.gpr[inst.rs] < inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tltiu $%s, %u", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(tltu) ({
   if(cpu.gpr[inst.rs] < cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tltu $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tne) ({
   if((int32_t)cpu.gpr[inst.rs] != (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tne $%s, $%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(tnei) ({
   if((int32_t)cpu.gpr[inst.rs] != inst.simm) {
     signal_exception(EXC_TRAP);
   }
-  dsprintf(asm_buf_p, "tnei $%s, %d", regs[inst.rs], inst.simm);
 });
 
 
@@ -418,7 +395,6 @@ make_exec_handler(jr) ({
   InstAssert(inst.rt == 0 && inst.rd == 0);
   cpu.br_target = cpu.gpr[inst.rs];
   exec_delayslot();
-  dsprintf(asm_buf_p, "jr %s", regs[inst.rs]);
 });
 
 #define R_SIMPLE(name, op, t)                              \
@@ -426,8 +402,6 @@ make_exec_handler(name) ({                                 \
   InstAssert(inst.shamt == 0);                             \
   cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op                \
   (t)cpu.gpr[inst.rt];                                     \
-  dsprintf(asm_buf_p, "%s %s,%s,%s", #name, regs[inst.rd], \
-	  regs[inst.rs], regs[inst.rt]);                       \
 });
 
 R_SIMPLE(or,   |, uint32_t)
@@ -454,8 +428,6 @@ make_exec_handler(add) ({
   } else {
 	cpu.gpr[inst.rd] = ret.lo;
   }
-  dsprintf(asm_buf_p, "add %s,%s,%s", regs[inst.rd],
-	  regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(sub) ({
@@ -473,15 +445,11 @@ make_exec_handler(sub) ({
   } else {
 	cpu.gpr[inst.rd] = ret.lo;
   }
-  dsprintf(asm_buf_p, "sub %s,%s,%s", regs[inst.rd],
-	  regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(nor) ({
   InstAssert(inst.shamt == 0);
   cpu.gpr[inst.rd] = ~(cpu.gpr[inst.rs] | cpu.gpr[inst.rt]);
-  dsprintf(asm_buf_p, "nor %s,%s,%s", regs[inst.rd],
-	  regs[inst.rs], regs[inst.rt]);
 });
 
 #undef R_SIMPLE
@@ -492,7 +460,6 @@ make_exec_handler(clz) ({
   } else {
 	cpu.gpr[inst.rd] = __builtin_clz(cpu.gpr[inst.rs]);
   }
-  dsprintf(asm_buf_p, "clz %s,%s", regs[inst.rd], regs[inst.rs]);
 });
 
 make_exec_handler(mult) ({
@@ -500,7 +467,6 @@ make_exec_handler(mult) ({
   int64_t prod = (int64_t)(int32_t)cpu.gpr[inst.rs] * (int64_t)(int32_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
-  dsprintf(asm_buf_p, "mult %s,%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(multu) ({
@@ -508,96 +474,81 @@ make_exec_handler(multu) ({
   uint64_t prod = (uint64_t)cpu.gpr[inst.rs] * (uint64_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
-  dsprintf(asm_buf_p, "multu %s,%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(divide) ({
   InstAssert(inst.rd == 0 && inst.shamt == 0);
   cpu.lo = (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
   cpu.hi = (int32_t)cpu.gpr[inst.rs] % (int32_t)cpu.gpr[inst.rt];
-  dsprintf(asm_buf_p, "div %s,%s", regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(divu) ({
   InstAssert(inst.rd == 0 && inst.shamt == 0);
   cpu.lo = cpu.gpr[inst.rs] / cpu.gpr[inst.rt];
   cpu.hi = cpu.gpr[inst.rs] % cpu.gpr[inst.rt];
-  dsprintf(asm_buf_p, "divu %s,%s", regs[inst.rs], regs[inst.rt]);
 });
 
 
 make_exec_handler(sll) ({
   InstAssert(inst.rs == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << inst.shamt;
-  dsprintf(asm_buf_p, "sll %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 });
 
 make_exec_handler(sllv) ({
   InstAssert(inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << (cpu.gpr[inst.rs] & 0x1f);
-  dsprintf(asm_buf_p, "sllv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 });
 
 make_exec_handler(sra) ({
   InstAssert(inst.rs == 0);
   cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> inst.shamt;
-  dsprintf(asm_buf_p, "sra %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 });
 
 make_exec_handler(srav) ({
   InstAssert(inst.shamt == 0);
   cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
-  dsprintf(asm_buf_p, "srav %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 });
 
 make_exec_handler(srl) ({
   InstAssert(inst.rs == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> inst.shamt;
-  dsprintf(asm_buf_p, "srl %s,%s,0x%x", regs[inst.rd], regs[inst.rt], inst.shamt);
 });
 
 make_exec_handler(srlv) ({
   InstAssert(inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
-  dsprintf(asm_buf_p, "srlv %s,%s,%s", regs[inst.rd], regs[inst.rt], regs[inst.rs]);
 });
 
 make_exec_handler(movn) ({
   InstAssert(inst.shamt == 0);
   if (cpu.gpr[inst.rt] != 0)
 	cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
-  dsprintf(asm_buf_p, "movn %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(movz) ({
   InstAssert(inst.shamt == 0);
   if (cpu.gpr[inst.rt] == 0)
 	cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
-  dsprintf(asm_buf_p, "movz %s,%s,%s", regs[inst.rd], regs[inst.rs], regs[inst.rt]);
 });
 
 make_exec_handler(mfhi) ({
   InstAssert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.hi;
-  dsprintf(asm_buf_p, "mfhi %s", regs[inst.rd]);
 });
 
 make_exec_handler(mthi) ({
   InstAssert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
   cpu.hi = cpu.gpr[inst.rs];
-  dsprintf(asm_buf_p, "mthi %s", regs[inst.rd]);
 });
 
 make_exec_handler(mflo) ({
   InstAssert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.lo;
-  dsprintf(asm_buf_p, "mflo %s", regs[inst.rd]);
 });
 
 make_exec_handler(mtlo) ({
   InstAssert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
   cpu.lo = cpu.gpr[inst.rs];
-  dsprintf(asm_buf_p, "mtlo %s", regs[inst.rd]);
 });
 
 make_exec_handler(jalr) ({
@@ -605,14 +556,12 @@ make_exec_handler(jalr) ({
   cpu.gpr[inst.rd] = cpu.pc + 8;
   cpu.br_target = cpu.gpr[inst.rs];
   exec_delayslot();
-  dsprintf(asm_buf_p, "jalr %s,%s", regs[inst.rd], regs[inst.rs]);
 });
 
 
 make_exec_handler(lui) ({
   InstAssert(inst.rs == 0);
   cpu.gpr[inst.rt] = inst.uimm << 16;
-  dsprintf(asm_buf_p, "lui %s, 0x%x", regs[inst.rt], inst.uimm);
 });
 
 make_exec_handler(addi) ({
@@ -630,37 +579,30 @@ make_exec_handler(addi) ({
   } else {
 	cpu.gpr[inst.rt] = ret.lo;
   }
-  dsprintf(asm_buf_p, "addi %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(addiu) ({
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm;
-  dsprintf(asm_buf_p, "addiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(andi) ({
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.uimm;
-  dsprintf(asm_buf_p, "andi %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 });
 
 make_exec_handler(ori) ({
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.uimm;
-  dsprintf(asm_buf_p, "ori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 });
 
 make_exec_handler(xori) ({
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.uimm;
-  dsprintf(asm_buf_p, "xori %s, %s, 0x%x", regs[inst.rt], regs[inst.rs], inst.uimm);
 });
 
 make_exec_handler(sltiu) ({
   cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.simm;
-  dsprintf(asm_buf_p, "sltiu %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(slti) ({
   cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < inst.simm;
-  dsprintf(asm_buf_p, "slti %s, %s, %d", regs[inst.rt], regs[inst.rs], inst.simm);
 });
 
 
@@ -697,7 +639,6 @@ make_exec_handler(swl) ({
   uint32_t wdata = cpu.gpr[inst.rt] >> ((3 - idx) * 8);
 
   store_mem((waddr >> 2) << 2, len, wdata);
-  dsprintf(asm_buf_p, "swl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(swr) ({
@@ -706,25 +647,21 @@ make_exec_handler(swr) ({
   uint32_t wdata = cpu.gpr[inst.rt];
 
   store_mem(waddr, len, wdata);
-  dsprintf(asm_buf_p, "swr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sw) ({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
   store_mem(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
-  dsprintf(asm_buf_p, "sw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sh) ({
   CHECK_ALIGNED_ADDR_AdES(2, cpu.gpr[inst.rs] + inst.simm);
   store_mem(cpu.gpr[inst.rs] + inst.simm, 2, cpu.gpr[inst.rt]);
-  dsprintf(asm_buf_p, "sh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sb) ({
   CHECK_ALIGNED_ADDR_AdES(1, cpu.gpr[inst.rs] + inst.simm);
   store_mem(cpu.gpr[inst.rs] + inst.simm, 1, cpu.gpr[inst.rt]);
-  dsprintf(asm_buf_p, "sb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lwl) ({
@@ -737,7 +674,6 @@ make_exec_handler(lwl) ({
 	  cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) | ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
 	else
 	  cpu.gpr[inst.rt] = rdata;
-	dsprintf(asm_buf_p, "lwl %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
   }
 });
 
@@ -752,67 +688,56 @@ make_exec_handler(lwr) ({
 	else
 	  cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
   }
-  dsprintf(asm_buf_p, "lwr %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lw) ({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
   uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
   if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
-  dsprintf(asm_buf_p, "lw %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lb) ({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
   uint32_t rdata = (int32_t)(int8_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
   if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
-  dsprintf(asm_buf_p, "lb %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lbu) ({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
   uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
   if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
-  dsprintf(asm_buf_p, "lbu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lh) ({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
   uint32_t rdata = (int32_t)(int16_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
   if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
-  dsprintf(asm_buf_p, "lh %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(lhu) ({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
   uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
   if(!cpu.curr_instr_except) { cpu.gpr[inst.rt] = rdata; }
-  dsprintf(asm_buf_p, "lhu %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(pref) ({
-  dsprintf(asm_buf_p, "pref %d, %d(%s)", inst.rt, inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(ll) ({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
   cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
-  dsprintf(asm_buf_p, "ll %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sc) ({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
   vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
   if(!cpu.curr_instr_except) cpu.gpr[inst.rt] = 1;
-  dsprintf(asm_buf_p, "sc %s, %d(%s)", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(cache) ({
-  dsprintf(asm_buf_p, "cache", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 make_exec_handler(sync) ({
-  dsprintf(asm_buf_p, "sync", regs[inst.rt], inst.simm, regs[inst.rs]);
 });
 
 
@@ -827,7 +752,6 @@ make_exec_handler(beql) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "beql %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bnel) ({
@@ -838,7 +762,6 @@ make_exec_handler(bnel) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "bnel %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(blezl) ({
@@ -850,7 +773,6 @@ make_exec_handler(blezl) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtzl) ({
@@ -861,7 +783,6 @@ make_exec_handler(bgtzl) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzl) ({
@@ -872,7 +793,6 @@ make_exec_handler(bltzl) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezl) ({
@@ -883,7 +803,6 @@ make_exec_handler(bgezl) ({
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-  dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezall) ({
@@ -918,7 +837,6 @@ make_exec_handler(beq) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "beq %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(bne) ({
@@ -927,7 +845,6 @@ make_exec_handler(bne) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bne %s,%s,0x%x", regs[inst.rs], regs[inst.rt], inst.simm);
 });
 
 make_exec_handler(blez) ({
@@ -937,7 +854,6 @@ make_exec_handler(blez) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "blez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgtz) ({
@@ -946,7 +862,6 @@ make_exec_handler(bgtz) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltz) ({
@@ -955,7 +870,6 @@ make_exec_handler(bltz) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bltz %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgez) ({
@@ -964,7 +878,6 @@ make_exec_handler(bgez) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bgez %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bgezal) ({
@@ -974,7 +887,6 @@ make_exec_handler(bgezal) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bgezal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(bltzal) ({
@@ -984,20 +896,17 @@ make_exec_handler(bltzal) ({
   else
     cpu.br_target = cpu.pc + 8;
   exec_delayslot();
-  dsprintf(asm_buf_p, "bltzal %s,0x%x", regs[inst.rs], inst.simm);
 });
 
 make_exec_handler(jal) ({
   cpu.gpr[31] = cpu.pc + 8;
   cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
   exec_delayslot();
-  dsprintf(asm_buf_p, "jal %x", cpu.pc);
 });
 
 make_exec_handler(j) ({
   cpu.br_target = (cpu.pc & 0xf0000000) | (inst.addr << 2);
   exec_delayslot();
-  dsprintf(asm_buf_p, "j %x", cpu.pc);
 });
 
 make_eoe() { } // end of execution
