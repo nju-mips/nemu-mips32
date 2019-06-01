@@ -25,11 +25,12 @@ void *vaddr_map(paddr_t addr, uint32_t len) {
   Assert(is_unmapped(addr),
          "addr %08x should be unmapped\n", addr);
 
+  addr = iomap(addr);
   device_t *dev = find_device(addr);
   Assert(dev && dev->map,
          "invalid address(0x%08x), pc(0x%08x)\n",
          addr, cpu.pc);
-  return dev->map(iomap(addr) - dev->start, len);
+  return dev->map(addr - dev->start, len);
 }
 
 uint32_t vaddr_read_safe(vaddr_t addr, int len) {
