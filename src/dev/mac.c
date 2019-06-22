@@ -237,11 +237,15 @@
 #define FLOW_CTRL_TX 0x01
 #define FLOW_CTRL_RX 0x02
 
+char *eth_iface = NULL;
+
 static u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E,
                                             0x00, 0xFA, 0xCE};
+static u32 eth_ip_addr = 0;
 
 static struct sockaddr_ll eth_sll;
-static u8 real_eth0_addr[ENET_ADDR_LENGTH];
+static u8 iface_mac_addr[ENET_ADDR_LENGTH];
+static u32 iface_ip_addr = 0;
 
 typedef struct {
   u32 regnum : 5;  /* phy register address */
@@ -396,38 +400,69 @@ void hexdump(const u8 *data, const int len) {
   }
 }
 
+static void sender_modify_packet(u8 *data, const int len) {
+  /* copy the destination addr */
+  memcpy(&eth_sll.sll_addr, &data[0], ENET_ADDR_LENGTH);
+  /* override the source addr */
+  memcpy(&data[ENET_ADDR_LENGTH], iface_mac_addr, ENET_ADDR_LENGTH);
+
+  int protocol = ntohs(*(u16 *)&data[12]);
+  switch (protocol) {
+  case ETH_P_IP: memcpy(&data[0x1e], &iface_ip_addr, 4); break;
+  case ETH_P_ARP:
+    memcpy(&data[0x16], &iface_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&eth_ip_addr, &data[0x1c], 4);
+    memcpy(&data[0x1c], &iface_ip_addr, 4);
+    break;
+  }
+}
+
+static void recver_modify_packet(u8 *data, const int len) {
+  /* copy the eth addr */
+  memcpy(data, eth_mac_addr, ENET_ADDR_LENGTH);
+  // 26 .. 29 is ip.src, 30 .. 33 is ip.dst
+
+  int protocol = ntohs(*(u16 *)&data[12]);
+  switch (protocol) {
+  case ETH_P_IP:
+    break;
+    memcpy(&data[0x1a], &eth_ip_addr, 4);
+    break;
+  case ETH_P_ARP:
+    memcpy(&data[0x20], &eth_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&data[0x26], &eth_ip_addr, 4);
+    break;
+  }
+}
+
 static void send_data(const u8 *data, const int len) {
   static u8 eth_frame[2048];
   assert(len < sizeof(eth_frame));
   memcpy(eth_frame, data, len);
 
-  /* copy the destination addr */
-  memcpy(&eth_sll.sll_addr, &eth_frame[0], ENET_ADDR_LENGTH);
-  /* override the source addr */
-  memcpy(&eth_frame[ENET_ADDR_LENGTH], real_eth0_addr,
-         ENET_ADDR_LENGTH);
+  sender_modify_packet(eth_frame, len);
 
   eth_sll.sll_protocol = *(u16 *)&eth_frame[12];
 
-  printf("ssl_protocol: %x\n", eth_sll.sll_protocol);
-  printf("type is %x %x\n", htons(ETH_P_ARP), htons(ETH_P_IP));
+  // printf("ssl_protocol: %x\n", eth_sll.sll_protocol);
+  //  printf("type is %x %x\n", htons(ETH_P_ARP), htons(ETH_P_IP));
 
   /* send the eth_frame */
-  int nbytes = sendto(mac_socket, &eth_frame[0], len, 0,
-                      (struct sockaddr *)&eth_sll, sizeof(eth_sll));
-  printf("send.nbytes is %d\n", nbytes);
-  hexdump(&eth_frame[0], len);
+  sendto(mac_socket, &eth_frame[0], len, 0,
+         (struct sockaddr *)&eth_sll, sizeof(eth_sll));
+  // printf("send.nbytes is %d\n", nbytes);
+  // hexdump(&eth_frame[0], len);
 }
 
 static int recv_data(u8 *to, const int maxlen) {
-  struct sockaddr src_addr;
-  socklen_t addrlen = sizeof(src_addr);
-  printf("try receive data\n");
-  int nbytes =
-      recvfrom(mac_socket, to, maxlen, 0, &src_addr, &addrlen);
-  memcpy(to, eth_mac_addr, ENET_ADDR_LENGTH);
+  // printf("try receive data\n");
+  int nbytes = recvfrom(mac_socket, to, maxlen, 0, NULL, NULL);
+
+  recver_modify_packet(to, nbytes);
+#if 0
   printf("recv.nbytes is %d\n", nbytes);
   hexdump(to, nbytes);
+#endif
   return nbytes;
 }
 
@@ -436,13 +471,13 @@ static void mac_init_socket() {
   gen_normal_table(reverse_table);
 
   /* init the socket */
-  mac_socket = socket(PF_PACKET, SOCK_RAW, ETH_P_ALL);
+  mac_socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   assert(mac_socket > 0 &&
          "init raw socket failed, please run me with sudo");
 
   struct ifreq eth_req;
-  const char *net_interface = "enp0s31f6";
-  strncpy(eth_req.ifr_name, net_interface, IFNAMSIZ);
+  assert(eth_iface);
+  strncpy(eth_req.ifr_name, eth_iface, IFNAMSIZ);
   if (ioctl(mac_socket, SIOCGIFINDEX, &eth_req) == -1) {
     perror("ioctl");
     abort();
@@ -452,17 +487,29 @@ static void mac_init_socket() {
   eth_sll.sll_family = AF_PACKET;
   eth_sll.sll_halen = ETHER_ADDR_LEN;
 
+  /* get mac address */
   if (ioctl(mac_socket, SIOCGIFHWADDR, &eth_req) == -1) {
     perror("ioctl");
     abort();
+  } else {
+    memcpy(iface_mac_addr, eth_req.ifr_hwaddr.sa_data,
+           ENET_ADDR_LENGTH);
   }
 
-  memcpy(real_eth0_addr, eth_req.ifr_hwaddr.sa_data,
-         ENET_ADDR_LENGTH);
+  /* get ip address */
+  if (ioctl(mac_socket, SIOCGIFADDR, &eth_req) == -1) {
+    perror("ioctl");
+    abort();
+  } else {
+    struct sockaddr_in *iface_ip = (void *)&eth_req.ifr_addr;
+    iface_ip_addr = iface_ip->sin_addr.s_addr;
+  }
 
-  printf("mac addr of %s:", net_interface);
-  for (int i = 0; i < 6; i++) { printf(" %02x", real_eth0_addr[i]); }
+#if 0
+  printf("mac addr of %s:", eth_iface);
+  for (int i = 0; i < 6; i++) { printf(" %02x", iface_mac_addr[i]); }
   printf("\n");
+#endif
 }
 
 static void mac_init_phy_regs() {
@@ -506,7 +553,8 @@ static void mii_transaction() {
         phy_regs[phy][reg] = data;
       }
       break;
-    default: CPUAssert(0, "unsupported MII reg %d write\n", reg);
+    default:
+      CPUAssert(0, "unsupported MII reg %d write access\n", reg);
     }
   } else {
     /* read */
@@ -524,11 +572,11 @@ static uint32_t mac_read(paddr_t addr, int len) {
   case RX_PING_RSR:
     recvlen = recv_data((u8 *)&regs.rx_ping, 0x500);
     if (recvlen > 0) { regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK; }
-    break;
+    return regs.rx_ping_rsr;
   case RX_PONG_RSR:
     recvlen = recv_data((u8 *)&regs.rx_pong, 0x500);
     if (recvlen > 0) { regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK; }
-    break;
+    return regs.rx_pong_rsr;
   case MDIO_RD: return regs.mdiord;
   case MDIO_CTRL: return regs.mdioctrl;
   default:

@@ -22,13 +22,11 @@ void register_device(device_t *dev) {
 
 void *vaddr_map(paddr_t addr, uint32_t len) {
   // only unmapped address can be map
-  Assert(is_unmapped(addr),
-         "addr %08x should be unmapped\n", addr);
+  Assert(is_unmapped(addr), "addr %08x should be unmapped\n", addr);
 
   addr = iomap(addr);
   device_t *dev = find_device(addr);
-  Assert(dev && dev->map,
-         "invalid address(0x%08x), pc(0x%08x)\n",
+  Assert(dev && dev->map, "invalid address(0x%08x), pc(0x%08x)\n",
          addr, cpu.pc);
   return dev->map(addr - dev->start, len);
 }
@@ -40,8 +38,7 @@ uint32_t vaddr_read_safe(vaddr_t addr, int len) {
   return dev->read(addr - dev->start, len);
 }
 
-void vaddr_write_safe(vaddr_t addr, int len,
-                      uint32_t data) {
+void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
   addr = prot_addr(addr, MMU_STORE);
   device_t *dev = find_device(addr);
   if (!dev || !dev->write) return;
@@ -69,9 +66,10 @@ void vaddr_write(vaddr_t addr, int len, uint32_t data) {
 }
 
 void init_mmio() {
+  extern char *eth_iface;
 #define X(dev)         \
   extern device_t dev; \
-  register_device(&dev);
+  if (eth_iface || &dev != &mac_dev) register_device(&dev);
 
   DEVOP(X);
 }

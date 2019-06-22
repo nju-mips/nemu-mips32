@@ -89,6 +89,7 @@ const char *SDLK_to_ascii[SDLK_LAST] = {
     [SDLK_KP1] = "1",         [SDLK_KP2] = "2",
     [SDLK_KP3] = "3",         [SDLK_KP0] = "0",
     [SDLK_KP_EQUALS] = "=",   [SDLK_KP_ENTER] = "\n",
+	[SDLK_KP_PERIOD] = ".",
 };
 
 void serial_enqueue_ascii(char ch) {

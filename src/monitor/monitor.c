@@ -17,7 +17,9 @@ void serial_enqueue_ascii(char);
 char *elf_file = NULL;
 char *symbol_file = NULL;
 static char *img_file = NULL;
-static char *kernel_img = NULL;
+// static char *kernel_img = NULL;
+
+extern char *eth_iface;
 
 vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
@@ -119,13 +121,14 @@ void sigint_handler(int no) { nemu_state = NEMU_STOP; }
 
 const struct option long_options[] = {
     {"symbol", 1, NULL, 'S'},
-    {"uImage", 1, NULL, 'u'},
-    {"diff-with-qemu", 0, NULL, 'D'},
+    // {"uImage", 1, NULL, 'u'},
+    // {"diff-with-qemu", 0, NULL, 'D'},
     {"batch", 0, NULL, 'b'},
     {"commit", 0, NULL, 'c'},
     {"image", 1, NULL, 'i'},
     {"elf", 1, NULL, 'e'},
     {"help", 0, NULL, 'h'},
+	{"iface", 1, NULL, 'I'},
     {NULL, 0, NULL, 0},
 };
 
@@ -152,17 +155,12 @@ static void print_help(const char *file) {
   printf("Report bugs to 141242068@smail.nju.edu.cn.\n");
 }
 
-static inline void parse_args(int argc, char *argv[]) {
+void parse_args(int argc, char *argv[]) {
   int o;
-  while ((o = getopt_long(argc, argv, "-bcDe:i:S:u:h",
+  while ((o = getopt_long(argc, argv, "-bcDe:i:S:h",
                           long_options, NULL)) != -1) {
     switch (o) {
     case 'S': symbol_file = optarg; break;
-    case 'u':
-      kernel_img = optarg;
-      load_image(kernel_img, UNMAPPED_BASE + ddr_dev.start +
-                                 32 * 1024 * 1024);
-      break;
     case 'D': work_mode |= MODE_DIFF; break;
     case 'b': work_mode |= MODE_BATCH; break;
     case 'c': work_mode |= MODE_LOG; break;
@@ -178,18 +176,17 @@ static inline void parse_args(int argc, char *argv[]) {
       else
         img_file = optarg;
       break;
+	case 'I':
+	  eth_iface = optarg;
+	  printf("set eth_iface to %s\n", eth_iface);
+	  break;
     case 'h':
     default: print_help(argv[0]); exit(0);
     }
   }
 }
 
-work_mode_t init_monitor(int argc, char *argv[]) {
-  /* Perform some global initialization. */
-
-  /* Parse arguments. */
-  parse_args(argc, argv);
-
+work_mode_t init_monitor(void) {
   /* Load the image to memory. */
   if (elf_file) {
     load_elf();
@@ -204,8 +201,8 @@ work_mode_t init_monitor(int argc, char *argv[]) {
     // send command to uboot
     char cmd[1024], *p = cmd;
     p += sprintf(p, "set serverip 114.212.81.241\n");
-    p += sprintf(p, "set ipaddr 114.212.81.241\n");
-    p += sprintf(p, "ping 182.61.200.7\n");
+    p += sprintf(p, "set ipaddr 192.168.1.1\n");
+    p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
     for(p = cmd; *p; p++)
 	  serial_enqueue_ascii(*p);
 #endif
