@@ -203,9 +203,9 @@ work_mode_t init_monitor(int argc, char *argv[]) {
 #if defined(DEBUG)
     // send command to uboot
     char cmd[1024], *p = cmd;
-    p += sprintf(p, "set serverip 192.168.1.1\n");
-    p += sprintf(p, "set ipaddr 192.168.1.107\n");
-    p += sprintf(p, "ping 192.168.1.1\n");
+    p += sprintf(p, "set serverip 114.212.81.241\n");
+    p += sprintf(p, "set ipaddr 114.212.81.241\n");
+    p += sprintf(p, "ping 182.61.200.7\n");
     for(p = cmd; *p; p++)
 	  serial_enqueue_ascii(*p);
 #endif

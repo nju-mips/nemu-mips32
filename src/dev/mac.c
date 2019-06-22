@@ -1,6 +1,11 @@
 #include "device.h"
 #include "nemu.h"
 
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <netinet/ether.h>
+#include <netpacket/packet.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -232,8 +237,11 @@
 #define FLOW_CTRL_TX 0x01
 #define FLOW_CTRL_RX 0x02
 
-u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E,
-                                     0x00, 0xFA, 0xCE};
+static u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E,
+                                            0x00, 0xFA, 0xCE};
+
+static struct sockaddr_ll eth_sll;
+static u8 real_eth0_addr[ENET_ADDR_LENGTH];
 
 typedef struct {
   u32 regnum : 5;  /* phy register address */
@@ -336,7 +344,7 @@ static int mac_socket = -1;
 
 static u32 reverse_table[256];
 
-static u8 mac_Tx_frame[2048];
+// static u8 mac_Tx_frame[2048];
 
 u64 Reflect(u64 ref, u8 ch) {
   int i;
@@ -370,7 +378,7 @@ static void gen_normal_table(u32 *table) {
   }
 }
 
-static u32 reverse_table_CRC(const u8 *data, u32 len, u32 *table) {
+u32 reverse_table_CRC(const u8 *data, u32 len, u32 *table) {
   u32 crc = 0xffffffff;
   const u8 *p = data;
   int i;
@@ -381,56 +389,83 @@ static u32 reverse_table_CRC(const u8 *data, u32 len, u32 *table) {
 
 void hexdump(const u8 *data, const int len) {
   for (int i = 0; i < len; i += 16) {
-	printf("%04x: ", i);
-	for (int j = i; j < len && j < i + 16; j ++)
-	  printf("%04x ", data[j]);
-	printf("\n");
+    printf("%02x: ", i);
+    for (int j = i; j < len && j < i + 16; j++)
+      printf("%02x ", data[j]);
+    printf("\n");
   }
 }
 
 static void send_data(const u8 *data, const int len) {
-  printf("raw data:\n");
-  hexdump(data, len);
+  static u8 eth_frame[2048];
+  assert(len < sizeof(eth_frame));
+  memcpy(eth_frame, data, len);
 
-  for (int i = 0; i < 7; i++) mac_Tx_frame[i] = 0xaa; /* preemble */
-  mac_Tx_frame[7] = 0xab; /* start of frame delimiter */
+  /* copy the destination addr */
+  memcpy(&eth_sll.sll_addr, &eth_frame[0], ENET_ADDR_LENGTH);
+  /* override the source addr */
+  memcpy(&eth_frame[ENET_ADDR_LENGTH], real_eth0_addr,
+         ENET_ADDR_LENGTH);
 
-  /* data */
-  for (int i = 0; i < len; i++) mac_Tx_frame[8 + i] = data[i];
+  eth_sll.sll_protocol = *(u16 *)&eth_frame[12];
 
-  int fcs_start = 8 + len;
-  const int fcs_bytes = 4;
+  printf("ssl_protocol: %x\n", eth_sll.sll_protocol);
+  printf("type is %x %x\n", htons(ETH_P_ARP), htons(ETH_P_IP));
 
-  /* padding */
-  if (len + fcs_bytes < 64) {
-    fcs_start = 64 - fcs_bytes;
-    for (int i = 0; i + fcs_bytes < 64; i++) {
-      mac_Tx_frame[8 + len + i] = 0;
-    }
-  }
-
-  /* FCS */
-  u32 fcs_crc =
-      reverse_table_CRC(&data[8], fcs_start - 8, reverse_table);
-  memcpy(&mac_Tx_frame[fcs_start], &fcs_crc, 4);
-
-  /* send the data */
-  int nbytes = send(mac_socket, mac_Tx_frame, fcs_start + 4, 0);
-  printf("nbytes is %d\n", nbytes);
-
-  /* print the sended frame */
-  printf("sended frame:\n");
-  hexdump(mac_Tx_frame, fcs_start + 4);
+  /* send the eth_frame */
+  int nbytes = sendto(mac_socket, &eth_frame[0], len, 0,
+                      (struct sockaddr *)&eth_sll, sizeof(eth_sll));
+  printf("send.nbytes is %d\n", nbytes);
+  hexdump(&eth_frame[0], len);
 }
 
-static void mac_init() {
+static int recv_data(u8 *to, const int maxlen) {
+  struct sockaddr src_addr;
+  socklen_t addrlen = sizeof(src_addr);
+  printf("try receive data\n");
+  int nbytes =
+      recvfrom(mac_socket, to, maxlen, 0, &src_addr, &addrlen);
+  memcpy(to, eth_mac_addr, ENET_ADDR_LENGTH);
+  printf("recv.nbytes is %d\n", nbytes);
+  hexdump(to, nbytes);
+  return nbytes;
+}
+
+static void mac_init_socket() {
   /* table to accerate the crc calculation */
   gen_normal_table(reverse_table);
 
   /* init the socket */
-  mac_socket = socket(PF_PACKET, SOCK_RAW, P_ALL);
-  assert(mac_socket > 0 && "init raw socket failed, please run me with sudo");
+  mac_socket = socket(PF_PACKET, SOCK_RAW, ETH_P_ALL);
+  assert(mac_socket > 0 &&
+         "init raw socket failed, please run me with sudo");
 
+  struct ifreq eth_req;
+  const char *net_interface = "enp0s31f6";
+  strncpy(eth_req.ifr_name, net_interface, IFNAMSIZ);
+  if (ioctl(mac_socket, SIOCGIFINDEX, &eth_req) == -1) {
+    perror("ioctl");
+    abort();
+  }
+
+  eth_sll.sll_ifindex = eth_req.ifr_ifindex;
+  eth_sll.sll_family = AF_PACKET;
+  eth_sll.sll_halen = ETHER_ADDR_LEN;
+
+  if (ioctl(mac_socket, SIOCGIFHWADDR, &eth_req) == -1) {
+    perror("ioctl");
+    abort();
+  }
+
+  memcpy(real_eth0_addr, eth_req.ifr_hwaddr.sa_data,
+         ENET_ADDR_LENGTH);
+
+  printf("mac addr of %s:", net_interface);
+  for (int i = 0; i < 6; i++) { printf(" %02x", real_eth0_addr[i]); }
+  printf("\n");
+}
+
+static void mac_init_phy_regs() {
   /* init phy regs */
   phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
   phy_regs[ACTIVE_PHY][MII_PHYSID2] = 0xb8a0;
@@ -448,6 +483,11 @@ static void mac_init() {
                                   LPA_PAUSE_CAP |
                                   LPA_1000XPAUSE_ASYM | LPA_100HALF |
                                   LPA_10FULL | LPA_10HALF | 0x1;
+}
+
+static void mac_init() {
+  mac_init_socket();
+  mac_init_phy_regs();
 }
 
 static void mii_transaction() {
@@ -475,11 +515,20 @@ static void mii_transaction() {
 }
 
 static uint32_t mac_read(paddr_t addr, int len) {
+  int recvlen = 0;
   switch (addr) {
   case TX_PING_TSR: return regs.tx_ping_tsr;
   case TX_PONG_TSR: return regs.tx_pong_tsr;
   case RX_PING ... RX_PING_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PONG ... RX_PONG_BUF_END: return ((u32 *)&regs)[addr / 4];
+  case RX_PING_RSR:
+    recvlen = recv_data((u8 *)&regs.rx_ping, 0x500);
+    if (recvlen > 0) { regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK; }
+    break;
+  case RX_PONG_RSR:
+    recvlen = recv_data((u8 *)&regs.rx_pong, 0x500);
+    if (recvlen > 0) { regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK; }
+    break;
   case MDIO_RD: return regs.mdiord;
   case MDIO_CTRL: return regs.mdioctrl;
   default:
