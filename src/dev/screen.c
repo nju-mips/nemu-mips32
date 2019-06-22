@@ -23,6 +23,7 @@ device_t screen_dev = {
     .name = "SCREEN_CONFIG",
     .start = SCREEN_ADDR,
     .end = SCREEN_ADDR + 4,
+    .peek = screen_read,
     .read = screen_read,
     .write = screen_write,
 };

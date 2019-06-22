@@ -169,8 +169,8 @@ device_t serial_dev = {
     .name = "SERIAL",
     .start = SERIAL_ADDR,
     .end = SERIAL_ADDR + SERIAL_SIZE,
+    .peek = serial_peek,
     .read = serial_read,
     .write = serial_write,
     .map = NULL,
-    .peek = serial_peek,
 };

@@ -3,7 +3,6 @@
 #include "nemu.h"
 #include <stdlib.h>
 
-// SCREEN width and height config
 #define RTC_ADDR 0x10002000
 #define RTC_SIZE 0x4
 
@@ -19,4 +18,5 @@ device_t rtc_dev = {
     .start = RTC_ADDR,
     .end = RTC_ADDR + RTC_SIZE,
     .read = rtc_read,
+    .peek = rtc_read,
 };
