@@ -379,7 +379,19 @@ static u32 reverse_table_CRC(const u8 *data, u32 len, u32 *table) {
   return ~crc;
 }
 
+void hexdump(const u8 *data, const int len) {
+  for (int i = 0; i < len; i += 16) {
+	printf("%04x: ", i);
+	for (int j = i; j < len && j < i + 16; j ++)
+	  printf("%04x ", data[j]);
+	printf("\n");
+  }
+}
+
 static void send_data(const u8 *data, const int len) {
+  printf("raw data:\n");
+  hexdump(data, len);
+
   for (int i = 0; i < 7; i++) mac_Tx_frame[i] = 0xaa; /* preemble */
   mac_Tx_frame[7] = 0xab; /* start of frame delimiter */
 
@@ -393,7 +405,7 @@ static void send_data(const u8 *data, const int len) {
   if (len + fcs_bytes < 64) {
     fcs_start = 64 - fcs_bytes;
     for (int i = 0; i + fcs_bytes < 64; i++) {
-      mac_Tx_frame[8 + len + i] = data[i];
+      mac_Tx_frame[8 + len + i] = 0;
     }
   }
 
@@ -403,7 +415,12 @@ static void send_data(const u8 *data, const int len) {
   memcpy(&mac_Tx_frame[fcs_start], &fcs_crc, 4);
 
   /* send the data */
-  send(mac_socket, mac_Tx_frame, fcs_start + 4, 0);
+  int nbytes = send(mac_socket, mac_Tx_frame, fcs_start + 4, 0);
+  printf("nbytes is %d\n", nbytes);
+
+  /* print the sended frame */
+  printf("sended frame:\n");
+  hexdump(mac_Tx_frame, fcs_start + 4);
 }
 
 static void mac_init() {
@@ -412,7 +429,7 @@ static void mac_init() {
 
   /* init the socket */
   mac_socket = socket(PF_PACKET, SOCK_RAW, P_ALL);
-  assert(mac_socket > 0 && "init mac failed");
+  assert(mac_socket > 0 && "init raw socket failed, please run me with sudo");
 
   /* init phy regs */
   phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
@@ -482,7 +499,7 @@ static void mac_write(paddr_t addr, int len, uint32_t data) {
         regs.tx_ping_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send ping packet */
-		send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
+        send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
         regs.tx_ping_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }
@@ -496,7 +513,7 @@ static void mac_write(paddr_t addr, int len, uint32_t data) {
       } else {
         /* send pong packet */
         send_data((u8 *)&regs.tx_pong, regs.tx_pong_tplr);
-		regs.tx_pong_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
+        regs.tx_pong_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }
     break;
