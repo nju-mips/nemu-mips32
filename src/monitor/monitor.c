@@ -200,9 +200,10 @@ work_mode_t init_monitor(void) {
 #if defined(DEBUG)
     // send command to uboot
     char cmd[1024], *p = cmd;
-    p += sprintf(p, "set serverip 114.212.81.241\n");
-    p += sprintf(p, "set ipaddr 192.168.1.1\n");
+    p += sprintf(p, "set serverip 192.168.3.1\n");
+    p += sprintf(p, "set ipaddr 114.212.81.241\n");
     p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
+    // p += sprintf(p, "ping 127.0.0.1\n");
     for(p = cmd; *p; p++)
 	  serial_enqueue_ascii(*p);
 #endif

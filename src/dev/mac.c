@@ -9,6 +9,10 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include "pcap.h"
+
+static pcap_handler pcap;
+
 // emaclite
 #define MAC_ADDR 0x1ff00000
 #define MAC_SIZE 0x10000
@@ -382,7 +386,7 @@ static void gen_normal_table(u32 *table) {
   }
 }
 
-u32 reverse_table_CRC(const u8 *data, u32 len, u32 *table) {
+u32 reverse_table_crc(const u8 *data, u32 len, u32 *table) {
   u32 crc = 0xffffffff;
   const u8 *p = data;
   int i;
@@ -400,6 +404,36 @@ void hexdump(const u8 *data, const int len) {
   }
 }
 
+#if 0
+static void eth_packet_check_crc(u8 *data, const int len) {
+  assert (len >= 16);
+  u32 crc = reverse_table_crc(&data[12], len - 4, reverse_table);
+  printf("%08x, %08x\n", crc, *(u32 *)&data[len - 4]);
+  assert (*(u32 *)&data[len - 4] == crc);
+}
+
+static void eth_packet_modify_crc(u8 *data, const int len) {
+  u32 crc = reverse_table_crc(&data[12], len - 4, reverse_table);
+  *(u32 *)&data[len - 4] = crc;
+}
+#endif
+
+static void ip_packet_modify_checksum(u8 *data, const int len) {
+  u32 checksum = 0;
+  *(u16 *)&data[24] = 0;
+  for (int i = 14; i < 34; i += 2) checksum += *(u16 *)&data[i];
+  checksum = (checksum >> 16) + (checksum & 0xFFFF);
+  // printf("check sum is %04x\n", checksum);
+  *(u16 *)&data[24] = ~checksum;
+}
+
+const char *ip_ntoa(u32 ip) {
+  static char s[128];
+  u8 *p = (u8 *)&ip;
+  sprintf(s, "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
+  return s;
+}
+
 static void sender_modify_packet(u8 *data, const int len) {
   /* copy the destination addr */
   memcpy(&eth_sll.sll_addr, &data[0], ENET_ADDR_LENGTH);
@@ -408,37 +442,50 @@ static void sender_modify_packet(u8 *data, const int len) {
 
   int protocol = ntohs(*(u16 *)&data[12]);
   switch (protocol) {
-  case ETH_P_IP: memcpy(&data[0x1e], &iface_ip_addr, 4); break;
+  case ETH_P_IP: {
+	break;
+    memcpy(&data[0x1a], &iface_ip_addr, 4);
+    ip_packet_modify_checksum(data, len);
+  } break;
   case ETH_P_ARP:
     memcpy(&data[0x16], &iface_mac_addr, ENET_ADDR_LENGTH);
     memcpy(&eth_ip_addr, &data[0x1c], 4);
+	printf("set eth_ip_addr to %s\n", ip_ntoa(eth_ip_addr));
     memcpy(&data[0x1c], &iface_ip_addr, 4);
     break;
   }
+  // eth_packet_modify_crc(data, len);
 }
 
 static void recver_modify_packet(u8 *data, const int len) {
   /* copy the eth addr */
   memcpy(data, eth_mac_addr, ENET_ADDR_LENGTH);
-  // 26 .. 29 is ip.src, 30 .. 33 is ip.dst
+  /* 0x1a .. 0x1d is ip.src.ip, 0x1e .. 0x21 is ip.dst.ip */
+  /* 0x16 .. 0x1b is arp.src.mac, 0x1c .. 0x1f is arp.src.ip */
+  /* 0x20 .. 0x25 is arp.dst.mac, 0x26 .. 0x29 is arp.dst.ip */
 
   int protocol = ntohs(*(u16 *)&data[12]);
   switch (protocol) {
-  case ETH_P_IP:
-    break;
-    memcpy(&data[0x1a], &eth_ip_addr, 4);
-    break;
+  case ETH_P_IP: {
+	break;
+    memcpy(&data[0x1e], &eth_ip_addr, 4);
+    ip_packet_modify_checksum(data, len);
+  } break;
   case ETH_P_ARP:
     memcpy(&data[0x20], &eth_mac_addr, ENET_ADDR_LENGTH);
     memcpy(&data[0x26], &eth_ip_addr, 4);
     break;
   }
+  // eth_packet_modify_crc(data, len);
 }
 
 static void send_data(const u8 *data, const int len) {
   static u8 eth_frame[2048];
   assert(len < sizeof(eth_frame));
   memcpy(eth_frame, data, len);
+
+  pcap_write(pcap, data, len);
+  pcap_flush(pcap);
 
   sender_modify_packet(eth_frame, len);
 
@@ -459,6 +506,8 @@ static int recv_data(u8 *to, const int maxlen) {
   int nbytes = recvfrom(mac_socket, to, maxlen, 0, NULL, NULL);
 
   recver_modify_packet(to, nbytes);
+  pcap_write(pcap, to, nbytes);
+  pcap_flush(pcap);
 #if 0
   printf("recv.nbytes is %d\n", nbytes);
   hexdump(to, nbytes);
@@ -533,6 +582,7 @@ static void mac_init_phy_regs() {
 }
 
 static void mac_init() {
+  pcap = pcap_open("build/packets.pcap");
   mac_init_socket();
   mac_init_phy_regs();
 }
