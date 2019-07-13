@@ -9,12 +9,10 @@
 
 CPU_state cpu;
 
-void signal_exception(int code);
-
-const char *regs[32] = {
-    "0 ", "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1", "t2",
-    "t3", "t4", "t5", "t6", "t7", "s0", "s1", "s2", "s3", "s4", "s5",
-    "s6", "s7", "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"};
+const char *regs[32] = {"0 ", "at", "v0", "v1", "a0", "a1", "a2", "a3",
+                        "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+                        "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
+                        "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"};
 
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
@@ -47,8 +45,7 @@ void print_registers(uint32_t instr) {
   eprintf("\n");
 
   for (int i = 0; i < 32; i++) {
-    eprintf("$%s:0x%08x%c", regs[i], cpu.gpr[i],
-            (i + 1) % 4 == 0 ? '\n' : ' ');
+    eprintf("$%s:0x%08x%c", regs[i], cpu.gpr[i], (i + 1) % 4 == 0 ? '\n' : ' ');
   }
 
   ninstr++;
@@ -68,15 +65,34 @@ void save_usual_registers(void) {
 void check_usual_registers(void) {
   for (int i = 0; i < NR_GPR; i++) {
     if (i == R_k0 || i == R_k1) continue;
-    CPUAssert(saved_gprs[i] == cpu.gpr[i],
-              "gpr[%d] %08x <> %08x after eret\n", i, saved_gprs[i],
-              cpu.gpr[i]);
+    CPUAssert(saved_gprs[i] == cpu.gpr[i], "gpr[%d] %08x <> %08x after eret\n",
+              i, saved_gprs[i], cpu.gpr[i]);
   }
 }
 
 #endif
 
+void test() {
+  cpu.cp0.status.CU = CU0_ENABLE;
+  cpu.cp0.status.ERL = 1;
+  cpu.cp0.status.BEV = 0;
+  cpu.cp0.status.IM = 0x00;
+
+  cpu.cp0.status.BEV = 0;
+  cpu.cp0.status.IM = 0xFF;
+  cpu.cp0.status.ERL = 0;
+  cpu.cp0.status.EXL = 0;
+  cpu.cp0.status.IE = 1;
+
+  cpu.cp0.cause.IV = 1;
+
+  cpu.cp0.cpr[CP0_STATUS][0] = 0;
+  cpu.cp0.cpr[CP0_CAUSE][0] = 0;
+}
+
 int init_cpu(vaddr_t entry) {
+  test();
+
   nemu_start_time = get_current_time();
 
   cpu.cp0.count[0] = 0;
@@ -119,8 +135,7 @@ static inline void clear_softmmu() {
   softmmu.ptr = NULL;
 }
 
-static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr,
-                                  device_t *dev) {
+static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
   if (dev->map) {
     softmmu.vaddr = vaddr & ~0xFFF;
     softmmu.ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
@@ -153,8 +168,6 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 }
 
 void signal_exception(int code) {
-  cpu.curr_instr_except = true;
-
   if (code == EXC_TRAP) {
     eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
     exit(0);
@@ -164,9 +177,10 @@ void signal_exception(int code) {
   save_usual_registers();
 #endif
 
-  if (cpu.is_br) {
+  if (cpu.is_delayslot) {
     cpu.cp0.epc = cpu.pc - 4;
-    cpu.cp0.cause.BD = cpu.is_br && cpu.cp0.status.EXL == 0;
+    cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
+    cpu.is_delayslot = false;
   } else {
     cpu.cp0.epc = cpu.pc;
   }
@@ -174,35 +188,33 @@ void signal_exception(int code) {
   // eprintf("signal exception %d@%08x, badvaddr:%08x\n",
   // code, cpu.pc, cpu.cp0.badvaddr);
 
-  /* reference linux: arch/mips/kernel/cps-vec.S */
-  // uint32_t ebase = cpu.cp0.status.BEV ? 0xbfc00000 :
-  // 0x80000000;
   uint32_t ebase = 0xbfc00000;
-  cpu.need_br = true;
-  // for loongson testcase, exception entry is 'h0380'
+  cpu.has_exception = true;
+
+#ifdef __ARCH_LOONGSON__
+  /* for loongson testcase, the only exception entry is
+   * 'h0380' */
+  cpu.br_target = ebase + 0x0380;
+  if (code == EXC_TLBM || code == EXC_TLBL || code == EXC_TLBS)
+    cpu.br_target = ebase;
+#else
+  /* reference linux: arch/mips/kernel/cps-vec.S */
+  if (cpu.cp0.status.BEV) ebase = 0x80000000;
+
   switch (code) {
   case EXC_INTR:
-#ifdef __ARCH_LOONGSON__
-    cpu.br_target = ebase + 0x0380;
-#else
     if (cpu.cp0.cause.IV) {
       cpu.br_target = ebase + 0x0200;
     } else {
       cpu.br_target = ebase + 0x0180;
     }
-#endif
     break;
   case EXC_TLBM:
   case EXC_TLBL:
   case EXC_TLBS: cpu.br_target = ebase + 0x0000; break;
-  default: /* usual exception */
-#ifdef __ARCH_LOONGSON__
-    cpu.br_target = ebase + 0x0380;
-#else
-    cpu.br_target = ebase + 0x0180;
-    break;
-#endif
+  default: /* usual exception */ cpu.br_target = ebase + 0x0180; break;
   }
+#endif
 
 #ifdef ENABLE_SEGMENT
   cpu.base = 0; // kernel segment base is zero
@@ -224,6 +236,7 @@ void update_cp0_timer() {
 
   // update IP
   if (cpu.cp0.compare != 0 && cpu.cp0.count[0] == cpu.cp0.compare) {
+    eprintf("cause INTR@%08x\n", cpu.pc);
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
@@ -251,11 +264,6 @@ void cpu_exec(uint64_t n) {
     update_cp0_timer();
 #endif
 
-    if (UNLIKELY(cpu.need_br)) {
-      cpu.pc = cpu.br_target;
-      cpu.need_br = false;
-    }
-
 #ifdef DEBUG
     instr_enqueue_pc(cpu.pc);
 #endif
@@ -264,43 +272,33 @@ void cpu_exec(uint64_t n) {
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
       signal_exception(EXC_AdEL);
-      goto skip_need_br_check;
+      goto check_exception;
     }
 #endif
 
     Inst inst = {.val = load_mem(cpu.pc, 4)};
 
-    cpu.curr_instr_except = false;
-
 #ifdef DEBUG
     instr_enqueue_instr(inst.val);
 #endif
 
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-    static bool ie = 0; /* fuck gcc */
-    ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) &&
-         cpu.cp0.status.IE;
-#endif
-
 #include "exec-handlers.h"
 
-    if (cpu.is_br) { cpu.need_br = true; }
-
-    cpu.is_br = false; // clear this bits
-
-  skip_need_br_check:
-
 #ifdef DEBUG
-    // eprintf("%08x: %08x\n", cpu.pc, inst.val);
     if (work_mode == MODE_LOG) print_registers(inst.val);
 #endif
 
-    /* update pc */
-    cpu.pc += 4;
-
+  check_exception:;
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+    bool ie =
+        !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
     check_ipbits(ie);
 #endif
+
+    if (cpu.has_exception) {
+      cpu.has_exception = false;
+      cpu.pc = cpu.br_target;
+    }
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
