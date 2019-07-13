@@ -12,7 +12,7 @@
 extern void instr_enqueue_pc(uint32_t pc);
 extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);
-extern void print_registers(uint32_t);
+extern void print_registers(void);
 
 #define eprintf(...) fprintf(stderr, ##__VA_ARGS__)
 
@@ -62,7 +62,7 @@ extern void print_registers(uint32_t);
               __FILE__, __LINE__, __func__, #cond);       \
       print_instr_queue();                                \
       eprintf("=========== dump registers =========\n");  \
-      print_registers(vaddr_read_safe(cpu.pc, 4));        \
+      print_registers();                                  \
       eprintf("=========== dump    end =========\n");     \
       eprintf("\e[1;31m" fmt "\e[0m\n", ##__VA_ARGS__);   \
       CPUAbort();                                         \

@@ -1,6 +1,7 @@
 #include <setjmp.h>
 #include <sys/time.h>
 
+#include "debug.h"
 #include "device.h"
 #include "memory.h"
 #include "mmu.h"
@@ -13,6 +14,10 @@ const char *regs[32] = {"0 ", "at", "v0", "v1", "a0", "a1", "a2", "a3",
                         "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
                         "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
                         "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"};
+
+/* APIs from iq.c */
+extern uint32_t get_current_pc();
+extern uint32_t get_current_instr();
 
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
@@ -30,9 +35,9 @@ uint64_t get_current_time() { // in us
   return t.tv_sec * 1000000 + t.tv_usec - nemu_start_time;
 }
 
-void print_registers(uint32_t instr) {
+void print_registers(void) {
   static unsigned int ninstr = 0;
-  eprintf("$pc:    0x%08x", cpu.pc);
+  eprintf("$pc:    0x%08x", get_current_pc());
   eprintf("   ");
   eprintf("$hi:    0x%08x", cpu.hi);
   eprintf("   ");
@@ -41,7 +46,7 @@ void print_registers(uint32_t instr) {
 
   eprintf("$ninstr: %08x", ninstr);
   eprintf("                  ");
-  eprintf("$instr: %08x", instr);
+  eprintf("$instr: %08x", get_current_instr());
   eprintf("\n");
 
   for (int i = 0; i < 32; i++) {
@@ -169,8 +174,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 
 void signal_exception(int code) {
   if (code == EXC_TRAP) {
-    eprintf("\e[31mHIT BAD TRAP @%08x\e[0m\n", cpu.pc);
-    exit(0);
+    panic("HIT BAD TRAP @%08x\n", get_current_pc());
   }
 
 #ifdef ENABLE_CAE_CHECK
@@ -184,6 +188,8 @@ void signal_exception(int code) {
   } else {
     cpu.cp0.epc = cpu.pc;
   }
+
+  eprintf("excode is %d, cpu.cp0.epc set to %08x\n", code, cpu.cp0.epc);
 
   // eprintf("signal exception %d@%08x, badvaddr:%08x\n",
   // code, cpu.pc, cpu.cp0.badvaddr);
@@ -225,9 +231,15 @@ void signal_exception(int code) {
   cpu.cp0.cause.ExcCode = code;
 }
 
-void check_ipbits(bool ie) {
+void check_intrs() {
+  bool ie =
+      !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     signal_exception(EXC_INTR);
+    
+    /* next cycle the IP will be cleared */
+    if (cpu.cp0.cause.IP & CAUSE_IP_TIMER)
+      cpu.cp0.cause.IP &= ~CAUSE_IP_TIMER;
   }
 }
 
@@ -285,14 +297,12 @@ void cpu_exec(uint64_t n) {
 #include "exec-handlers.h"
 
 #ifdef DEBUG
-    if (work_mode == MODE_LOG) print_registers(inst.val);
+    if (work_mode == MODE_LOG) print_registers();
 #endif
 
   check_exception:;
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-    bool ie =
-        !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
-    check_ipbits(ie);
+    check_intrs();
 #endif
 
     if (cpu.has_exception) {
