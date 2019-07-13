@@ -16,7 +16,36 @@ extern void print_registers(uint32_t);
 
 #define eprintf(...) fprintf(stderr, ##__VA_ARGS__)
 
-#define Abort()                         \
+#define Abort() exit(-1)
+
+// we are properly doing diff testing in batch_mode, so do
+// not Log in batch_mode
+#define Log(format, ...)                          \
+  do {                                            \
+    eprintf("nemu: %s:%d: %s: " format, __FILE__, \
+            __LINE__, __func__, ##__VA_ARGS__);   \
+  } while (0)
+
+#define Assert(cond, fmt, ...)                             \
+  do {                                                     \
+    if (!(cond)) {                                         \
+      Log("Assertion `%s' failed: \e[1;31m" fmt "\e[0m\n", \
+          #cond, ##__VA_ARGS__);                           \
+      Abort();                                             \
+    }                                                      \
+  } while (0)
+
+#define panic(fmt, ...)                                   \
+  do {                                                    \
+    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt        \
+            "\e[0m\n",                                    \
+            __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+    Abort();                                              \
+  } while (0)
+
+#define TODO() panic("please implement me")
+
+#define CPUAbort()                      \
   do {                                  \
     extern jmp_buf gdb_mode_top_caller; \
     if (work_mode == MODE_GDB) {        \
@@ -24,26 +53,6 @@ extern void print_registers(uint32_t);
     } else {                            \
       abort();                          \
     }                                   \
-  } while (0)
-
-// we are properly doing diff testing in batch_mode, so do
-// not Log in batch_mode
-#define Log(format, ...)                                   \
-  do {                                                     \
-    if (!(work_mode & MODE_BATCH)) {                       \
-      printf("\e[1;34m[%s,%d,%s] " format "\e[0m\n",       \
-             __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-    }                                                      \
-  } while (0)
-
-#define Assert(cond, fmt, ...)                            \
-  do {                                                    \
-    if (!(cond)) {                                        \
-      eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
-              __FILE__, __LINE__, __func__, #cond);       \
-      eprintf("\e[1;31m" fmt "\e[0m\n", ##__VA_ARGS__);   \
-      Abort();                                            \
-    }                                                     \
   } while (0)
 
 #define CPUAssert(cond, fmt, ...)                         \
@@ -56,18 +65,8 @@ extern void print_registers(uint32_t);
       print_registers(vaddr_read_safe(cpu.pc, 4));        \
       eprintf("=========== dump    end =========\n");     \
       eprintf("\e[1;31m" fmt "\e[0m\n", ##__VA_ARGS__);   \
-      Abort();                                            \
+      CPUAbort();                                         \
     }                                                     \
   } while (0)
-
-#define panic(fmt, ...)                                   \
-  do {                                                    \
-    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt        \
-            "\e[0m\n",                                    \
-            __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-    Abort();                                              \
-  } while (0)
-
-#define TODO() panic("please implement me")
 
 #endif
