@@ -187,8 +187,6 @@ void signal_exception(int code) {
     cpu.cp0.epc = cpu.pc;
   }
 
-  eprintf("excode is %d, cpu.cp0.epc set to %08x\n", code, cpu.cp0.epc);
-
   // eprintf("signal exception %d@%08x, badvaddr:%08x\n",
   // code, cpu.pc, cpu.cp0.badvaddr);
 
