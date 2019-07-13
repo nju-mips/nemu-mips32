@@ -173,9 +173,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 }
 
 void signal_exception(int code) {
-  if (code == EXC_TRAP) {
-    panic("HIT BAD TRAP @%08x\n", get_current_pc());
-  }
+  if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
 
 #ifdef ENABLE_CAE_CHECK
   save_usual_registers();
@@ -194,31 +192,54 @@ void signal_exception(int code) {
   // eprintf("signal exception %d@%08x, badvaddr:%08x\n",
   // code, cpu.pc, cpu.cp0.badvaddr);
 
-  uint32_t ebase = 0xbfc00000;
   cpu.has_exception = true;
 
 #ifdef __ARCH_LOONGSON__
   /* for loongson testcase, the only exception entry is
    * 'h0380' */
-  cpu.br_target = ebase + 0x0380;
+  cpu.br_target = 0xbfc00380;
   if (code == EXC_TLBM || code == EXC_TLBL || code == EXC_TLBS)
-    cpu.br_target = ebase;
+    cpu.br_target = 0xbfc00000;
 #else
   /* reference linux: arch/mips/kernel/cps-vec.S */
-  if (cpu.cp0.status.BEV) ebase = 0x80000000;
-
   switch (code) {
   case EXC_INTR:
-    if (cpu.cp0.cause.IV) {
-      cpu.br_target = ebase + 0x0200;
+    if (cpu.cp0.status.BEV) {
+      if (cpu.cp0.cause.IV) {
+        cpu.br_target = 0xbfc00400;
+      } else {
+        cpu.br_target = 0xbfc00380;
+      }
     } else {
-      cpu.br_target = ebase + 0x0180;
+      if (cpu.cp0.cause.IV) {
+        cpu.br_target = 0x80000200;
+      } else {
+        cpu.br_target = 0x80000180;
+      }
     }
     break;
   case EXC_TLBM:
   case EXC_TLBL:
-  case EXC_TLBS: cpu.br_target = ebase + 0x0000; break;
-  default: /* usual exception */ cpu.br_target = ebase + 0x0180; break;
+  case EXC_TLBS:
+    if (cpu.cp0.status.BEV) {
+      if (cpu.cp0.status.EXL) {
+        cpu.br_target = 0xbfc00380;
+      } else {
+        cpu.br_target = 0xbfc00200;
+      }
+    } else {
+      if (cpu.cp0.status.EXL) {
+        cpu.br_target = 0x80000180;
+      } else {
+        cpu.br_target = 0x80000000;
+      }
+    }
+  default:
+    if (cpu.cp0.status.BEV) {
+      cpu.br_target = 0xbfc00380;
+    } else {
+      cpu.br_target = 0x80000180;
+    }
   }
 #endif
 
@@ -232,14 +253,12 @@ void signal_exception(int code) {
 }
 
 void check_intrs() {
-  bool ie =
-      !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
+  bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     signal_exception(EXC_INTR);
-    
+
     /* next cycle the IP will be cleared */
-    if (cpu.cp0.cause.IP & CAUSE_IP_TIMER)
-      cpu.cp0.cause.IP &= ~CAUSE_IP_TIMER;
+    if (cpu.cp0.cause.IP & CAUSE_IP_TIMER) cpu.cp0.cause.IP &= ~CAUSE_IP_TIMER;
   }
 }
 
