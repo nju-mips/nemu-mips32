@@ -26,10 +26,16 @@ void instr_enqueue_instr(uint32_t instr) {
 }
 
 uint32_t get_current_pc() {
+#ifndef DEBUG
+  panic("please enable DEBUG macro in Makefile\n");
+#endif
   return iq[instr_ptr].pc;
 }
 
 uint32_t get_current_instr() {
+#ifndef DEBUG
+  panic("please enable DEBUG macro in Makefile\n");
+#endif
   if(iq[instr_ptr].instr_enq)
     return iq[instr_ptr].instr;
   return 0;

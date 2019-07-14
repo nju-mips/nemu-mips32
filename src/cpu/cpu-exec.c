@@ -122,7 +122,7 @@ static struct softmmu_t softmmu[1 << MMU_BITS];
 
 static inline void clear_softmmu() {
   for (int i = 0; i < sizeof(softmmu) / sizeof(*softmmu); i ++) {
-    softmmu[i].id = 0;
+    softmmu[i].id = 0xFFFFFFFF;
     softmmu[i].ptr = NULL;
   }
 }
