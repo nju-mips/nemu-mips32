@@ -265,7 +265,6 @@ void update_cp0_timer() {
 
   // update IP
   if (cpu.cp0.compare != 0 && cpu.cp0.count[0] == cpu.cp0.compare) {
-    eprintf("cause INTR@%08x\n", cpu.pc);
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
