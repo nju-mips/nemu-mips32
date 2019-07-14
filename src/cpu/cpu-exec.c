@@ -77,26 +77,7 @@ void check_usual_registers(void) {
 
 #endif
 
-void test() {
-  cpu.cp0.status.CU = CU0_ENABLE;
-  cpu.cp0.status.ERL = 1;
-  cpu.cp0.status.BEV = 0;
-  cpu.cp0.status.IM = 0x00;
-
-  cpu.cp0.status.BEV = 0;
-  cpu.cp0.status.IM = 0xFF;
-  cpu.cp0.status.ERL = 0;
-  cpu.cp0.status.EXL = 0;
-  cpu.cp0.status.IE = 1;
-
-  cpu.cp0.cause.IV = 1;
-
-  cpu.cp0.cpr[CP0_STATUS][0] = 0;
-  cpu.cp0.cpr[CP0_CAUSE][0] = 0;
-}
-
 int init_cpu(vaddr_t entry) {
-  test();
 
   nemu_start_time = get_current_time();
 
@@ -130,26 +111,42 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-struct {
-  vaddr_t vaddr;
+#define MMU_BITS 6
+
+struct softmmu_t {
+  uint32_t id;
   uint8_t *ptr;
-} softmmu;
+};
+
+static struct softmmu_t softmmu[1 << MMU_BITS];
 
 static inline void clear_softmmu() {
-  softmmu.vaddr = 0;
-  softmmu.ptr = NULL;
+  for (int i = 0; i < sizeof(softmmu) / sizeof(*softmmu); i ++) {
+    softmmu[i].id = 0;
+    softmmu[i].ptr = NULL;
+  }
+}
+
+static inline uint32_t softmmu_index(vaddr_t vaddr) {
+  return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
+}
+
+static inline uint32_t softmmu_id(vaddr_t vaddr) {
+  return (vaddr >> (12 + MMU_BITS));
 }
 
 static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
   if (dev->map) {
-    softmmu.vaddr = vaddr & ~0xFFF;
-    softmmu.ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
+    uint32_t idx = softmmu_index(vaddr);
+    softmmu[idx].id = softmmu_id(vaddr);;
+    softmmu[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
   }
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  if (softmmu.vaddr == (addr & ~0xFFF)) {
-    return *((uint32_t *)&softmmu.ptr[addr & 0xFFF]) &
+  uint32_t idx = softmmu_index(addr);
+  if (softmmu[idx].id == softmmu_id(addr)) {
+    return *((uint32_t *)&softmmu[idx].ptr[addr & 0xFFF]) &
            (~0u >> ((4 - len) << 3));
   } else {
     paddr_t paddr = prot_addr(addr, MMU_LOAD);
@@ -161,8 +158,9 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
-  if (softmmu.vaddr == (addr & ~0xFFF)) {
-    memcpy(&softmmu.ptr[addr & 0xFFF], &data, len);
+  uint32_t idx = softmmu_index(addr);
+  if (softmmu[idx].id == softmmu_id(addr)) {
+    memcpy(&softmmu[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
     device_t *dev = find_device(paddr);
@@ -250,7 +248,8 @@ void signal_exception(int code) {
   cpu.cp0.cause.ExcCode = code;
 }
 
-void check_intrs() {
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+static inline void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     signal_exception(EXC_INTR);
@@ -259,6 +258,7 @@ void check_intrs() {
     if (cpu.cp0.cause.IP & CAUSE_IP_TIMER) cpu.cp0.cause.IP &= ~CAUSE_IP_TIMER;
   }
 }
+#endif
 
 void update_cp0_timer() {
   ++(*(uint64_t *)cpu.cp0.count);

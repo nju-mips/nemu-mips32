@@ -28,7 +28,7 @@ CFLAGS += -DENABLE_PAGING
 CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
-CFLAGS += -DDEBUG
+# CFLAGS += -DDEBUG
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
