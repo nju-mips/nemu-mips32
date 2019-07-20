@@ -324,6 +324,7 @@ make_exec_handler(mtc0)({
     cp0_entry_hi_t *newVal = (void *)&(cpu.gpr[inst.rt]);
     cpu.cp0.entry_hi.asid = newVal->asid;
     cpu.cp0.entry_hi.vpn = newVal->vpn;
+    clear_softmmu();
   } break;
   default:
     cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
