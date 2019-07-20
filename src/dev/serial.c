@@ -16,12 +16,10 @@
 static uint32_t uartlite_ctrl_reg = 0;
 
 /* status */
-#define SR_TX_FIFO_FULL (1 << 3)  /* transmit FIFO full */
-#define SR_TX_FIFO_EMPTY (1 << 2) /* transmit FIFO empty \
-                                   */
-#define SR_RX_FIFO_VALID_DATA \
-  (1 << 0)                       /* data in receive FIFO */
-#define SR_RX_FIFO_FULL (1 << 1) /* receive FIFO full */
+#define SR_TX_FIFO_FULL (1 << 3)       /* transmit FIFO full */
+#define SR_TX_FIFO_EMPTY (1 << 2)      /* transmit FIFO empty  */
+#define SR_RX_FIFO_VALID_DATA (1 << 0) /* data in receive FIFO */
+#define SR_RX_FIFO_FULL (1 << 1)       /* receive FIFO full */
 
 /* ctrl */
 #define ULITE_CONTROL_RST_TX 0x01
@@ -89,7 +87,7 @@ const char *SDLK_to_ascii[SDLK_LAST] = {
     [SDLK_KP1] = "1",         [SDLK_KP2] = "2",
     [SDLK_KP3] = "3",         [SDLK_KP0] = "0",
     [SDLK_KP_EQUALS] = "=",   [SDLK_KP_ENTER] = "\n",
-	[SDLK_KP_PERIOD] = ".",
+    [SDLK_KP_PERIOD] = ".",
 };
 
 void serial_enqueue_ascii(char ch) {
@@ -134,9 +132,7 @@ static uint32_t serial_peek(paddr_t addr, int len) {
   case STAT: return serial_f == serial_r ? 0 : 1;
   case CTRL: return uartlite_ctrl_reg;
   default:
-    CPUAssert(false,
-              "uart: address(0x%08x) is not readable",
-              addr);
+    CPUAssert(false, "uart: address(0x%08x) is not readable", addr);
     break;
   }
   return 0;
@@ -159,9 +155,7 @@ static void serial_write(paddr_t addr, int len, uint32_t data) {
     break;
   case CTRL: uartlite_ctrl_reg = data; break;
   default:
-    CPUAssert(false,
-              "uart: address(0x%08x) is not writable",
-              addr);
+    CPUAssert(false, "uart: address(0x%08x) is not writable", addr);
     break;
   }
 }

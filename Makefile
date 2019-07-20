@@ -21,11 +21,11 @@ CFLAGS += -DENABLE_DELAYSLOT
 # CFLAGS += -DENABLE_SEGMENT # prior to PAGING
 CFLAGS += -DENABLE_PAGING
 
-# enable interrupt will lose about 400 marks
 # CFLAGS += -DENABLE_INTR
 CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
+# enable interrupt will lose about 600 marks
 CFLAGS += -DDEBUG
 
 # Files to be compiled
