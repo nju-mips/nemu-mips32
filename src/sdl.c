@@ -17,7 +17,7 @@ static void device_update(int signum) {
 
   // if (jiffy % (TIMER_HZ / VGA_HZ) == 0) { update_screen(); }
 
-  SDL_Event event;
+  SDL_Event event = {0};
   SDL_PollEvent(&event);
   switch (event.type) {
   // If a key was pressed

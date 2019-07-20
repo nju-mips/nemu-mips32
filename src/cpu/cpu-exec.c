@@ -316,8 +316,8 @@ void cpu_exec(uint64_t n) {
     if (work_mode == MODE_LOG) print_registers();
 #endif
 
-  check_exception:;
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+  check_exception:;
     check_intrs();
 #endif
 
