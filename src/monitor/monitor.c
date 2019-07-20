@@ -186,6 +186,7 @@ work_mode_t init_monitor(void) {
 
   if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
 
+#undef DEBUG
 #if defined(DEBUG)
   // send command to uboot
   char cmd[1024], *p = cmd;
