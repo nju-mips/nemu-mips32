@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include "cpu/reg.h"
 
-#define NR_TLB_ENTRY 512
-
 typedef struct {
   uint32_t pfn : 24;
   uint32_t c   : 3;  // cache coherency

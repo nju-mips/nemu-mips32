@@ -195,7 +195,7 @@ void signal_exception(int code) {
    * 'h0380' */
   cpu.br_target = 0xbfc00380;
   if (code == EXC_TLBM || code == EXC_TLBL || code == EXC_TLBS)
-    cpu.br_target = 0xbfc00000;
+    cpu.br_target = 0xbfc00200;
 #else
   /* reference linux: arch/mips/kernel/cps-vec.S */
   switch (code) {

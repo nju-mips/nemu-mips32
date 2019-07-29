@@ -326,6 +326,9 @@ make_exec_handler(mtc0)({
     cpu.cp0.entry_hi.vpn = newVal->vpn;
     clear_softmmu();
   } break;
+  case CPRS(CP0_INDEX, 0): {
+    cpu.cp0.index.idx = cpu.gpr[inst.rt];
+  } break;
   default:
     cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
     break;

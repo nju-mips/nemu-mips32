@@ -167,6 +167,8 @@ typedef struct {
   uint32_t _1   :  3;
 } cp0_pagemask_t;
 
+#define PABITS 32
+
 // only 4KB page is supported
 typedef struct {
   uint32_t asid : 8;
@@ -179,7 +181,9 @@ typedef struct {
   uint32_t v   : 1;
   uint32_t d   : 1;
   uint32_t c   : 3;
-  uint32_t pfn : 24;
+  /* uint32_t pfn : 24; */
+  uint32_t pfn : (PABITS - 12);
+  uint32_t _1  : (36 - PABITS);
   uint32_t _0  : 2;
 } cp0_entry_lo_t;
 
@@ -191,8 +195,12 @@ typedef struct {
 
 typedef uint32_t cp0_wired_t;
 
+#define TLB_BITS 5
+#define NR_TLB_ENTRY (1 << TLB_BITS)
+
 typedef struct {
-  uint32_t idx : 31;
+  uint32_t idx : TLB_BITS;
+  uint32_t _0  : (32 - 1 - TLB_BITS);
   uint32_t p   : 1;
 } cp0_index_t;
 
