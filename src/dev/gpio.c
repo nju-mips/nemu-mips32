@@ -8,7 +8,7 @@
 #define GPIO_SIZE 0x1000
 
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
-  check_ioaddr(addr, 4, "GPIO");
+  check_ioaddr(addr, len, 4, "GPIO.write");
   if (data == 0) {
     eprintf(ANSI_WIDTHOR_GREEN
             "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);

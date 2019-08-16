@@ -139,7 +139,7 @@ static uint32_t serial_peek(paddr_t addr, int len) {
 }
 
 static uint32_t serial_read(paddr_t addr, int len) {
-  check_ioaddr(addr, SERIAL_SIZE, "serial");
+  check_ioaddr(addr, len, SERIAL_SIZE, "serial.read");
   uint32_t data = serial_peek(addr, len);
   if (addr == Rx && serial_f != serial_r)
     serial_f = (serial_f + 1) % SERIAL_QUEUE_LEN;
@@ -147,7 +147,7 @@ static uint32_t serial_read(paddr_t addr, int len) {
 }
 
 static void serial_write(paddr_t addr, int len, uint32_t data) {
-  check_ioaddr(addr, SERIAL_SIZE, "serial");
+  check_ioaddr(addr, len, SERIAL_SIZE, "serial.write");
   switch (addr) {
   case Tx:
     putchar((char)data);

@@ -107,7 +107,7 @@ static void spi_init(const char *filename) {
 
 static uint32_t spi_read(paddr_t addr, int len) {
   assert (0);
-  check_ioaddr(addr, SPI_SIZE, "spi.read");
+  check_ioaddr(addr, len, SPI_SIZE, "spi.read");
   return 0;
 }
 

@@ -18,7 +18,7 @@ static inline uint32_t get_y(uint32_t addr) {
 }
 
 static uint32_t vga_read(paddr_t addr, int len) {
-  check_ioaddr(addr, VMEM_SIZE, "VGA.read");
+  check_ioaddr(addr, len, VMEM_SIZE, "VGA.read");
 
   uint32_t offset = addr % 4;
   uint32_t x = get_x(addr);
@@ -31,7 +31,7 @@ static uint32_t vga_read(paddr_t addr, int len) {
 }
 
 static void vga_write(paddr_t addr, int len, uint32_t data) {
-  check_ioaddr(addr, VMEM_SIZE, "VGA.write");
+  check_ioaddr(addr, len, VMEM_SIZE, "VGA.write");
 
   uint32_t offset = addr % 4;
   uint32_t x = get_x(addr);
