@@ -248,17 +248,19 @@ enum {
 };
 
 typedef struct {
-  uint32_t gpr[32];
-  uint32_t hi, lo;
-  cp0_t cp0;
   vaddr_t pc;
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif
 
-  vaddr_t br_target;
   bool is_delayslot;
   bool has_exception;
+  vaddr_t br_target;
+
+  uint32_t gpr[32];
+  uint32_t hi, lo;
+
+  cp0_t cp0;
 } CPU_state;
 
 

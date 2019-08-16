@@ -7,7 +7,7 @@
 
 static inline void check_ioaddr(uint32_t addr, uint32_t len, uint32_t size,
                                 const char *dev) {
-  CPUAssert(addr < size && len < size && addr + len < size,
+  CPUAssert(addr <= size && len <= size && addr + len <= size,
             "%s: address(0x%08x) is out of side or unaligned", dev, addr);
 }
 
