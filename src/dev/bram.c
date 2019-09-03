@@ -10,18 +10,18 @@ static uint8_t bram[BRAM_SIZE];
 /* fake spi flash */
 
 static void *bram_map(uint32_t addr, uint32_t len) {
-  check_ioaddr(addr, BRAM_SIZE, "bram.map");
+  check_ioaddr(addr, len, BRAM_SIZE, "bram.map");
   return &bram[addr];
 }
 
 static uint32_t bram_read(paddr_t addr, int len) {
-  check_ioaddr(addr, BRAM_SIZE, "bram.read");
+  check_ioaddr(addr, len, BRAM_SIZE, "bram.read");
   return *((uint32_t *)((void *)bram + addr)) &
          (~0u >> ((4 - len) << 3));
 }
 
 static void bram_write(paddr_t addr, int len, uint32_t data) {
-  check_ioaddr(addr, BRAM_SIZE, "bram.write");
+  check_ioaddr(addr, len, BRAM_SIZE, "bram.write");
   memcpy((void *)bram + addr, &data, len);
 }
 

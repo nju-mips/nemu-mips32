@@ -137,7 +137,7 @@ void keyboard_enqueue(SDL_EventType type, SDLKey key) {
 }
 
 static uint32_t kb_read(paddr_t addr, int len) {
-  check_ioaddr(addr, KB_SIZE, "keyboard");
+  check_ioaddr(addr, len, KB_SIZE, "keyboard.read");
   /* CTRL not yet implemented, only allow byte read/write */
   switch (addr) {
   case KB_STAT: return keyboard_f == keyboard_r ? 0 : 1;

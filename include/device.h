@@ -5,13 +5,10 @@
 #include "memory.h"
 #include <stdint.h>
 
-static inline void check_ioaddr(uint32_t addr,
-                                uint32_t size,
+static inline void check_ioaddr(uint32_t addr, uint32_t len, uint32_t size,
                                 const char *dev) {
-  CPUAssert(
-      addr < size,
-      "%s: address(0x%08x) is out of side or unaligned",
-      dev, addr);
+  CPUAssert(addr <= size && len <= size && addr + len <= size,
+            "%s: address(0x%08x) is out of side or unaligned", dev, addr);
 }
 
 void *vaddr_map(vaddr_t vaddr, uint32_t size);
@@ -27,9 +24,7 @@ typedef struct {
   uint32_t (*peek)(paddr_t addr, int len);
 } device_t;
 
-static inline uint32_t mr_index(uint32_t addr) {
-  return addr / (4 * 1024);
-}
+static inline uint32_t mr_index(uint32_t addr) { return addr / (4 * 1024); }
 
 static inline device_t *find_device(paddr_t addr) {
   extern device_t *memory_regions[1024 * 1024];
