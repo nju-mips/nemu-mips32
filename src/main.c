@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdint.h>
 #include "monitor.h"
+#include <stdint.h>
+#include <stdio.h>
 
 void init_mmio();
 void init_sdl();
@@ -16,15 +16,15 @@ int main(int argc, char *argv[]) {
 
   /* Initialize the monitor. */
   work_mode_t mode = init_monitor();
-  if(mode & MODE_BATCH) {
-	init_sdl();
-	if(mode == MODE_DIFF) {
-	  qemu_diff();
-	} else {
-	  cpu_exec(-1);
-	}
+  if (mode & MODE_BATCH) {
+    init_sdl();
+    if (mode == MODE_DIFF) {
+      qemu_diff();
+    } else {
+      cpu_exec(-1);
+    }
   } else {
-	gdb_mainloop();
+    gdb_mainloop();
   }
   return 0;
 }

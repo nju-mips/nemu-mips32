@@ -10,10 +10,18 @@
 
 CPU_state cpu;
 
-const char *regs[32] = {"0 ", "at", "v0", "v1", "a0", "a1", "a2", "a3",
-                        "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
-                        "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
-                        "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"};
+/* clang-format off */
+const char *regs[32] = {
+  "0 ", "at", "v0", "v1",
+  "a0", "a1", "a2", "a3",
+  "t0", "t1", "t2", "t3",
+  "t4", "t5", "t6", "t7",
+  "s0", "s1", "s2", "s3",
+  "s4", "s5", "s6", "s7",
+  "t8", "t9", "k0", "k1",
+  "gp", "sp", "fp", "ra"
+};
+/* clang-format on */
 
 /* APIs from iq.c */
 extern uint32_t get_current_pc();
@@ -121,7 +129,7 @@ struct softmmu_t {
 static struct softmmu_t softmmu[1 << MMU_BITS];
 
 static inline void clear_softmmu() {
-  for (int i = 0; i < sizeof(softmmu) / sizeof(*softmmu); i ++) {
+  for (int i = 0; i < sizeof(softmmu) / sizeof(*softmmu); i++) {
     softmmu[i].id = 0xFFFFFFFF;
     softmmu[i].ptr = NULL;
   }
@@ -138,7 +146,8 @@ static inline uint32_t softmmu_id(vaddr_t vaddr) {
 static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
   if (dev->map) {
     uint32_t idx = softmmu_index(vaddr);
-    softmmu[idx].id = softmmu_id(vaddr);;
+    softmmu[idx].id = softmmu_id(vaddr);
+    ;
     softmmu[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
   }
 }

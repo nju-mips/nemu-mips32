@@ -21,7 +21,7 @@
   } else {                     \
     cpu.pc += 4;               \
   }                            \
-  goto eoe;                  
+  goto eoe;
 
 #define make_eoe() \
   eoe:;
@@ -44,6 +44,7 @@
 #  define InstAssert(cond) assert(cond)
 #endif
 
+/* clang-format off */
 static const void *special_table[64] = {
     /* 0x00 */ &&sll, &&inv, &&srl, &&sra,
     /* 0x04 */ &&sllv, &&inv, &&srlv, &&srav,
@@ -143,19 +144,15 @@ static const void *opcode_table[64] = {
     /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
 };
 
+/* clang-format on */
+
 make_entry() { goto *opcode_table[inst.op]; }
 
-make_exec_handler(exec_special)({
-  goto *special_table[inst.func];
-});
+make_exec_handler(exec_special)({ goto *special_table[inst.func]; });
 
-make_exec_handler(exec_special2)({
-  goto *special2_table[inst.func];
-});
+make_exec_handler(exec_special2)({ goto *special2_table[inst.func]; });
 
-make_exec_handler(exec_regimm)({
-  goto *regimm_table[inst.rt];
-});
+make_exec_handler(exec_regimm)({ goto *regimm_table[inst.rt]; });
 
 make_exec_handler(exec_cop0)({
   if (inst.rs & 0x10)
@@ -190,8 +187,7 @@ make_exec_handler(tlbr)({
 
 make_exec_handler(tlbwi)({
   uint32_t i = cpu.cp0.index.idx;
-  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n",
-            i, NR_TLB_ENTRY);
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n", i, NR_TLB_ENTRY);
   tlb_write(i);
   clear_softmmu();
 });
@@ -204,9 +200,7 @@ make_exec_handler(tlbwr)({
 });
 
 /* temporary strategy: store timer registers in C0 */
-make_exec_handler(syscall)({
-  signal_exception(EXC_SYSCALL);
-});
+make_exec_handler(syscall)({ signal_exception(EXC_SYSCALL); });
 
 make_exec_handler(breakpoint)({
   if (work_mode == MODE_GDB) {
@@ -263,8 +257,7 @@ make_exec_handler(mfc0)({
 make_exec_handler(mtc0)({
   // this serial is for debugging,
   // please don't use it in real codes
-  if (inst.rd == CP0_RESERVED &&
-      inst.sel == CP0_RESERVED_SERIAL)
+  if (inst.rd == CP0_RESERVED && inst.sel == CP0_RESERVED_SERIAL)
     putchar(cpu.gpr[inst.rt]);
 
   switch (CPRS(inst.rd, inst.sel)) {
@@ -296,8 +289,8 @@ make_exec_handler(mtc0)({
     cp0_cause_t *newVal = (void *)&(cpu.gpr[inst.rt]);
     cpu.cp0.cause.IV = newVal->IV;
     cpu.cp0.cause.WP = newVal->WP;
-    cpu.cp0.cause.IP = (newVal->IP & sw_ip_mask) |
-                       (cpu.cp0.cause.IP & ~sw_ip_mask);
+    cpu.cp0.cause.IP =
+        (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
   } break;
   case CPRS(CP0_PAGEMASK, 0): {
     cp0_pagemask_t *newVal = (void *)&(cpu.gpr[inst.rt]);
@@ -329,86 +322,64 @@ make_exec_handler(mtc0)({
   case CPRS(CP0_INDEX, 0): {
     cpu.cp0.index.idx = cpu.gpr[inst.rt];
   } break;
-  default:
-    cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt];
-    break;
+  default: cpu.cp0.cpr[inst.rd][inst.sel] = cpu.gpr[inst.rt]; break;
   }
 });
 
 make_exec_handler(teq)({
-  if ((int32_t)cpu.gpr[inst.rs] ==
-      (int32_t)cpu.gpr[inst.rt]) {
+  if ((int32_t)cpu.gpr[inst.rs] == (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
 });
 
 make_exec_handler(teqi)({
-  if ((int32_t)cpu.gpr[inst.rs] == inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if ((int32_t)cpu.gpr[inst.rs] == inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tge)({
-  if ((int32_t)cpu.gpr[inst.rs] >=
-      (int32_t)cpu.gpr[inst.rt]) {
+  if ((int32_t)cpu.gpr[inst.rs] >= (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
 });
 
 make_exec_handler(tgei)({
-  if ((int32_t)cpu.gpr[inst.rs] >= inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if ((int32_t)cpu.gpr[inst.rs] >= inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tgeiu)({
-  if (cpu.gpr[inst.rs] >= inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if (cpu.gpr[inst.rs] >= inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tgeu)({
-  if (cpu.gpr[inst.rs] >= cpu.gpr[inst.rt]) {
-    signal_exception(EXC_TRAP);
-  }
+  if (cpu.gpr[inst.rs] >= cpu.gpr[inst.rt]) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tlt)({
-  if ((int32_t)cpu.gpr[inst.rs] <
-      (int32_t)cpu.gpr[inst.rt]) {
+  if ((int32_t)cpu.gpr[inst.rs] < (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
 });
 
 make_exec_handler(tlti)({
-  if ((int32_t)cpu.gpr[inst.rs] < inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if ((int32_t)cpu.gpr[inst.rs] < inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tltiu)({
-  if (cpu.gpr[inst.rs] < inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if (cpu.gpr[inst.rs] < inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tltu)({
-  if (cpu.gpr[inst.rs] < cpu.gpr[inst.rt]) {
-    signal_exception(EXC_TRAP);
-  }
+  if (cpu.gpr[inst.rs] < cpu.gpr[inst.rt]) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(tne)({
-  if ((int32_t)cpu.gpr[inst.rs] !=
-      (int32_t)cpu.gpr[inst.rt]) {
+  if ((int32_t)cpu.gpr[inst.rs] != (int32_t)cpu.gpr[inst.rt]) {
     signal_exception(EXC_TRAP);
   }
 });
 
 make_exec_handler(tnei)({
-  if ((int32_t)cpu.gpr[inst.rs] != inst.simm) {
-    signal_exception(EXC_TRAP);
-  }
+  if ((int32_t)cpu.gpr[inst.rs] != inst.simm) { signal_exception(EXC_TRAP); }
 });
 
 make_exec_handler(jr)({
@@ -417,11 +388,10 @@ make_exec_handler(jr)({
   exec_delayslot();
 });
 
-#define R_SIMPLE(name, op, t)                       \
-  make_exec_handler(name)({                         \
-    InstAssert(inst.shamt == 0);                    \
-    cpu.gpr[inst.rd] =                              \
-        (t)cpu.gpr[inst.rs] op(t) cpu.gpr[inst.rt]; \
+#define R_SIMPLE(name, op, t)                                      \
+  make_exec_handler(name)({                                        \
+    InstAssert(inst.shamt == 0);                                   \
+    cpu.gpr[inst.rd] = (t)cpu.gpr[inst.rs] op(t) cpu.gpr[inst.rt]; \
   });
 
 R_SIMPLE(or, |, uint32_t)
@@ -441,14 +411,14 @@ make_exec_handler(add)({
     };
     int64_t val;
   } ret;
-  ret.val = (int64_t)(int32_t)cpu.gpr[inst.rs] +
-            (int64_t)(int32_t)cpu.gpr[inst.rt];
+  ret.val =
+      (int64_t)(int32_t)cpu.gpr[inst.rs] + (int64_t)(int32_t)cpu.gpr[inst.rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #ifdef ENABLE_EXCEPTION
     signal_exception(EXC_OV);
 #else
-    CPUAssert(0, "add overflow, %08x + %08x\n",
-              cpu.gpr[inst.rs], cpu.gpr[inst.rt]);
+    CPUAssert(0, "add overflow, %08x + %08x\n", cpu.gpr[inst.rs],
+              cpu.gpr[inst.rt]);
 #endif
   } else {
     cpu.gpr[inst.rd] = ret.lo;
@@ -463,14 +433,14 @@ make_exec_handler(sub)({
     };
     int64_t val;
   } ret;
-  ret.val = (int64_t)(int32_t)cpu.gpr[inst.rs] -
-            (int64_t)(int32_t)cpu.gpr[inst.rt];
+  ret.val =
+      (int64_t)(int32_t)cpu.gpr[inst.rs] - (int64_t)(int32_t)cpu.gpr[inst.rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #ifdef ENABLE_EXCEPTION
     signal_exception(EXC_OV);
 #else
-    CPUAssert(0, "sub overflow, %08x - %08x\n",
-              cpu.gpr[inst.rs], cpu.gpr[inst.rt]);
+    CPUAssert(0, "sub overflow, %08x - %08x\n", cpu.gpr[inst.rs],
+              cpu.gpr[inst.rt]);
 #endif
   } else {
     cpu.gpr[inst.rd] = ret.lo;
@@ -494,26 +464,23 @@ make_exec_handler(clz)({
 
 make_exec_handler(mult)({
   InstAssert(inst.rd == 0 && inst.shamt == 0);
-  int64_t prod = (int64_t)(int32_t)cpu.gpr[inst.rs] *
-                 (int64_t)(int32_t)cpu.gpr[inst.rt];
+  int64_t prod =
+      (int64_t)(int32_t)cpu.gpr[inst.rs] * (int64_t)(int32_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
 });
 
 make_exec_handler(multu)({
   InstAssert(inst.rd == 0 && inst.shamt == 0);
-  uint64_t prod = (uint64_t)cpu.gpr[inst.rs] *
-                  (uint64_t)cpu.gpr[inst.rt];
+  uint64_t prod = (uint64_t)cpu.gpr[inst.rs] * (uint64_t)cpu.gpr[inst.rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
 });
 
 make_exec_handler(divide)({
   InstAssert(inst.rd == 0 && inst.shamt == 0);
-  cpu.lo =
-      (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
-  cpu.hi =
-      (int32_t)cpu.gpr[inst.rs] % (int32_t)cpu.gpr[inst.rt];
+  cpu.lo = (int32_t)cpu.gpr[inst.rs] / (int32_t)cpu.gpr[inst.rt];
+  cpu.hi = (int32_t)cpu.gpr[inst.rs] % (int32_t)cpu.gpr[inst.rt];
 });
 
 make_exec_handler(divu)({
@@ -529,20 +496,17 @@ make_exec_handler(sll)({
 
 make_exec_handler(sllv)({
   InstAssert(inst.shamt == 0);
-  cpu.gpr[inst.rd] = cpu.gpr[inst.rt]
-                     << (cpu.gpr[inst.rs] & 0x1f);
+  cpu.gpr[inst.rd] = cpu.gpr[inst.rt] << (cpu.gpr[inst.rs] & 0x1f);
 });
 
 make_exec_handler(sra)({
   InstAssert(inst.rs == 0);
-  cpu.gpr[inst.rd] =
-      (int32_t)cpu.gpr[inst.rt] >> inst.shamt;
+  cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> inst.shamt;
 });
 
 make_exec_handler(srav)({
   InstAssert(inst.shamt == 0);
-  cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >>
-                     (cpu.gpr[inst.rs] & 0x1f);
+  cpu.gpr[inst.rd] = (int32_t)cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
 });
 
 make_exec_handler(srl)({
@@ -552,43 +516,36 @@ make_exec_handler(srl)({
 
 make_exec_handler(srlv)({
   InstAssert(inst.shamt == 0);
-  cpu.gpr[inst.rd] =
-      cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
+  cpu.gpr[inst.rd] = cpu.gpr[inst.rt] >> (cpu.gpr[inst.rs] & 0x1f);
 });
 
 make_exec_handler(movn)({
   InstAssert(inst.shamt == 0);
-  if (cpu.gpr[inst.rt] != 0)
-    cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
+  if (cpu.gpr[inst.rt] != 0) cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
 });
 
 make_exec_handler(movz)({
   InstAssert(inst.shamt == 0);
-  if (cpu.gpr[inst.rt] == 0)
-    cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
+  if (cpu.gpr[inst.rt] == 0) cpu.gpr[inst.rd] = cpu.gpr[inst.rs];
 });
 
 make_exec_handler(mfhi)({
-  InstAssert(inst.rs == 0 && inst.rt == 0 &&
-             inst.shamt == 0);
+  InstAssert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.hi;
 });
 
 make_exec_handler(mthi)({
-  InstAssert(inst.rt == 0 && inst.rd == 0 &&
-             inst.shamt == 0);
+  InstAssert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
   cpu.hi = cpu.gpr[inst.rs];
 });
 
 make_exec_handler(mflo)({
-  InstAssert(inst.rs == 0 && inst.rt == 0 &&
-             inst.shamt == 0);
+  InstAssert(inst.rs == 0 && inst.rt == 0 && inst.shamt == 0);
   cpu.gpr[inst.rd] = cpu.lo;
 });
 
 make_exec_handler(mtlo)({
-  InstAssert(inst.rt == 0 && inst.rd == 0 &&
-             inst.shamt == 0);
+  InstAssert(inst.rt == 0 && inst.rd == 0 && inst.shamt == 0);
   cpu.lo = cpu.gpr[inst.rs];
 });
 
@@ -612,39 +569,27 @@ make_exec_handler(addi)({
     };
     int64_t val;
   } ret;
-  ret.val = (int64_t)(int32_t)cpu.gpr[inst.rs] +
-            (int64_t)(int32_t)inst.simm;
+  ret.val = (int64_t)(int32_t)cpu.gpr[inst.rs] + (int64_t)(int32_t)inst.simm;
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #ifdef ENABLE_EXCEPTION
     signal_exception(EXC_OV);
 #else
-    CPUAssert(0, "addi overflow, %08x + %08x\n",
-              cpu.gpr[inst.rs], inst.simm);
+    CPUAssert(0, "addi overflow, %08x + %08x\n", cpu.gpr[inst.rs], inst.simm);
 #endif
   } else {
     cpu.gpr[inst.rt] = ret.lo;
   }
 });
 
-make_exec_handler(addiu)({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm;
-});
+make_exec_handler(addiu)({ cpu.gpr[inst.rt] = cpu.gpr[inst.rs] + inst.simm; });
 
-make_exec_handler(andi)({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.uimm;
-});
+make_exec_handler(andi)({ cpu.gpr[inst.rt] = cpu.gpr[inst.rs] & inst.uimm; });
 
-make_exec_handler(ori)({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.uimm;
-});
+make_exec_handler(ori)({ cpu.gpr[inst.rt] = cpu.gpr[inst.rs] | inst.uimm; });
 
-make_exec_handler(xori)({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.uimm;
-});
+make_exec_handler(xori)({ cpu.gpr[inst.rt] = cpu.gpr[inst.rs] ^ inst.uimm; });
 
-make_exec_handler(sltiu)({
-  cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.simm;
-});
+make_exec_handler(sltiu)({ cpu.gpr[inst.rt] = cpu.gpr[inst.rs] < inst.simm; });
 
 make_exec_handler(slti)({
   cpu.gpr[inst.rt] = (int32_t)cpu.gpr[inst.rs] < inst.simm;
@@ -668,10 +613,9 @@ make_exec_handler(slti)({
 
 #else
 
-#  define CHECK_ALIGNED_ADDR(align, addr)                \
-    CPUAssert(((addr) & (align - 1)) == 0,               \
-              "address(0x%08x) is unaligned, pc=%08x\n", \
-              (addr), cpu.pc)
+#  define CHECK_ALIGNED_ADDR(align, addr)  \
+    CPUAssert(((addr) & (align - 1)) == 0, \
+              "address(0x%08x) is unaligned, pc=%08x\n", (addr), cpu.pc)
 
 #  define CHECK_ALIGNED_ADDR_AdEL CHECK_ALIGNED_ADDR
 #  define CHECK_ALIGNED_ADDR_AdES CHECK_ALIGNED_ADDR
@@ -697,20 +641,17 @@ make_exec_handler(swr)({
 
 make_exec_handler(sw)({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
-  store_mem(cpu.gpr[inst.rs] + inst.simm, 4,
-            cpu.gpr[inst.rt]);
+  store_mem(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
 });
 
 make_exec_handler(sh)({
   CHECK_ALIGNED_ADDR_AdES(2, cpu.gpr[inst.rs] + inst.simm);
-  store_mem(cpu.gpr[inst.rs] + inst.simm, 2,
-            cpu.gpr[inst.rt]);
+  store_mem(cpu.gpr[inst.rs] + inst.simm, 2, cpu.gpr[inst.rt]);
 });
 
 make_exec_handler(sb)({
   CHECK_ALIGNED_ADDR_AdES(1, cpu.gpr[inst.rs] + inst.simm);
-  store_mem(cpu.gpr[inst.rs] + inst.simm, 1,
-            cpu.gpr[inst.rt]);
+  store_mem(cpu.gpr[inst.rs] + inst.simm, 1, cpu.gpr[inst.rt]);
 });
 
 make_exec_handler(lwl)({
@@ -720,10 +661,8 @@ make_exec_handler(lwl)({
 
   if (!cpu.has_exception) {
     if (len < 4)
-      cpu.gpr[inst.rt] =
-          rdata << ((4 - len) * 8) |
-          ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >>
-              (len * 8);
+      cpu.gpr[inst.rt] = rdata << ((4 - len) * 8) |
+                         ((uint32_t)cpu.gpr[inst.rt] << (len * 8)) >> (len * 8);
     else
       cpu.gpr[inst.rt] = rdata;
   }
@@ -736,10 +675,8 @@ make_exec_handler(lwr)({
   uint32_t rdata = load_mem(raddr, len);
   if (!cpu.has_exception) {
     if (len < 4)
-      cpu.gpr[inst.rt] =
-          (rdata << idx * 8) >> (idx * 8) |
-          ((uint32_t)cpu.gpr[inst.rt] >> (len * 8))
-              << (len * 8);
+      cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8) |
+                         ((uint32_t)cpu.gpr[inst.rt] >> (len * 8)) << (len * 8);
     else
       cpu.gpr[inst.rt] = (rdata << idx * 8) >> (idx * 8);
   }
@@ -747,36 +684,31 @@ make_exec_handler(lwr)({
 
 make_exec_handler(lw)({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata =
-      load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
+  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 4);
   if (!cpu.has_exception) { cpu.gpr[inst.rt] = rdata; }
 });
 
 make_exec_handler(lb)({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = (int32_t)(int8_t)load_mem(
-      cpu.gpr[inst.rs] + inst.simm, 1);
+  uint32_t rdata = (int32_t)(int8_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
   if (!cpu.has_exception) { cpu.gpr[inst.rt] = rdata; }
 });
 
 make_exec_handler(lbu)({
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata =
-      load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
+  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 1);
   if (!cpu.has_exception) { cpu.gpr[inst.rt] = rdata; }
 });
 
 make_exec_handler(lh)({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata = (int32_t)(int16_t)load_mem(
-      cpu.gpr[inst.rs] + inst.simm, 2);
+  uint32_t rdata = (int32_t)(int16_t)load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
   if (!cpu.has_exception) { cpu.gpr[inst.rt] = rdata; }
 });
 
 make_exec_handler(lhu)({
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[inst.rs] + inst.simm);
-  uint32_t rdata =
-      load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
+  uint32_t rdata = load_mem(cpu.gpr[inst.rs] + inst.simm, 2);
   if (!cpu.has_exception) { cpu.gpr[inst.rt] = rdata; }
 });
 
@@ -784,14 +716,12 @@ make_exec_handler(pref)({});
 
 make_exec_handler(ll)({
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[inst.rs] + inst.simm);
-  cpu.gpr[inst.rt] =
-      vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
+  cpu.gpr[inst.rt] = vaddr_read(cpu.gpr[inst.rs] + inst.simm, 4);
 });
 
 make_exec_handler(sc)({
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[inst.rs] + inst.simm);
-  vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4,
-              cpu.gpr[inst.rt]);
+  vaddr_write(cpu.gpr[inst.rs] + inst.simm, 4, cpu.gpr[inst.rt]);
   if (!cpu.has_exception) cpu.gpr[inst.rt] = 1;
 });
 
