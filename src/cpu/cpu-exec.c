@@ -1,5 +1,10 @@
 #include <setjmp.h>
+#include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/times.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "debug.h"
 #include "device.h"
@@ -8,7 +13,11 @@
 #include "monitor.h"
 #include "nemu.h"
 
+/* some global bariables */
+nemu_state_t nemu_state = NEMU_STOP;
 CPU_state cpu;
+
+static uint64_t nemu_start_time = 0;
 
 /* clang-format off */
 const char *regs[32] = {
@@ -32,15 +41,25 @@ extern uint32_t get_current_instr();
 
 #define MAX_INSTR_TO_PRINT 10
 
-nemu_state_t nemu_state = NEMU_STOP;
-
-static uint64_t nemu_start_time = 0;
-
 // 1s = 10^3 ms = 10^6 us
 uint64_t get_current_time() { // in us
+#if 1
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec * 1000000 + t.tv_usec - nemu_start_time;
+#elif 0
+  clockid_t clockid = {0};
+  struct timespec tp = {0};
+  clock_getcpuclockid(getpid(), &clockid);
+  clock_gettime(clockid, &tp);
+  // clock_gettime(CLOCK_THREAD_CPUTIME_ID, &tp);
+  return (tp.tv_sec * 1000000 + tp.tv_nsec / 1000) - nemu_start_time;
+#elif 0
+  struct rusage usage = {0};
+  getrusage(RUSAGE_SELF /* current thread */, &usage);
+  return (usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec) -
+         nemu_start_time;
+#endif
 }
 
 void print_registers(void) {
@@ -86,7 +105,6 @@ void check_usual_registers(void) {
 #endif
 
 int init_cpu(vaddr_t entry) {
-
   nemu_start_time = get_current_time();
 
   cpu.cp0.count[0] = 0;
@@ -119,7 +137,7 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-#define MMU_BITS 6
+#define MMU_BITS 5
 
 struct softmmu_t {
   uint32_t id;
