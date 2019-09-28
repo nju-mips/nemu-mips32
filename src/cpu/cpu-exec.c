@@ -210,7 +210,12 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   }
 }
 
-#define PREDECODE_BITS 10
+#ifdef PERF_PREDECODE
+uint64_t predecode_hit = 0;
+uint64_t predecode_miss = 0;
+#endif
+
+#define PREDECODE_BITS 12
 typedef struct {
   const void *handler;
   uint32_t id;
@@ -229,13 +234,14 @@ typedef struct {
           uint16_t uimm;
           int16_t simm;
         }; // I
-      };
-    };
+      };   // R and I union
+    };     // R and I union
 
     uint32_t addr; // J
   };
 
-  int sel;
+  int sel; /* put here will improve performance */
+
 #ifdef DEBUG
   Inst inst;
 #endif
@@ -364,6 +370,21 @@ void update_cp0_timer() {
   if (cpu.cp0.compare != 0 && cpu.cp0.count[0] == cpu.cp0.compare) {
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
+}
+
+void nemu_exit() {
+#ifdef PERF_SOFTMMU
+  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
+      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
+#endif
+
+#ifdef PERF_PREDECODE
+  printf("predecode: %lu/%lu = %lf\n", predecode_hit,
+      predecode_hit + predecode_miss,
+      predecode_hit / (double)(predecode_hit + predecode_miss));
+#endif
+
+  exit(0);
 }
 
 /* Simulate how the CPU works. */

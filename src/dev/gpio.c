@@ -22,15 +22,10 @@ static void gpio_write(paddr_t addr, int len, uint32_t data) {
             data);
   }
 
-#ifdef PERF_SOFTMMU
-  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
-      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
-#endif
-
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more
   // commit log which makes it easier for crosschecking.
-  if (work_mode & MODE_BATCH) exit(0);
+  if (work_mode & MODE_BATCH) nemu_exit();
 }
 
 device_t gpio_dev = {

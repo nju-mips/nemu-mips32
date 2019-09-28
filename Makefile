@@ -26,8 +26,9 @@ CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 # CFLAGS += -DPERF_SOFTMMU
+# CFLAGS += -DPERF_PREDECODE
 # enable interrupt will lose about 600 marks
-CFLAGS += -DDEBUG
+# CFLAGS += -DDEBUG
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")

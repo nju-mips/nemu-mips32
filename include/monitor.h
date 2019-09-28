@@ -12,4 +12,6 @@ typedef enum {
 extern nemu_state_t nemu_state;
 extern work_mode_t work_mode;
 
+void nemu_exit();
+
 #endif

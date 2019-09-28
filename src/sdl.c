@@ -22,7 +22,7 @@ static void device_update(int signum) {
     keyboard_enqueue(event.type, event.key.keysym.sym);
     break;
   case SDL_QUIT:
-    exit(0);
+    nemu_exit();
   default:
     /* do nothing */
     break;

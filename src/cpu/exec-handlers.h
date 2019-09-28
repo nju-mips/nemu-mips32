@@ -154,6 +154,11 @@ make_entry() {
   instr_enqueue_pc(cpu.pc);
 #endif
 
+#ifdef PERF_PREDECODE
+  predecode_hit += !!decode->handler;
+  predecode_miss += !decode->handler;
+#endif
+
   if (decode->handler) {
 #ifdef DEBUG
     instr_enqueue_instr(decode->inst.val);
@@ -252,7 +257,8 @@ make_exec_handler(inv) {
 #ifdef ENABLE_EXCEPTION
   signal_exception(EXC_RI);
 #else
-  uint8_t *p = (uint8_t *)&inst;
+  uint32_t instr = load_mem(cpu.pc, 4);
+  uint8_t *p = (uint8_t *)&instr;
   printf(
       "invalid opcode(pc = 0x%08x): %02x %02x %02x %02x "
       "...\n",
