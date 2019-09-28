@@ -98,7 +98,7 @@ void check_usual_registers(void) {
   for (int i = 0; i < NR_GPR; i++) {
     if (i == R_k0 || i == R_k1) continue;
     CPUAssert(saved_gprs[i] == cpu.gpr[i], "gpr[%d] %08x <> %08x after eret\n",
-              i, saved_gprs[i], cpu.gpr[i]);
+        i, saved_gprs[i], cpu.gpr[i]);
   }
 }
 
@@ -137,6 +137,11 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
+#ifdef PERF_SOFTMMU
+uint64_t softmmu_hit = 0;
+uint64_t softmmu_miss = 0;
+#endif
+
 #define MMU_BITS 5
 
 struct softmmu_t {
@@ -162,10 +167,12 @@ static inline uint32_t softmmu_id(vaddr_t vaddr) {
 }
 
 static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
+#ifdef PERF_SOFTMMU
+  softmmu_miss++;
+#endif
   if (dev->map) {
     uint32_t idx = softmmu_index(vaddr);
     softmmu[idx].id = softmmu_id(vaddr);
-    ;
     softmmu[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
   }
 }
@@ -173,6 +180,9 @@ static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = softmmu_index(addr);
   if (softmmu[idx].id == softmmu_id(addr)) {
+#ifdef PERF_SOFTMMU
+    softmmu_hit++;
+#endif
     return *((uint32_t *)&softmmu[idx].ptr[addr & 0xFFF]) &
            (~0u >> ((4 - len) << 3));
   } else {
@@ -187,6 +197,9 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = softmmu_index(addr);
   if (softmmu[idx].id == softmmu_id(addr)) {
+#ifdef PERF_SOFTMMU
+    softmmu_hit++;
+#endif
     memcpy(&softmmu[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
@@ -196,6 +209,55 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
     dev->write(paddr - dev->start, len, data);
   }
 }
+
+#define PREDECODE_BITS 10
+typedef struct {
+  int op;
+  union {
+    struct {
+      int rs, rt; // R and I
+
+      union {
+        struct {
+          int rd;
+          int shamt;
+          int func;
+        }; // R
+
+        union {
+          uint16_t uimm;
+          int16_t simm;
+        }; // I
+      };
+    };
+
+    uint32_t addr; // J
+  };
+
+  int sel;
+} predecode_t;
+
+#if 0
+static struct predecode_t predecode[1 << PREDECODE_BITS];
+
+static inline void clear_predecode() {
+  for (int i = 0; i < sizeof(predecode) / sizeof(*predecode); i++) {
+    predecode[i].id = 0xFFFFFFFF;
+    predecode[i].ptr = NULL;
+  }
+}
+
+static inline uint32_t predecode_index(vaddr_t vaddr) {
+  return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
+}
+
+static inline uint32_t predecode_id(vaddr_t vaddr) {
+  return (vaddr >> (12 + MMU_BITS));
+}
+
+static inline void update_predecode(
+    vaddr_t vaddr, paddr_t paddr, device_t *dev) {}
+#endif
 
 void signal_exception(int code) {
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
@@ -355,6 +417,11 @@ void cpu_exec(uint64_t n) {
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
+
+#ifdef PERF_SOFTMMU
+  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
+      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
+#endif
 
   if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }
 }

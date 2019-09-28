@@ -44,6 +44,7 @@ typedef union {
 } L64_t;
 
 /* clang-format off */
+/* R-type */
 static const void *special_table[64] = {
     /* 0x00 */ &&sll, &&inv, &&srl, &&sra,
     /* 0x04 */ &&sllv, &&inv, &&srlv, &&srav,
@@ -82,6 +83,7 @@ static const void *special2_table[64] = {
     /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
 };
 
+/* I-type */
 static const void *regimm_table[64] = {
     /* 0x00 */ &&bltz, &&bgez, &&bltzl, &&bgezl,
     /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
@@ -93,6 +95,7 @@ static const void *regimm_table[64] = {
     /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
 };
 
+/* R-type */
 static const void *cop0_table_rs[32] = {
     /* 0x00 */ &&mfc0, &&inv, &&inv, &&inv,
     /* 0x04 */ &&mtc0, &&inv, &&inv, &&inv,
@@ -124,6 +127,7 @@ static const void *cop0_table_func[64] = {
     /* 0x3c */ &&inv,  &&inv,  &&inv,   &&inv,
 };
 
+/* I-type */
 static const void *opcode_table[64] = {
     /* 0x00 */ &&exec_special, &&exec_regimm, &&j, &&jal,
     /* 0x04 */ &&beq, &&bne, &&blez, &&bgtz,

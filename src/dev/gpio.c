@@ -3,6 +3,10 @@
 #include "nemu.h"
 #include <stdlib.h>
 
+#ifdef PERF_SOFTMMU
+extern uint64_t softmmu_hit;
+extern uint64_t softmmu_miss;
+#endif
 
 #define GPIO_BASE 0x10000000
 #define GPIO_SIZE 0x1000
@@ -17,6 +21,11 @@ static void gpio_write(paddr_t addr, int len, uint32_t data) {
             "HIT BAD TRAP code: %d\n" ANSI_WIDTHOR_RESET,
             data);
   }
+
+#ifdef PERF_SOFTMMU
+  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
+      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
+#endif
 
   nemu_state = NEMU_END;
   // directly exit, so that we will not print one more
