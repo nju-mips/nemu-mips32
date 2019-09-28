@@ -16,8 +16,6 @@
   goto inst_end;                \
   make_label(name)
 
-#define make_exec_wrapper(...) __VA_ARGS__;
-
 #define exec_delayslot()   \
   cpu.is_delayslot = true; \
   cpu.pc += 4;             \

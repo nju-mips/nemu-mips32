@@ -22,12 +22,13 @@ CFLAGS += -DENABLE_DELAYSLOT
 CFLAGS += -DENABLE_PAGING
 
 # CFLAGS += -DENABLE_INTR
+# enable EXCEPTION will lose about 200 marks
 CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 # CFLAGS += -DPERF_SOFTMMU
 # CFLAGS += -DPERF_PREDECODE
-# enable interrupt will lose about 600 marks
+# enable interrupt will lose about 1000 marks
 # CFLAGS += -DDEBUG
 
 # Files to be compiled
