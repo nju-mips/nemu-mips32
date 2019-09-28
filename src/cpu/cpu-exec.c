@@ -142,7 +142,7 @@ uint64_t softmmu_hit = 0;
 uint64_t softmmu_miss = 0;
 #endif
 
-#define MMU_BITS 5
+#define MMU_BITS 12
 
 struct softmmu_t {
   uint32_t id;
@@ -212,7 +212,8 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
 
 #define PREDECODE_BITS 10
 typedef struct {
-  int op;
+  const void *handler;
+  uint32_t id;
   union {
     struct {
       int rs, rt; // R and I
@@ -235,29 +236,36 @@ typedef struct {
   };
 
   int sel;
+#ifdef DEBUG
+  Inst inst;
+#endif
 } predecode_t;
 
-#if 0
-static struct predecode_t predecode[1 << PREDECODE_BITS];
+static predecode_t predecode[1 << PREDECODE_BITS];
 
 static inline void clear_predecode() {
   for (int i = 0; i < sizeof(predecode) / sizeof(*predecode); i++) {
-    predecode[i].id = 0xFFFFFFFF;
-    predecode[i].ptr = NULL;
+    predecode[i].handler = 0;
   }
 }
 
 static inline uint32_t predecode_index(vaddr_t vaddr) {
-  return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
+  return vaddr & ((1 << PREDECODE_BITS) - 1);
 }
 
 static inline uint32_t predecode_id(vaddr_t vaddr) {
-  return (vaddr >> (12 + MMU_BITS));
+  return (vaddr >> PREDECODE_BITS);
 }
 
-static inline void update_predecode(
-    vaddr_t vaddr, paddr_t paddr, device_t *dev) {}
-#endif
+predecode_t *instr_fetch(vaddr_t pc) {
+  uint32_t idx = predecode_index(pc);
+  uint32_t id = predecode_id(pc);
+  if (predecode[idx].id != id) {
+    predecode[idx].handler = NULL;
+    predecode[idx].id = id;
+  }
+  return &predecode[idx];
+}
 
 void signal_exception(int code) {
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
@@ -381,10 +389,6 @@ void cpu_exec(uint64_t n) {
     update_cp0_timer();
 #endif
 
-#ifdef DEBUG
-    instr_enqueue_pc(cpu.pc);
-#endif
-
 #ifdef ENABLE_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
@@ -393,11 +397,7 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    Inst inst = {.val = load_mem(cpu.pc, 4)};
-
-#ifdef DEBUG
-    instr_enqueue_instr(inst.val);
-#endif
+    predecode_t *decode = instr_fetch(cpu.pc);
 
 #include "exec-handlers.h"
 
@@ -417,11 +417,6 @@ void cpu_exec(uint64_t n) {
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
-
-#ifdef PERF_SOFTMMU
-  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
-      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
-#endif
 
   if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }
 }

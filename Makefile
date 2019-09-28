@@ -25,7 +25,7 @@ CFLAGS += -DENABLE_PAGING
 CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
-CFLAGS += -DPERF_SOFTMMU
+# CFLAGS += -DPERF_SOFTMMU
 # enable interrupt will lose about 600 marks
 # CFLAGS += -DDEBUG
 
