@@ -151,7 +151,7 @@ static const void *opcode_table[64] = {
 
 make_entry() {
 #ifdef DEBUG
-    instr_enqueue_pc(cpu.pc);
+  instr_enqueue_pc(cpu.pc);
 #endif
 
   if (decode->handler) {
@@ -275,6 +275,7 @@ make_exec_handler(tlbwi) {
   CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n", i, NR_TLB_ENTRY);
   tlb_write(i);
   clear_softmmu();
+  clear_predecode();
 }
 
 make_exec_handler(tlbwr) {
@@ -282,6 +283,7 @@ make_exec_handler(tlbwr) {
   cpu.cp0.random = i;
   tlb_write(i);
   clear_softmmu();
+  clear_predecode();
 }
 
 /* temporary strategy: store timer registers in C0 */
@@ -398,6 +400,7 @@ make_exec_handler(mtc0) {
     cpu.cp0.entry_hi.asid = newVal->asid;
     cpu.cp0.entry_hi.vpn = newVal->vpn;
     clear_softmmu();
+    clear_predecode();
   } break;
   case CPRS(CP0_INDEX, 0): {
     cpu.cp0.index.idx = cpu.gpr[decode->rt];
@@ -817,7 +820,7 @@ make_exec_handler(sc) {
   if (!cpu.has_exception) cpu.gpr[decode->rt] = 1;
 }
 
-make_exec_handler(cache) {}
+make_exec_handler(cache) { clear_predecode(); }
 
 make_exec_handler(sync) {}
 
