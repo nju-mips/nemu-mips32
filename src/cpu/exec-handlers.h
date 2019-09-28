@@ -212,7 +212,7 @@ make_entry() {
     decode->rt = inst.rt;
     decode->rd = inst.rd;
     decode->sel = inst.sel;
-    decode->handler = cop0_table_rs[inst.func];
+    decode->handler = cop0_table_rs[inst.rs];
     break;
   }
   S2type : {

@@ -27,7 +27,7 @@ CFLAGS += -DENABLE_EXCEPTION
 
 # CFLAGS += -DPERF_SOFTMMU
 # enable interrupt will lose about 600 marks
-# CFLAGS += -DDEBUG
+CFLAGS += -DDEBUG
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
