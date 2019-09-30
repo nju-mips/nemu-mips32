@@ -220,7 +220,7 @@ char *gdb_extend_commands(char *args, int arglen) {
 char *gdb_continue(char *args, int arglen) { return NULL; }
 
 char *gdb_read_registers(char *args, int arglen) {
-  static char regs[32 * 8 + 25];
+  static char regs[(32 + 6 ) * 8 + 10];
   int len = 0;
   for (int i = 0; i < 32; i++) {
     int value = htonl(cpu.gpr[i]);
@@ -239,6 +239,7 @@ char *gdb_read_registers(char *args, int arglen) {
                   cpu.cp0.cpr[CP0_CAUSE][0]);
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
                   cpu.pc);
+  assert (len < sizeof(regs));
   return regs;
 }
 
@@ -417,9 +418,9 @@ void gdb_server_mainloop(int servfd) {
     gdb_cmd_handler_t handler = handlers[(int)data[0]];
     if (handler) {
       char *resp = handler(&data[1], size);
-      // printf("[NEMU] Client request '%s'\n", data);
+      printf("[NEMU] Client request '%s'\n", data);
       if (resp) {
-        // printf("[NEMU] Server response '%s'\n", resp);
+        printf("[NEMU] Server response '%s'\n", resp);
         gdb_send(gdb, (void *)resp, strlen(resp));
       } else {
         gdb_send(gdb, (void *)"", 0);
