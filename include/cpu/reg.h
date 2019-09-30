@@ -281,6 +281,10 @@ typedef struct {
 #define EXC_OV      12   /* arithmetic overflow */
 #define EXC_TRAP    13   /* trap */
 
+#define TLB_Refill    1
+#define TLB_Invalid   2
+#define TLB_Modified  3
+
 typedef struct {
   union {
 	uint32_t val;

@@ -274,7 +274,9 @@ decode_cache_t *instr_fetch(vaddr_t pc) {
   return &decode_cache[idx];
 }
 
-void signal_exception(int code) {
+void signal_exception(int c_code) {
+  int code = c_code & 0xFFFF;
+
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
 
 #ifdef ENABLE_CAE_CHECK
@@ -320,20 +322,26 @@ void signal_exception(int code) {
     break;
   case EXC_TLBM:
   case EXC_TLBL:
-  case EXC_TLBS:
-    if (cpu.cp0.status.BEV) {
-      if (cpu.cp0.status.EXL) {
-        cpu.br_target = 0xbfc00380;
+  case EXC_TLBS: {
+    int extra = (unsigned)c_code >> 16;
+    if (extra == TLB_Refill) {
+      if (cpu.cp0.status.BEV) {
+        if (cpu.cp0.status.EXL) {
+          cpu.br_target = 0xbfc00380;
+        } else {
+          cpu.br_target = 0xbfc00200;
+        }
       } else {
-        cpu.br_target = 0xbfc00200;
+        if (cpu.cp0.status.EXL) {
+          cpu.br_target = 0x80000180;
+        } else {
+          cpu.br_target = 0x80000000;
+        }
       }
-    } else {
-      if (cpu.cp0.status.EXL) {
-        cpu.br_target = 0x80000180;
-      } else {
-        cpu.br_target = 0x80000000;
-      }
+      break;
     }
+  }
+    /* fall through */
   default:
     if (cpu.cp0.status.BEV) {
       cpu.br_target = 0xbfc00380;
