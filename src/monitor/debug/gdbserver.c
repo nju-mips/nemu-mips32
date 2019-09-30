@@ -223,22 +223,21 @@ char *gdb_read_registers(char *args, int arglen) {
   static char regs[(32 + 6 ) * 8 + 10];
   int len = 0;
   for (int i = 0; i < 32; i++) {
-    int value = htonl(cpu.gpr[i]);
     len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                    value);
+                    htonl(cpu.gpr[i]));
   }
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.cp0.cpr[CP0_STATUS][0]);
+                  htonl(cpu.cp0.cpr[CP0_STATUS][0]));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.lo);
+                  htonl(cpu.lo));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.hi);
+                  htonl(cpu.hi));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.cp0.cpr[CP0_BADVADDR][0]);
+                  htonl(cpu.cp0.cpr[CP0_BADVADDR][0]));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.cp0.cpr[CP0_CAUSE][0]);
+                  htonl(cpu.cp0.cpr[CP0_CAUSE][0]));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  cpu.pc);
+                  htonl(cpu.pc));
   assert (len < sizeof(regs));
   return regs;
 }
@@ -266,6 +265,7 @@ char *gdb_read_memory(char *args, int arglen) {
     len += snprintf(&mem[len], sizeof(mem) - len, "%02x",
                     data & 0XFF);
   }
+  assert (len < sizeof(mem));
   return mem;
 }
 
