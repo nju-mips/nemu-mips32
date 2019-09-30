@@ -38,7 +38,6 @@ extern uint32_t get_current_instr();
 
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
-#define ALWAYS_INLINE static inline __attribute__((always_inline))
 
 #define MAX_INSTR_TO_PRINT 10
 
@@ -159,15 +158,15 @@ static inline void clear_softmmu() {
   }
 }
 
-ALWAYS_INLINE uint32_t softmmu_index(vaddr_t vaddr) {
+static inline uint32_t softmmu_index(vaddr_t vaddr) {
   return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
 }
 
-ALWAYS_INLINE uint32_t softmmu_id(vaddr_t vaddr) {
+static inline uint32_t softmmu_id(vaddr_t vaddr) {
   return (vaddr >> (12 + MMU_BITS));
 }
 
-static void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
+static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
 #ifdef PERF_SOFTMMU
   softmmu_miss++;
 #endif
@@ -178,7 +177,7 @@ static void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
   }
 }
 
-ALWAYS_INLINE uint32_t load_mem(vaddr_t addr, int len) {
+static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = softmmu_index(addr);
   if (softmmu[idx].id == softmmu_id(addr)) {
 #ifdef PERF_SOFTMMU
@@ -195,7 +194,7 @@ ALWAYS_INLINE uint32_t load_mem(vaddr_t addr, int len) {
   }
 }
 
-ALWAYS_INLINE void store_mem(vaddr_t addr, int len, uint32_t data) {
+static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = softmmu_index(addr);
   if (softmmu[idx].id == softmmu_id(addr)) {
 #ifdef PERF_SOFTMMU
@@ -256,15 +255,15 @@ static inline void clear_predecode() {
   }
 }
 
-ALWAYS_INLINE uint32_t predecode_index(vaddr_t vaddr) {
+static inline uint32_t predecode_index(vaddr_t vaddr) {
   return vaddr & ((1 << PREDECODE_BITS) - 1);
 }
 
-ALWAYS_INLINE uint32_t predecode_id(vaddr_t vaddr) {
+static inline uint32_t predecode_id(vaddr_t vaddr) {
   return (vaddr >> PREDECODE_BITS);
 }
 
-ALWAYS_INLINE predecode_t *instr_fetch(vaddr_t pc) {
+predecode_t *instr_fetch(vaddr_t pc) {
   uint32_t idx = predecode_index(pc);
   uint32_t id = predecode_id(pc);
   if (predecode[idx].id != id) {
@@ -399,15 +398,46 @@ void cpu_exec(uint64_t n) {
 
   if (nemu_state == NEMU_END) {
     printf(
-        "Program execution has ended. To restart the program, exit NEMU and "
-        "run again.\n");
+        "Program execution has ended. To restart the "
+        "program, exit NEMU and run again.\n");
     return;
   }
 
   nemu_state = NEMU_RUNNING;
 
-  predecode_t *decode = NULL;
+  for (; n > 0; n--) {
+#ifdef ENABLE_INTR
+    update_cp0_timer();
+#endif
+
+#ifdef ENABLE_EXCEPTION
+    if ((cpu.pc & 0x3) != 0) {
+      cpu.cp0.badvaddr = cpu.pc;
+      signal_exception(EXC_AdEL);
+      goto check_exception;
+    }
+#endif
+
+    predecode_t *decode = instr_fetch(cpu.pc);
+
 #include "exec-handlers.h"
 
-  return;
+#ifdef DEBUG
+    if (work_mode == MODE_LOG) print_registers();
+#endif
+
+#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+  check_exception:;
+    check_intrs();
+#endif
+
+    if (cpu.has_exception) {
+      cpu.has_exception = false;
+      cpu.pc = cpu.br_target;
+    }
+
+    if (nemu_state != NEMU_RUNNING) { return; }
+  }
+
+  if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }
 }

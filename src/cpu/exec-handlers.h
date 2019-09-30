@@ -147,7 +147,90 @@ static const void *opcode_table[64] = {
 
 /* clang-format on */
 
-make_entry() { goto first_instruction_begin; }
+make_entry() {
+#ifdef DEBUG
+  instr_enqueue_pc(cpu.pc);
+#endif
+
+#ifdef PERF_PREDECODE
+  predecode_hit += !!decode->handler;
+  predecode_miss += !decode->handler;
+#endif
+
+  if (decode->handler) {
+#ifdef DEBUG
+    instr_enqueue_instr(decode->inst.val);
+#endif
+    goto *(decode->handler);
+  }
+
+  Inst inst = {.val = load_mem(cpu.pc, 4)};
+#ifdef DEBUG
+  decode->inst.val = load_mem(cpu.pc, 4);
+  instr_enqueue_instr(decode->inst.val);
+#endif
+
+  unsigned op = inst.op;
+  switch (op) {
+  case 0x00: goto Rtype;
+  case 0x01: goto Itype;
+  case 0x02:
+  case 0x03: goto Jtype;
+  case 0x10:
+    if (inst.rs & 0x10) {
+      decode->handler = cop0_table_func[inst.func];
+      goto Handler;
+    } else {
+      goto Cop0Type;
+    }
+    break;
+  case 0x1c: goto S2type;
+
+  default: goto Itype;
+  }
+
+  do {
+  Rtype : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->shamt = inst.shamt;
+    decode->func = inst.func;
+    decode->handler = special_table[inst.func];
+    break;
+  }
+  Itype : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->uimm = inst.uimm;
+    decode->handler = opcode_table[op];
+    break;
+  }
+  Jtype : {
+    decode->addr = inst.addr;
+    decode->handler = opcode_table[op];
+    break;
+  }
+  Cop0Type : {
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->sel = inst.sel;
+    decode->handler = cop0_table_rs[inst.rs];
+    break;
+  }
+  S2type : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->shamt = inst.shamt;
+    decode->handler = special2_table[inst.func];
+    break;
+  }
+  } while (0);
+
+Handler:
+  goto *(decode->handler);
+}
 
 #if 1
 /* make_entry() { goto *opcode_table[inst.op]; } */
@@ -179,7 +262,6 @@ make_exec_handler(inv) {
       "...\n",
       cpu.pc, p[0], p[1], p[2], p[3]);
   nemu_state = NEMU_END;
-  return;
 #endif
 }
 
@@ -214,7 +296,6 @@ make_exec_handler(syscall) { signal_exception(EXC_SYSCALL); }
 make_exec_handler(breakpoint) {
   if (work_mode == MODE_GDB) {
     nemu_state = NEMU_STOP;
-    return;
   } else {
     signal_exception(EXC_BP);
   }
@@ -924,125 +1005,4 @@ make_label(inst_end) {
   /* fall through */
 }
 
-make_exit() {
-#ifdef DEBUG
-  if (work_mode == MODE_LOG) print_registers();
-#endif
-
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
-  check_intrs();
-  if (cpu.has_exception) {
-    cpu.has_exception = false;
-    cpu.pc = cpu.br_target;
-  }
-#endif
-
-#ifndef PERF_MODE
-  n--;
-  if (n <= 0) {
-    nemu_state = NEMU_STOP;
-    return;
-  }
-  if (nemu_state != NEMU_RUNNING) return;
-#endif
-
-first_instruction_begin:
-  /* next instruction */
-#ifdef ENABLE_INTR
-  update_cp0_timer();
-#endif
-
-  if ((cpu.pc & 0x3) != 0) {
-#ifdef ENABLE_EXCEPTION
-    cpu.cp0.badvaddr = cpu.pc;
-    signal_exception(EXC_AdEL);
-#else
-    CPUAssert(0, "pc %08x is not 4 bytes aligned\n", cpu.pc);
-#endif
-  } else {
-    decode = instr_fetch(cpu.pc);
-
-#ifdef DEBUG
-    instr_enqueue_pc(cpu.pc);
-#endif
-
-#ifdef PERF_PREDECODE
-    predecode_hit += !!decode->handler;
-    predecode_miss += !decode->handler;
-#endif
-
-    if (decode->handler) {
-#ifdef DEBUG
-      instr_enqueue_instr(decode->inst.val);
-#endif
-      goto *(decode->handler);
-    }
-
-    Inst inst = {.val = load_mem(cpu.pc, 4)};
-#ifdef DEBUG
-    decode->inst.val = load_mem(cpu.pc, 4);
-    instr_enqueue_instr(decode->inst.val);
-#endif
-
-    unsigned op = inst.op;
-    switch (op) {
-    case 0x00: goto Rtype;
-    case 0x01: goto Itype;
-    case 0x02:
-    case 0x03: goto Jtype;
-    case 0x10:
-      if (inst.rs & 0x10) {
-        decode->handler = cop0_table_func[inst.func];
-        goto Handler;
-      } else {
-        goto Cop0Type;
-      }
-      break;
-    case 0x1c: goto S2type;
-
-    default: goto Itype;
-    }
-
-    do {
-    Rtype : {
-      decode->rs = inst.rs;
-      decode->rt = inst.rt;
-      decode->rd = inst.rd;
-      decode->shamt = inst.shamt;
-      decode->func = inst.func;
-      decode->handler = special_table[inst.func];
-      break;
-    }
-    Itype : {
-      decode->rs = inst.rs;
-      decode->rt = inst.rt;
-      decode->uimm = inst.uimm;
-      decode->handler = opcode_table[op];
-      break;
-    }
-    Jtype : {
-      decode->addr = inst.addr;
-      decode->handler = opcode_table[op];
-      break;
-    }
-    Cop0Type : {
-      decode->rt = inst.rt;
-      decode->rd = inst.rd;
-      decode->sel = inst.sel;
-      decode->handler = cop0_table_rs[inst.rs];
-      break;
-    }
-    S2type : {
-      decode->rs = inst.rs;
-      decode->rt = inst.rt;
-      decode->rd = inst.rd;
-      decode->shamt = inst.shamt;
-      decode->handler = special2_table[inst.func];
-      break;
-    }
-    } while (0);
-
-  Handler:
-    goto *(decode->handler);
-  }
-}
+make_exit();
