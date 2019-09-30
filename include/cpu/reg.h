@@ -204,6 +204,12 @@ typedef struct {
   uint32_t p   : 1;
 } cp0_index_t;
 
+typedef struct {
+  uint32_t _0      : 4;
+  uint32_t BadVPN2 : 19;
+  uint32_t PTEBase : 9;
+} cp0_context_t;
+
 typedef union {
   uint32_t cpr[32][8];
 
@@ -213,7 +219,7 @@ typedef union {
 	struct { uint32_t random;           uint32_t _[7]; };
 	struct { cp0_entry_lo_t entry_lo0;  uint32_t _[7]; };
 	struct { cp0_entry_lo_t entry_lo1;  uint32_t _[7]; };
-	struct { uint32_t context;          uint32_t _[7]; };
+	struct { cp0_context_t context;     uint32_t _[7]; };
 	struct { cp0_pagemask_t pagemask;   uint32_t _[7]; };
 	struct { cp0_wired_t wired;         uint32_t _[7]; };
 	uint32_t reserved[8];                 /* reserved */
@@ -281,9 +287,28 @@ typedef struct {
 #define EXC_OV      12   /* arithmetic overflow */
 #define EXC_TRAP    13   /* trap */
 
-#define TLB_Refill    1
-#define TLB_Invalid   2
-#define TLB_Modified  3
+#define EX_EJTAG_DEBUG   1
+#define EX_RESET         2
+#define EX_SOFT_RESET    3
+#define EX_NMI           4
+#define EX_MACHINE_CHECK 5
+#define EX_ADDR_ERROR    6
+#define EX_TLB_REFILL    7
+#define EX_TLB_INVALID   8
+#define EX_TLB_MODIFIED  9
+#define EX_CACHE_ERROR   10
+#define EX_BUS_ERROR     11
+#define EX_OVERFLOW      12
+#define EX_TRAP          13
+#define EX_SYSCALL       14
+#define EX_BREAK         15
+#define EX_RI            16
+#define EX_CO_UNUSABLE   17
+#define EX_FP            18
+#define EX_WATCH         19
+#define EX_INTR          20
+
+#define MAKE_EX(EX, CODE) ((EX << 16) | CODE)
 
 typedef struct {
   union {

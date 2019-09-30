@@ -274,8 +274,8 @@ decode_cache_t *instr_fetch(vaddr_t pc) {
   return &decode_cache[idx];
 }
 
-void signal_exception(int c_code) {
-  int code = c_code & 0xFFFF;
+void signal_exception(int exception) {
+  int code = exception & 0xFFFF;
 
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
 
@@ -323,8 +323,8 @@ void signal_exception(int c_code) {
   case EXC_TLBM:
   case EXC_TLBL:
   case EXC_TLBS: {
-    int extra = (unsigned)c_code >> 16;
-    if (extra == TLB_Refill) {
+    int extra = (unsigned)exception >> 16;
+    if (extra == EX_TLB_REFILL) {
       if (cpu.cp0.status.BEV) {
         if (cpu.cp0.status.EXL) {
           cpu.br_target = 0xbfc00380;
@@ -340,8 +340,8 @@ void signal_exception(int c_code) {
       }
       break;
     }
-  }
     /* fall through */
+  }
   default:
     if (cpu.cp0.status.BEV) {
       cpu.br_target = 0xbfc00380;

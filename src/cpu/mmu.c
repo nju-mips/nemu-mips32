@@ -79,6 +79,14 @@ void tlb_write(uint32_t i) {
   tlb[i].p1.v = cpu.cp0.entry_lo1.v;
 }
 
+static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
+  cpu.cp0.badvaddr = vaddr;
+  cpu.cp0.context.BadVPN2 = vaddr >> 13;
+  cpu.cp0.entry_hi.vpn = vaddr >> 13;
+  cpu.cp0.entry_hi.asid = asid;
+  signal_exception(MAKE_EX(ex, code));
+}
+
 vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
   uint32_t exccode = rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
   vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
@@ -90,26 +98,29 @@ vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
     /* match the vpn and asid */
     tlb_phyn_t *phyn = mapped->oddbit ? &(tlb[i].p1) : &(tlb[i].p0);
     if (phyn->v == 0) {
-      // printf("[TLB@%08x] invalid phyn, signal(%d)\n",
-      // cpu.pc, exccode);
-      cpu.cp0.badvaddr = vaddr;
-      signal_exception((TLB_Invalid << 16) | exccode);
+#if 0
+      printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
+#endif
+      tlb_exception(EX_TLB_INVALID, exccode, vaddr, 0);
       return blackhole_dev.start;
     } else if (rwbit == MMU_STORE && phyn->d == 0) {
-      // printf("[TLB@%08x] modified phyn, signal(%d)\n",
-      // cpu.pc, exccode);
-      cpu.cp0.badvaddr = vaddr;
-      signal_exception((TLB_Modified << 16) | EXC_TLBM);
+#if 0
+      printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
+#endif
+      tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, 0);
       return blackhole_dev.start;
     } else {
-      // printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc,
-      // vaddr, (phyn->pfn << 12) | (vaddr & PAGE_MASK));
+#if 0
+      printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc, vaddr,
+          (phyn->pfn << 12) | (vaddr & PAGE_MASK));
+#endif
       return (phyn->pfn << 12) | (vaddr & PAGE_MASK);
     }
   }
 
-  // printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
-  cpu.cp0.badvaddr = vaddr;
-  signal_exception((TLB_Refill << 16) | exccode);
+#if 0
+  printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
+#endif
+  tlb_exception(EX_TLB_REFILL, exccode, vaddr, 0);
   return blackhole_dev.start;
 }
