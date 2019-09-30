@@ -116,9 +116,7 @@ static char mips_32bit_cp0_xml[] =
 
 typedef char *(*gdb_cmd_handler_t)(char *args, int arglen);
 
-char *gdb_question(char *args, int arglen) {
-  return "T05thread:01;";
-}
+char *gdb_question(char *args, int arglen) { return "T05thread:01;"; }
 
 char *gdb_xfer_handler(char *args) {
   char *category = args;
@@ -184,8 +182,8 @@ char *gdb_vCont_handler(char *args) {
 
       switch (action) {
       case 'c': {
-        int instr = vaddr_read_safe(cpu.pc, 4);
-        int ninstr = vaddr_read_safe(cpu.pc + 4, 4);
+        int instr = dbg_vaddr_read(cpu.pc, 4);
+        int ninstr = dbg_vaddr_read(cpu.pc + 4, 4);
         if (instr == 0x42000018 && ninstr == 0x0005000d) {
           printf("[NEMU] WARNING: continue at eret\n");
           cpu_exec(1);
@@ -220,35 +218,27 @@ char *gdb_extend_commands(char *args, int arglen) {
 char *gdb_continue(char *args, int arglen) { return NULL; }
 
 char *gdb_read_registers(char *args, int arglen) {
-  static char regs[(32 + 6 ) * 8 + 10];
+  static char regs[(32 + 6) * 8 + 10];
   int len = 0;
   for (int i = 0; i < 32; i++) {
-    len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                    htonl(cpu.gpr[i]));
+    len += snprintf(&regs[len], sizeof(regs) - len, "%08x", htonl(cpu.gpr[i]));
   }
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.cp0.cpr[CP0_STATUS][0]));
+      htonl(cpu.cp0.cpr[CP0_STATUS][0]));
+  len += snprintf(&regs[len], sizeof(regs) - len, "%08x", htonl(cpu.lo));
+  len += snprintf(&regs[len], sizeof(regs) - len, "%08x", htonl(cpu.hi));
   len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.lo));
-  len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.hi));
-  len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.cp0.cpr[CP0_BADVADDR][0]));
-  len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.cp0.cpr[CP0_CAUSE][0]));
-  len += snprintf(&regs[len], sizeof(regs) - len, "%08x",
-                  htonl(cpu.pc));
-  assert (len < sizeof(regs));
+      htonl(cpu.cp0.cpr[CP0_BADVADDR][0]));
+  len += snprintf(
+      &regs[len], sizeof(regs) - len, "%08x", htonl(cpu.cp0.cpr[CP0_CAUSE][0]));
+  len += snprintf(&regs[len], sizeof(regs) - len, "%08x", htonl(cpu.pc));
+  assert(len < sizeof(regs));
   return regs;
 }
 
-char *gdb_write_registers(char *args, int arglen) {
-  return NULL;
-}
+char *gdb_write_registers(char *args, int arglen) { return NULL; }
 
-char *gdb_set_thread(char *args, int arglen) {
-  return "OK";
-}
+char *gdb_set_thread(char *args, int arglen) { return "OK"; }
 
 char *gdb_step(char *args, int arglen) { return NULL; }
 
@@ -261,11 +251,10 @@ char *gdb_read_memory(char *args, int arglen) {
 
   int len = 0;
   for (int i = 0; i < size; i++) {
-    int data = vaddr_read_safe(addr + i, 1);
-    len += snprintf(&mem[len], sizeof(mem) - len, "%02x",
-                    data & 0XFF);
+    int data = dbg_vaddr_read(addr + i, 1);
+    len += snprintf(&mem[len], sizeof(mem) - len, "%02x", data & 0XFF);
   }
-  assert (len < sizeof(mem));
+  assert(len < sizeof(mem));
   return mem;
 }
 
@@ -278,7 +267,7 @@ char *gdb_write_memory(char *args, int arglen) {
   for (int i = 0; i < size; i++) {
     int data = 0;
     sscanf(hex + 1, "%02x", &data);
-    vaddr_write_safe(addr + i, 1, data);
+    dbg_vaddr_write(addr + i, 1, data);
 
     if (hex[1] == 0 || hex[2] == 0)
       hex = NULL;
@@ -294,8 +283,7 @@ char *gdb_read_register(char *args, int arglen) {
   int reg_no = 0;
   sscanf(args, "%x", &reg_no);
   if (reg_no < 32) {
-    snprintf(reg_value, sizeof(reg_value), "%08x",
-             htonl(cpu.gpr[reg_no]));
+    snprintf(reg_value, sizeof(reg_value), "%08x", htonl(cpu.gpr[reg_no]));
   } else {
     int value = 0;
     switch (reg_no) {
@@ -308,21 +296,16 @@ char *gdb_read_register(char *args, int arglen) {
     case 0x26: value = cpu.cp0.cpr[CP0_EPC][0]; break;
     default: value = 0; break;
     }
-    snprintf(reg_value, sizeof(reg_value), "%08x",
-             htonl(value));
+    snprintf(reg_value, sizeof(reg_value), "%08x", htonl(value));
   }
   return reg_value;
 }
 
-char *gdb_write_register(char *args, int arglen) {
-  return NULL;
-}
+char *gdb_write_register(char *args, int arglen) { return NULL; }
 
 char *gdb_reset(char *args, int arglen) { return NULL; }
 
-char *gdb_single_step(char *args, int arglen) {
-  return NULL;
-}
+char *gdb_single_step(char *args, int arglen) { return NULL; }
 
 char *gdb_detach(char *args, int arglen) { return "OK"; }
 
@@ -333,12 +316,11 @@ char *gdb_write_memory_hex(char *args, int arglen) {
 
   char *hex = strchr(args, ':');
   printf("write memory hex:%08x: '", addr);
-  for (char *p = hex + 1; p < args + arglen; p++)
-    printf("%02hhx ", *p);
+  for (char *p = hex + 1; p < args + arglen; p++) printf("%02hhx ", *p);
   printf("'\n");
 
   for (int i = 0; i < size; i++) {
-    vaddr_write_safe(addr + i, 1, hex[1]);
+    dbg_vaddr_write(addr + i, 1, hex[1]);
 
     if (hex > args + arglen)
       hex = NULL;
@@ -361,10 +343,9 @@ char *gdb_remove_break_point(char *args, int arglen) {
   sscanf(args, "%x,%x,%x", &type, &addr, &kind);
   // let gdb to maintain the breakpoints, :)
   for (int i = 0; i < NR_BREAK_POINTS; i++) {
-    if (break_points[i].used &&
-        break_points[i].addr == addr) {
+    if (break_points[i].used && break_points[i].addr == addr) {
       break_points[i].used = false;
-      vaddr_write_safe(addr, 4, break_points[i].value);
+      dbg_vaddr_write(addr, 4, break_points[i].value);
       return "OK";
     }
   }
@@ -378,8 +359,8 @@ char *gdb_insert_break_point(char *args, int arglen) {
   for (int i = 0; i < NR_BREAK_POINTS; i++) {
     if (!break_points[i].used) {
       break_points[i].addr = addr;
-      break_points[i].value = vaddr_read_safe(addr, 4);
-      vaddr_write_safe(addr, 4, 0x0005000d);
+      break_points[i].value = dbg_vaddr_read(addr, 4);
+      dbg_vaddr_write(addr, 4, 0x0005000d);
       break_points[i].used = true;
       return "OK";
     }
@@ -427,8 +408,7 @@ void gdb_server_mainloop(int servfd) {
       }
       free(data);
     } else {
-      printf("[NEMU] WARNING: Unsupport gdb request '%s'\n",
-             data);
+      printf("[NEMU] WARNING: Unsupport gdb request '%s'\n", data);
       gdb_send(gdb, (void *)"", 0);
       free(data);
     }

@@ -5,6 +5,8 @@
 #include <SDL/SDL.h>
 #include <stdlib.h>
 
+void clear_decode_cache();
+
 device_t *memory_regions[1024 * 1024]; /* 8 MB */
 
 void register_device(device_t *dev) {
@@ -31,18 +33,19 @@ void *vaddr_map(paddr_t addr, uint32_t len) {
   return dev->map(addr - dev->start, len);
 }
 
-uint32_t vaddr_read_safe(vaddr_t addr, int len) {
+uint32_t dbg_vaddr_read(vaddr_t addr, int len) {
   addr = prot_addr(addr, MMU_LOAD);
   device_t *dev = find_device(addr);
   if (!dev || !dev->read) return 0;
   return dev->read(addr - dev->start, len);
 }
 
-void vaddr_write_safe(vaddr_t addr, int len, uint32_t data) {
+void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data) {
   addr = prot_addr(addr, MMU_STORE);
   device_t *dev = find_device(addr);
   if (!dev || !dev->write) return;
   dev->write(addr - dev->start, len, data);
+  clear_decode_cache();
 }
 
 uint32_t vaddr_read(vaddr_t addr, int len) {

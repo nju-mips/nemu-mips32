@@ -137,85 +137,86 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-#ifdef PERF_SOFTMMU
-uint64_t softmmu_hit = 0;
-uint64_t softmmu_miss = 0;
+#ifdef PERF_mmu_cache
+uint64_t mmu_cache_hit = 0;
+uint64_t mmu_cache_miss = 0;
 #endif
 
 #define MMU_BITS 12
 
-struct softmmu_t {
+struct mmu_cache_t {
   uint32_t id;
   uint8_t *ptr;
 };
 
-static struct softmmu_t softmmu[1 << MMU_BITS];
+static struct mmu_cache_t mmu_cache[1 << MMU_BITS];
 
-static inline void clear_softmmu() {
-  for (int i = 0; i < sizeof(softmmu) / sizeof(*softmmu); i++) {
-    softmmu[i].id = 0xFFFFFFFF;
-    softmmu[i].ptr = NULL;
+static inline void clear_mmu_cache() {
+  for (int i = 0; i < sizeof(mmu_cache) / sizeof(*mmu_cache); i++) {
+    mmu_cache[i].id = 0xFFFFFFFF;
+    mmu_cache[i].ptr = NULL;
   }
 }
 
-static inline uint32_t softmmu_index(vaddr_t vaddr) {
+static inline uint32_t mmu_cache_index(vaddr_t vaddr) {
   return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
 }
 
-static inline uint32_t softmmu_id(vaddr_t vaddr) {
+static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
   return (vaddr >> (12 + MMU_BITS));
 }
 
-static inline void update_softmmu(vaddr_t vaddr, paddr_t paddr, device_t *dev) {
-#ifdef PERF_SOFTMMU
-  softmmu_miss++;
+static inline void update_mmu_cache(
+    vaddr_t vaddr, paddr_t paddr, device_t *dev) {
+#ifdef PERF_mmu_cache
+  mmu_cache_miss++;
 #endif
   if (dev->map) {
-    uint32_t idx = softmmu_index(vaddr);
-    softmmu[idx].id = softmmu_id(vaddr);
-    softmmu[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
+    uint32_t idx = mmu_cache_index(vaddr);
+    mmu_cache[idx].id = mmu_cache_id(vaddr);
+    mmu_cache[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
   }
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
-  uint32_t idx = softmmu_index(addr);
-  if (softmmu[idx].id == softmmu_id(addr)) {
-#ifdef PERF_SOFTMMU
-    softmmu_hit++;
+  uint32_t idx = mmu_cache_index(addr);
+  if (mmu_cache[idx].id == mmu_cache_id(addr)) {
+#ifdef PERF_mmu_cache
+    mmu_cache_hit++;
 #endif
-    return *((uint32_t *)&softmmu[idx].ptr[addr & 0xFFF]) &
+    return *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
            (~0u >> ((4 - len) << 3));
   } else {
     paddr_t paddr = prot_addr(addr, MMU_LOAD);
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
-    update_softmmu(addr, paddr, dev);
+    update_mmu_cache(addr, paddr, dev);
     return dev->read(paddr - dev->start, len);
   }
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
-  uint32_t idx = softmmu_index(addr);
-  if (softmmu[idx].id == softmmu_id(addr)) {
-#ifdef PERF_SOFTMMU
-    softmmu_hit++;
+  uint32_t idx = mmu_cache_index(addr);
+  if (mmu_cache[idx].id == mmu_cache_id(addr)) {
+#ifdef PERF_mmu_cache
+    mmu_cache_hit++;
 #endif
-    memcpy(&softmmu[idx].ptr[addr & 0xFFF], &data, len);
+    memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
-    update_softmmu(addr, paddr, dev);
+    update_mmu_cache(addr, paddr, dev);
     dev->write(paddr - dev->start, len, data);
   }
 }
 
-#ifdef PERF_PREDECODE
-uint64_t predecode_hit = 0;
-uint64_t predecode_miss = 0;
+#ifdef PERF_decode_cache
+uint64_t decode_cache_hit = 0;
+uint64_t decode_cache_miss = 0;
 #endif
 
-#define PREDECODE_BITS 12
+#define decode_cache_BITS 12
 typedef struct {
   const void *handler;
   uint32_t id;
@@ -245,32 +246,32 @@ typedef struct {
 #ifdef DEBUG
   Inst inst;
 #endif
-} predecode_t;
+} decode_cache_t;
 
-static predecode_t predecode[1 << PREDECODE_BITS];
+static decode_cache_t decode_cache[1 << decode_cache_BITS];
 
-static inline void clear_predecode() {
-  for (int i = 0; i < sizeof(predecode) / sizeof(*predecode); i++) {
-    predecode[i].handler = 0;
+void clear_decode_cache() {
+  for (int i = 0; i < sizeof(decode_cache) / sizeof(*decode_cache); i++) {
+    decode_cache[i].handler = 0;
   }
 }
 
-static inline uint32_t predecode_index(vaddr_t vaddr) {
-  return vaddr & ((1 << PREDECODE_BITS) - 1);
+static inline uint32_t decode_cache_index(vaddr_t vaddr) {
+  return vaddr & ((1 << decode_cache_BITS) - 1);
 }
 
-static inline uint32_t predecode_id(vaddr_t vaddr) {
-  return (vaddr >> PREDECODE_BITS);
+static inline uint32_t decode_cache_id(vaddr_t vaddr) {
+  return (vaddr >> decode_cache_BITS);
 }
 
-predecode_t *instr_fetch(vaddr_t pc) {
-  uint32_t idx = predecode_index(pc);
-  uint32_t id = predecode_id(pc);
-  if (predecode[idx].id != id) {
-    predecode[idx].handler = NULL;
-    predecode[idx].id = id;
+decode_cache_t *instr_fetch(vaddr_t pc) {
+  uint32_t idx = decode_cache_index(pc);
+  uint32_t id = decode_cache_id(pc);
+  if (decode_cache[idx].id != id) {
+    decode_cache[idx].handler = NULL;
+    decode_cache[idx].id = id;
   }
-  return &predecode[idx];
+  return &decode_cache[idx];
 }
 
 void signal_exception(int code) {
@@ -373,15 +374,16 @@ void update_cp0_timer() {
 }
 
 void nemu_exit() {
-#ifdef PERF_SOFTMMU
-  printf("softmmu: %lu/%lu = %lf\n", softmmu_hit, softmmu_hit + softmmu_miss,
-      softmmu_hit / (double)(softmmu_hit + softmmu_miss));
+#ifdef PERF_mmu_cache
+  printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
+      mmu_cache_hit + mmu_cache_miss,
+      mmu_cache_hit / (double)(mmu_cache_hit + mmu_cache_miss));
 #endif
 
-#ifdef PERF_PREDECODE
-  printf("predecode: %lu/%lu = %lf\n", predecode_hit,
-      predecode_hit + predecode_miss,
-      predecode_hit / (double)(predecode_hit + predecode_miss));
+#ifdef PERF_decode_cache
+  printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
+      decode_cache_hit + decode_cache_miss,
+      decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
 #endif
 
   exit(0);
@@ -418,7 +420,7 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    predecode_t *decode = instr_fetch(cpu.pc);
+    decode_cache_t *decode = instr_fetch(cpu.pc);
 
 #include "exec-handlers.h"
 

@@ -55,8 +55,8 @@ void vaddr_write(vaddr_t, int, uint32_t);
 uint32_t paddr_peek(paddr_t, int);
 
 /* for gdb debugger */
-uint32_t vaddr_read_safe(vaddr_t, int);
-void vaddr_write_safe(vaddr_t addr, int len, uint32_t data);
+uint32_t dbg_vaddr_read(vaddr_t, int);
+void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data);
 
 vaddr_t page_translate(vaddr_t, bool rwbit);
 

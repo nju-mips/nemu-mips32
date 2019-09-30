@@ -183,7 +183,7 @@ void print_qemu_registers(gdb_regs_t *regs) {
 }
 
 static bool is_branch_inst(vaddr_t pc) {
-  Inst inst = { .val = vaddr_read_safe(pc, 4) };
+  Inst inst = { .val = dbg_vaddr_read(pc, 4) };
   if(0x3 <= inst.op && inst.op <= 0x7) return true;
   if(0x14 <= inst.op && inst.op <= 0x17) return true;
 
