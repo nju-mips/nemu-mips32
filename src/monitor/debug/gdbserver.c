@@ -399,9 +399,9 @@ void gdb_server_mainloop(int servfd) {
     gdb_cmd_handler_t handler = handlers[(int)data[0]];
     if (handler) {
       char *resp = handler(&data[1], size);
-      printf("[NEMU] Client request '%s'\n", data);
+      // printf("[NEMU] Client request '%s'\n", data);
       if (resp) {
-        printf("[NEMU] Server response '%s'\n", resp);
+        // printf("[NEMU] Server response '%s'\n", resp);
         gdb_send(gdb, (void *)resp, strlen(resp));
       } else {
         gdb_send(gdb, (void *)"", 0);
