@@ -29,3 +29,14 @@ make
 ```
 ./build/nemu -e *.elf
 ```
+
+## linux
+
+* important files:
+ * linux/arch/mips/boot/dts/noop/noop.dts
+* commands:
+ * cd linux && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make uImage
+ * cd uboot && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make
+ * cd nemu-mips32 && vim Makefile # ENABLE\_DEBUG
+ * cd nemu-mips32 && make && build/nemu -b -e u-boot.elf
+
