@@ -4,25 +4,21 @@
 #include "memory.h"
 #include "mmu.h"
 
+#define PABITS 32
+
 tlb_entry_t tlb[NR_TLB_ENTRY];
 
 extern void signal_exception(int);
 
-#define PAGE_MASK ((1 << 12) - 1)
-#define VPN_MASK ((1 << 19) - 1)
-
-static inline bool match_vpn_and_asid(int idx, uint32_t vpn, uint32_t asid) {
-  bool vpn_match = (tlb[idx].vpn & VPN_MASK) == (vpn & VPN_MASK);
-  bool asid_match = tlb[idx].asid == asid;
-  if (vpn_match && (asid_match || tlb[idx].g)) { return true; }
-  return false;
-}
-
 void tlb_present() {
   for (int i = 0; i < NR_TLB_ENTRY; i++) {
-    if (!match_vpn_and_asid(i, cpu.cp0.entry_hi.vpn, cpu.cp0.entry_hi.asid)) {
-      continue;
-    }
+    uint32_t mask = tlb[i].pagemask;
+    assert(mask == 0 || (mask | (mask + 1)) == 0);
+    bool match = (tlb[i].vpn & ~mask) == (cpu.cp0.entry_hi.vpn & ~mask) &&
+                 (tlb[i].g || tlb[i].asid == cpu.cp0.entry_hi.asid);
+
+    if (!match) continue;
+
     /* match this tlb entry */
     cpu.cp0.index.p = 0;
     cpu.cp0.index.idx = i;
@@ -89,38 +85,52 @@ static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
 
 vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
   uint32_t exccode = rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
-  vaddr_mapped_t *mapped = (vaddr_mapped_t *)&vaddr;
+  uint32_t va_31_13 = (vaddr & ~0x1FFF) >> 13;
   for (int i = 0; i < NR_TLB_ENTRY; i++) {
-    if (!match_vpn_and_asid(i, mapped->vpn, cpu.cp0.entry_hi.asid)) {
-      continue;
-    }
+    uint32_t mask = tlb[i].pagemask;
+    assert(mask == 0 || (mask | (mask + 1)) == 0);
+    bool match = (tlb[i].vpn & ~mask) == (va_31_13 & ~mask) &&
+                 (tlb[i].g || tlb[i].asid == cpu.cp0.entry_hi.asid);
+    if (!match) continue;
 
+    bool EvenOddBit = vaddr & ((mask + 1) << 12);
     /* match the vpn and asid */
-    tlb_phyn_t *phyn = mapped->oddbit ? &(tlb[i].p1) : &(tlb[i].p0);
+    tlb_phyn_t *phyn = EvenOddBit ? &(tlb[i].p1) : &(tlb[i].p0);
     if (phyn->v == 0) {
 #if 0
       printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
 #endif
-      tlb_exception(EX_TLB_INVALID, exccode, vaddr, 0);
+      tlb_exception(EX_TLB_INVALID, exccode, vaddr, tlb[i].asid);
       return blackhole_dev.start;
-    } else if (rwbit == MMU_STORE && phyn->d == 0) {
+    } else if (phyn->d == 0 && rwbit == MMU_STORE) {
 #if 0
       printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
 #endif
-      tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, 0);
+      tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, tlb[i].asid);
       return blackhole_dev.start;
     } else {
+      // # pfn_PABITS-1-12..0 corresponds to pa_PABITS-1..12
+      //
+      // pa ← pfn_PABITS-1-12..EvenOddBit-12 || va_EvenOddBit-1..0
+      // case TLB[i].Mask
+      //  2#0000000000000000: EvenOddBit ← 12
+      //  2#0000000000000011: EvenOddBit ← 14
+      //  2#0000000000001111: EvenOddBit ← 16
+      // endcase
+
+      uint32_t highbits = (phyn->pfn & ~mask) << 12;
+      uint32_t lowbits = vaddr & (((mask + 1) << 12) - 1);
 #if 0
       printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc, vaddr,
-          (phyn->pfn << 12) | (vaddr & PAGE_MASK));
+          highbits | lowbits);
 #endif
-      return (phyn->pfn << 12) | (vaddr & PAGE_MASK);
+      return highbits | lowbits;
     }
   }
 
 #if 0
-  printf("[TLB@%08x] unmatched %08x\n", cpu.pc, vaddr);
+  printf("[TLB@%08x] TLBMiss %08x\n", cpu.pc, vaddr);
 #endif
-  tlb_exception(EX_TLB_REFILL, exccode, vaddr, 0);
+  tlb_exception(EX_TLB_REFILL, exccode, vaddr, cpu.cp0.entry_hi.asid);
   return blackhole_dev.start;
 }
