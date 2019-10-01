@@ -187,12 +187,25 @@ work_mode_t init_monitor(void) {
   if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
 
 #if defined(DEBUG)
+#if 1
+  const uint32_t linux_elf_base = 0x84000000;
+  const char *linux_elf_path = "/home/wierton/linux-noop-4.11.4/arch/mips/boot/uImage.bin";
+  size_t size = get_file_size(linux_elf_path);
+  void *buf = read_file(linux_elf_path);
+  void *mem = vaddr_map(linux_elf_base, size);
+  memcpy(mem, buf, size);
+  free(buf);
+
+  /* ARCH=mips make uImage */
   // send command to uboot
   char cmd[1024], *p = cmd;
+  p += sprintf(p, "bootm 0x%08x\n", linux_elf_base);
+#else
   p += sprintf(p, "set serverip 192.168.3.1\n");
   p += sprintf(p, "set ipaddr 114.212.81.241\n");
   p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
-  // p += sprintf(p, "ping 127.0.0.1\n");
+  p += sprintf(p, "ping 127.0.0.1\n");
+#endif
   for (p = cmd; *p; p++) serial_enqueue_ascii(*p);
 #endif
 

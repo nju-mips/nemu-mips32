@@ -152,7 +152,7 @@ make_entry() {
   instr_enqueue_pc(cpu.pc);
 #endif
 
-#ifdef PERF_decode_cache
+#ifdef PERF_DECODE_CACHE
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;
 #endif
@@ -169,6 +169,9 @@ make_entry() {
   decode->inst.val = load_mem(cpu.pc, 4);
   instr_enqueue_instr(decode->inst.val);
 #endif
+
+  if (cpu.pc == 0x8000080c)
+    printf("[NEMU] inst is %08x, %08x\n", inst.val, dbg_vaddr_read(cpu.pc, 4));
 
   unsigned op = inst.op;
   switch (op) {

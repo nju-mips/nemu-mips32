@@ -104,40 +104,7 @@ void check_usual_registers(void) {
 
 #endif
 
-int init_cpu(vaddr_t entry) {
-  nemu_start_time = get_current_time();
-
-  cpu.cp0.count[0] = 0;
-  cpu.cp0.compare = 0xFFFFFFFF;
-
-  cpu.cp0.status.CU = CU0_ENABLE;
-  cpu.cp0.status.ERL = 1;
-  cpu.cp0.status.BEV = 1;
-  cpu.cp0.status.IM = 0x00;
-
-  cpu.pc = entry;
-  cpu.cp0.cpr[CP0_PRID][0] = 0x00018000; // MIPS32 4Kc
-
-  // init cp0 config 0
-  cpu.cp0.config.MT = 1; // standard MMU
-  cpu.cp0.config.BE = 0; // little endian
-  cpu.cp0.config.M = 1;  // config1 present
-
-  // init cp0 config 1
-  cpu.cp0.config1.DA = 3; // 4=3+1 ways dcache
-  cpu.cp0.config1.DL = 1; // 4=2^(1 + 1) bytes per line
-  cpu.cp0.config1.DS = 2; // 256=2^(2 + 6) sets
-
-  cpu.cp0.config1.IA = 3; // 4=3+1 ways ways dcache
-  cpu.cp0.config1.IL = 1; // 4=2^(1 + 1) bytes per line
-  cpu.cp0.config1.IS = 2; // 256=2^(2 + 6) sets
-
-  cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
-
-  return 0;
-}
-
-#ifdef PERF_mmu_cache
+#ifdef PERF_MMU_CACHE
 uint64_t mmu_cache_hit = 0;
 uint64_t mmu_cache_miss = 0;
 #endif
@@ -168,20 +135,21 @@ static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
 
 static inline void update_mmu_cache(
     vaddr_t vaddr, paddr_t paddr, device_t *dev) {
-#ifdef PERF_mmu_cache
+#ifdef PERF_MMU_CACHE
   mmu_cache_miss++;
 #endif
   if (dev->map) {
     uint32_t idx = mmu_cache_index(vaddr);
     mmu_cache[idx].id = mmu_cache_id(vaddr);
     mmu_cache[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
+    assert (mmu_cache[idx].ptr);
   }
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef PERF_mmu_cache
+#ifdef PERF_MMU_CACHE
     mmu_cache_hit++;
 #endif
     return *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
@@ -198,7 +166,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef PERF_mmu_cache
+#ifdef PERF_MMU_CACHE
     mmu_cache_hit++;
 #endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
@@ -211,12 +179,12 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   }
 }
 
-#ifdef PERF_decode_cache
+#ifdef PERF_DECODE_CACHE
 uint64_t decode_cache_hit = 0;
 uint64_t decode_cache_miss = 0;
 #endif
 
-#define decode_cache_BITS 12
+#define DECODE_CACHE_BITS 12
 typedef struct {
   const void *handler;
   uint32_t id;
@@ -248,20 +216,20 @@ typedef struct {
 #endif
 } decode_cache_t;
 
-static decode_cache_t decode_cache[1 << decode_cache_BITS];
+static decode_cache_t decode_cache[1 << DECODE_CACHE_BITS];
 
 void clear_decode_cache() {
   for (int i = 0; i < sizeof(decode_cache) / sizeof(*decode_cache); i++) {
-    decode_cache[i].handler = 0;
+    decode_cache[i].handler = NULL;
   }
 }
 
 static inline uint32_t decode_cache_index(vaddr_t vaddr) {
-  return vaddr & ((1 << decode_cache_BITS) - 1);
+  return vaddr & ((1 << DECODE_CACHE_BITS) - 1);
 }
 
 static inline uint32_t decode_cache_id(vaddr_t vaddr) {
-  return (vaddr >> decode_cache_BITS);
+  return (vaddr >> DECODE_CACHE_BITS);
 }
 
 decode_cache_t *instr_fetch(vaddr_t pc) {
@@ -359,6 +327,43 @@ void signal_exception(uint32_t exception) {
   cpu.cp0.cause.ExcCode = code;
 }
 
+int init_cpu(vaddr_t entry) {
+  nemu_start_time = get_current_time();
+
+  cpu.cp0.count[0] = 0;
+  cpu.cp0.compare = 0xFFFFFFFF;
+
+  cpu.cp0.status.CU = CU0_ENABLE;
+  cpu.cp0.status.ERL = 1;
+  cpu.cp0.status.BEV = 1;
+  cpu.cp0.status.IM = 0x00;
+
+  cpu.pc = entry;
+  cpu.cp0.cpr[CP0_PRID][0] = 0x00018000; // MIPS32 4Kc
+
+  // init cp0 config 0
+  cpu.cp0.config.MT = 1; // standard MMU
+  cpu.cp0.config.BE = 0; // little endian
+  cpu.cp0.config.M = 1;  // config1 present
+
+  // init cp0 config 1
+  cpu.cp0.config1.DA = 3; // 4=$3+1 ways dcache
+  cpu.cp0.config1.DL = 3; // 16=2^($3 + 1) bytes per line
+  cpu.cp0.config1.DS = 2; // 256=2^($2 + 6) sets
+
+  cpu.cp0.config1.IA = 3; // 4=$3+1 ways ways dcache
+  cpu.cp0.config1.IL = 3; // 16=2^($3 + 1) bytes per line
+  cpu.cp0.config1.IS = 2; // 256=2^($2 + 6) sets
+
+  cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
+
+  /* initialize some cache */
+  clear_mmu_cache();
+  clear_decode_cache();
+
+  return 0;
+}
+
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
 static inline void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
@@ -381,13 +386,13 @@ void update_cp0_timer() {
 }
 
 void nemu_exit() {
-#ifdef PERF_mmu_cache
+#ifdef PERF_MMU_CACHE
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
       mmu_cache_hit / (double)(mmu_cache_hit + mmu_cache_miss));
 #endif
 
-#ifdef PERF_decode_cache
+#ifdef PERF_DECODE_CACHE
   printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
       decode_cache_hit + decode_cache_miss,
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
