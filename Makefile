@@ -14,8 +14,8 @@ AR = ar
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
 
-CFLAGS += -D__ARCH_MIPS32_R1__ 
-# CFLAGS += -D__ARCH_LOONGSON__ 
+# CFLAGS += -D__ARCH_MIPS32_R1__ 
+CFLAGS += -D__ARCH_LOONGSON__ 
 
 CFLAGS += -DENABLE_DELAYSLOT
 # CFLAGS += -DENABLE_SEGMENT # prior to PAGING
@@ -28,9 +28,10 @@ CFLAGS += -DENABLE_EXCEPTION
 
 # CFLAGS += -DPERF_SOFTMMU
 # CFLAGS += -DPERF_PREDECODE
-CFLAGS += -DENABLE_KERNEL_DEBUG
+# CFLAGS += -DENABLE_KERNEL_DEBUG
+# CFLAGS += -DENABLE_QUICK_LINUX_LOADING
 # enable interrupt will lose about 1000 marks
-CFLAGS += -DDEBUG
+# CFLAGS += -DDEBUG
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
