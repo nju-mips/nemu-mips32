@@ -346,8 +346,10 @@ make_exec_handler(mfc0) {
 make_exec_handler(mtc0) {
   // this serial is for debugging,
   // please don't use it in real codes
+#ifdef ENABLE_KERNEL_DEBUG
   if (decode->rd == CP0_RESERVED && decode->sel == CP0_RESERVED_SERIAL)
     putchar(cpu.gpr[decode->rt]);
+#endif
 
   switch (CPRS(decode->rd, decode->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):

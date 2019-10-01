@@ -190,11 +190,11 @@ work_mode_t init_monitor(void) {
 #if 1
   const uint32_t linux_elf_base = 0x84000000;
   const char *linux_elf_path = "/home/wierton/linux-noop-4.11.4/arch/mips/boot/uImage.bin";
-  size_t size = get_file_size(linux_elf_path);
-  void *buf = read_file(linux_elf_path);
-  void *mem = vaddr_map(linux_elf_base, size);
-  memcpy(mem, buf, size);
-  free(buf);
+  load_image(linux_elf_path, linux_elf_base);
+
+  // const uint32_t initramfs_base = 0x82000000;
+  // const char *initramfs_path = "/home/wierton/manual/projs/initramfs/build/initramfs.igz";
+  // load_image(initramfs_path, initramfs_base);
 
   /* ARCH=mips make uImage */
   // send command to uboot
