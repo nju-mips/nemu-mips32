@@ -4,11 +4,9 @@
 #include "memory.h"
 #include "mmu.h"
 
-#define PABITS 32
-
 tlb_entry_t tlb[NR_TLB_ENTRY];
 
-extern void signal_exception(int);
+extern void signal_exception(unsigned);
 
 void tlb_present() {
   for (int i = 0; i < NR_TLB_ENTRY; i++) {

@@ -274,8 +274,9 @@ decode_cache_t *instr_fetch(vaddr_t pc) {
   return &decode_cache[idx];
 }
 
-void signal_exception(int exception) {
+void signal_exception(uint32_t exception) {
   int code = exception & 0xFFFF;
+  int extra = exception >> 16;
 
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
 
@@ -300,8 +301,7 @@ void signal_exception(int exception) {
   /* for loongson testcase, the only exception entry is
    * 'h0380' */
   cpu.br_target = 0xbfc00380;
-  if (code == EXC_TLBM || code == EXC_TLBL || code == EXC_TLBS)
-    cpu.br_target = 0xbfc00000;
+  if (extra == EX_TLB_REFILL) { cpu.br_target = 0xbfc00200; }
 #else
   /* reference linux: arch/mips/kernel/cps-vec.S */
   switch (code) {
@@ -323,7 +323,6 @@ void signal_exception(int exception) {
   case EXC_TLBM:
   case EXC_TLBL:
   case EXC_TLBS: {
-    int extra = (unsigned)exception >> 16;
     if (extra == EX_TLB_REFILL) {
       if (cpu.cp0.status.BEV) {
         if (cpu.cp0.status.EXL) {

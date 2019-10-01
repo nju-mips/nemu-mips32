@@ -54,6 +54,8 @@
  *   Cache Size:   I:128-64B-direct, D:256-64B-direct
  */
 
+#define __ glue(__, __LINE__)
+
 typedef struct {
 	uint32_t IE   : 1;
 	uint32_t EXL  : 1;
@@ -68,7 +70,7 @@ typedef struct {
 	uint32_t IM   : 8;
 
 	uint32_t Impl : 2;
-	uint32_t _0   : 1;
+	uint32_t __   : 1;
 	uint32_t NMI  : 1;
 	uint32_t SR   : 1;
 	uint32_t TS   : 1;
@@ -84,18 +86,18 @@ typedef struct {
 } cp0_status_t;
 
 typedef struct {
-	uint32_t _5 : 2;
+	uint32_t __ : 2;
 	uint32_t ExcCode : 5;
-	uint32_t _4 : 1;
+	uint32_t __ : 1;
 	uint32_t IP : 8;
 
-	uint32_t _3 : 6;
+	uint32_t __ : 6;
 	uint32_t WP : 1;
 	uint32_t IV : 1;
 
-	uint32_t _2 : 4;
+	uint32_t __ : 4;
 	uint32_t CE : 2;
-	uint32_t _1 : 1;
+	uint32_t __ : 1;
 	uint32_t BD : 1;
 } cp0_cause_t;
 
@@ -109,7 +111,7 @@ typedef struct {
 
 typedef struct {
   uint32_t K0   : 3; // kseg0 coherency algorithms
-  uint32_t _0   : 4; // must be zero
+  uint32_t __   : 4; // must be zero
   uint32_t MT   : 3; // MMU type
                      // 0 for none
 					 // 1 for standard TLB
@@ -162,9 +164,9 @@ typedef struct {
 } cp0_config1_t;
 
 typedef struct {
-  uint32_t _0   : 13;
+  uint32_t __   : 13;
   uint32_t mask : 16;
-  uint32_t _1   :  3;
+  uint32_t __   :  3;
 } cp0_pagemask_t;
 
 #define PABITS 32
@@ -172,7 +174,7 @@ typedef struct {
 // only 4KB page is supported
 typedef struct {
   uint32_t asid : 8;
-  uint32_t _0   : 5;
+  uint32_t __   : 5;
   uint32_t vpn  : 19;
 } cp0_entry_hi_t;
 
@@ -183,14 +185,14 @@ typedef struct {
   uint32_t c   : 3;
   /* uint32_t pfn : 24; */
   uint32_t pfn : (PABITS - 12);
-  uint32_t _1  : (36 - PABITS);
-  uint32_t _0  : 2;
+  uint32_t __  : (36 - PABITS);
+  uint32_t __  : 2;
 } cp0_entry_lo_t;
 
 typedef struct {
-  uint32_t _0   : 13;
+  uint32_t __   : 13;
   uint32_t mask : 16;
-  uint32_t _1   : 3;
+  uint32_t __   : 3;
 } cp0_page_mask_t;
 
 typedef uint32_t cp0_wired_t;
@@ -199,49 +201,48 @@ typedef uint32_t cp0_wired_t;
 #define NR_TLB_ENTRY (1 << TLB_BITS)
 
 typedef struct {
-  uint32_t idx : TLB_BITS;
-  uint32_t _0  : (32 - 1 - TLB_BITS);
-  uint32_t p   : 1;
-} cp0_index_t;
-
-typedef struct {
-  uint32_t _0      : 4;
+  uint32_t __      : 4;
   uint32_t BadVPN2 : 19;
   uint32_t PTEBase : 9;
 } cp0_context_t;
 
+typedef struct {
+  uint32_t idx : TLB_BITS;
+  uint32_t __  : (32 - 1 - TLB_BITS);
+  uint32_t p   : 1;
+} cp0_index_t;
+
 typedef union {
   uint32_t cpr[32][8];
 
-#define _ glue(__, __LINE__)
+  /* clang-format off */
   struct {
-	struct { cp0_index_t index;         uint32_t _[7]; };
-	struct { uint32_t random;           uint32_t _[7]; };
-	struct { cp0_entry_lo_t entry_lo0;  uint32_t _[7]; };
-	struct { cp0_entry_lo_t entry_lo1;  uint32_t _[7]; };
-	struct { cp0_context_t context;     uint32_t _[7]; };
-	struct { cp0_pagemask_t pagemask;   uint32_t _[7]; };
-	struct { cp0_wired_t wired;         uint32_t _[7]; };
+	struct { cp0_index_t index;         uint32_t __[7]; };
+	struct { uint32_t random;           uint32_t __[7]; };
+	struct { cp0_entry_lo_t entry_lo0;  uint32_t __[7]; };
+	struct { cp0_entry_lo_t entry_lo1;  uint32_t __[7]; };
+	struct { cp0_context_t context;     uint32_t __[7]; };
+	struct { cp0_pagemask_t pagemask;   uint32_t __[7]; };
+	struct { cp0_wired_t wired;         uint32_t __[7]; };
 	uint32_t reserved[8];                 /* reserved */
-	struct { uint32_t badvaddr;         uint32_t _[7]; };
-	struct { uint32_t count[2];         uint32_t _[6]; };
-	struct { cp0_entry_hi_t entry_hi;   uint32_t _[7]; };
-	struct { uint32_t compare;          uint32_t _[7]; };
-	struct { cp0_status_t status;       uint32_t _[7]; };
-	struct { cp0_cause_t cause;         uint32_t _[7]; };
-	struct { vaddr_t epc;               uint32_t _[7]; };
+	struct { uint32_t badvaddr;         uint32_t __[7]; };
+	struct { uint32_t count[2];         uint32_t __[6]; };
+	struct { cp0_entry_hi_t entry_hi;   uint32_t __[7]; };
+	struct { uint32_t compare;          uint32_t __[7]; };
+	struct { cp0_status_t status;       uint32_t __[7]; };
+	struct { cp0_cause_t cause;         uint32_t __[7]; };
+	struct { vaddr_t epc;               uint32_t __[7]; };
 	struct { cp0_prid_t prid;
-	         vaddr_t ebase;             uint32_t _[6]; };
-	struct {
-	  cp0_config_t config;
-	  cp0_config1_t config1;
-	  uint32_t _[6];
-	};
+	         vaddr_t ebase;             uint32_t __[6]; };
+	struct { cp0_config_t config;
+	         cp0_config1_t config1;     uint32_t __[6]; };
   };
-#undef _
+  /* clang-format on */
 } cp0_t;
 
+#undef __
 
+/* clang-format off */
 enum {
   R_zero, R_at, R_v0, R_v1,
   R_a0, R_a1, R_a2, R_a3,
@@ -252,21 +253,20 @@ enum {
   R_t8, R_t9, R_k0, R_k1,
   R_gp, R_sp, R_fp, R_ra,
 };
+/* clang-format on */
 
 typedef struct {
+  uint32_t gpr[32];
+  uint32_t hi, lo;
+  cp0_t cp0;
   vaddr_t pc;
 #ifdef ENABLE_SEGMENT
   vaddr_t base;
 #endif
 
+  vaddr_t br_target;
   bool is_delayslot;
   bool has_exception;
-  vaddr_t br_target;
-
-  uint32_t gpr[32];
-  uint32_t hi, lo;
-
-  cp0_t cp0;
 } CPU_state;
 
 
@@ -308,7 +308,7 @@ typedef struct {
 #define EX_WATCH         19
 #define EX_INTR          20
 
-#define MAKE_EX(EX, CODE) ((EX << 16) | CODE)
+#define MAKE_EX(EX, CODE) (((EX) << 16) | CODE)
 
 typedef struct {
   union {
@@ -334,5 +334,6 @@ typedef struct {
 
 extern CPU_state cpu;
 int init_cpu(vaddr_t entry);
+
 
 #endif
