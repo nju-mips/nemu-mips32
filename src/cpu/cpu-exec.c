@@ -1,3 +1,4 @@
+#include <elf.h>
 #include <setjmp.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -5,7 +6,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <elf.h>
 
 #include "debug.h"
 #include "device.h"
@@ -105,7 +105,7 @@ void check_usual_registers(void) {
 
 #endif
 
-#ifdef PERF_MMU_CACHE
+#ifdef ENABLE_MMU_CACHE_PERF
 uint64_t mmu_cache_hit = 0;
 uint64_t mmu_cache_miss = 0;
 #endif
@@ -136,25 +136,29 @@ static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
 
 static inline void update_mmu_cache(
     vaddr_t vaddr, paddr_t paddr, device_t *dev) {
-#ifdef PERF_MMU_CACHE
+#ifdef ENABLE_MMU_CACHE_PERF
   mmu_cache_miss++;
 #endif
   if (dev->map) {
     uint32_t idx = mmu_cache_index(vaddr);
     mmu_cache[idx].id = mmu_cache_id(vaddr);
     mmu_cache[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
-    assert (mmu_cache[idx].ptr);
+    assert(mmu_cache[idx].ptr);
   }
 }
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef PERF_MMU_CACHE
+#ifdef ENABLE_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
-    return *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
-           (~0u >> ((4 - len) << 3));
+    uint32_t data = *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
+                    (~0u >> ((4 - len) << 3));
+#ifdef ENABLE_MMU_CACHE_CHECK
+    assert(data == dbg_vaddr_read(addr, len));
+#endif
+    return data;
   } else {
     paddr_t paddr = prot_addr(addr, MMU_LOAD);
     device_t *dev = find_device(paddr);
@@ -167,7 +171,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef PERF_MMU_CACHE
+#ifdef ENABLE_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
@@ -180,7 +184,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   }
 }
 
-#ifdef PERF_DECODE_CACHE
+#ifdef ENABLE_DECODE_CACHE_PERF
 uint64_t decode_cache_hit = 0;
 uint64_t decode_cache_miss = 0;
 #endif
@@ -212,7 +216,7 @@ typedef struct {
 
   int sel; /* put here will improve performance */
 
-#ifdef DEBUG
+#if defined(ENABLE_INSTR_LOG) || defined(ENABLE_DECODE_CACHE_CHECK)
   Inst inst;
 #endif
 } decode_cache_t;
@@ -382,19 +386,17 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   // update IP
-  if (compare != 0 && meet_compare) {
-    cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
-  }
+  if (compare != 0 && meet_compare) { cpu.cp0.cause.IP |= CAUSE_IP_TIMER; }
 }
 
 void nemu_exit() {
-#ifdef PERF_MMU_CACHE
+#ifdef ENABLE_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
       mmu_cache_hit / (double)(mmu_cache_hit + mmu_cache_miss));
 #endif
 
-#ifdef PERF_DECODE_CACHE
+#ifdef ENABLE_DECODE_CACHE_PERF
   printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
       decode_cache_hit + decode_cache_miss,
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
@@ -446,7 +448,7 @@ void cpu_exec(uint64_t n) {
 
 #include "exec-handlers.h"
 
-#ifdef DEBUG
+#ifdef ENABLE_INSTR_LOG
     if (work_mode == MODE_LOG) print_registers();
 #endif
 

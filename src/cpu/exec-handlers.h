@@ -152,27 +152,29 @@ make_entry() {
   instr_enqueue_pc(cpu.pc);
 #endif
 
-#ifdef PERF_DECODE_CACHE
+#ifdef ENABLE_DECODE_CACHE_PERF
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;
 #endif
 
   if (decode->handler) {
-#ifdef DEBUG
+#ifdef ENABLE_INSTR_LOG
     instr_enqueue_instr(decode->inst.val);
+#endif
+
+#ifdef ENABLE_DECODE_CACHE_CHECK
     assert (decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
 #endif
     goto *(decode->handler);
   }
 
   Inst inst = {.val = load_mem(cpu.pc, 4)};
-#ifdef DEBUG
+#if defined(ENABLE_INSTR_LOG) || defined(ENABLE_DECODE_CACHE_CHECK)
   decode->inst.val = load_mem(cpu.pc, 4);
+#endif
+#ifdef ENABLE_INSTR_LOG
   instr_enqueue_instr(decode->inst.val);
 #endif
-
-  if (cpu.pc == 0x8000080c)
-    printf("[NEMU] inst is %08x, %08x\n", inst.val, dbg_vaddr_read(cpu.pc, 4));
 
   unsigned op = inst.op;
   switch (op) {
