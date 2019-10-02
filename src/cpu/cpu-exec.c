@@ -369,9 +369,6 @@ static inline void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     signal_exception(EXC_INTR);
-
-    /* next cycle the IP will be cleared */
-    if (cpu.cp0.cause.IP & CAUSE_IP_TIMER) cpu.cp0.cause.IP &= ~CAUSE_IP_TIMER;
   }
 }
 #endif
