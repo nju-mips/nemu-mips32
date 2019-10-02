@@ -81,8 +81,8 @@ static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
   signal_exception(MAKE_EX(ex, code));
 }
 
-vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
-  uint32_t exccode = rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
+vaddr_t page_translate(vaddr_t vaddr, mmu_attr_t attr) {
+  uint32_t exccode = attr.rwbit == MMU_LOAD ? EXC_TLBL : EXC_TLBS;
   uint32_t va_31_13 = (vaddr & ~0x1FFF) >> 13;
   for (int i = 0; i < NR_TLB_ENTRY; i++) {
     uint32_t mask = tlb[i].pagemask;
@@ -98,13 +98,15 @@ vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
 #if 0
       printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
 #endif
-      tlb_exception(EX_TLB_INVALID, exccode, vaddr, tlb[i].asid);
+      if (attr.exbit)
+        tlb_exception(EX_TLB_INVALID, exccode, vaddr, tlb[i].asid);
       return blackhole_dev.start;
-    } else if (phyn->d == 0 && rwbit == MMU_STORE) {
+    } else if (phyn->d == 0 && attr.rwbit == MMU_STORE) {
 #if 0
       printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
 #endif
-      tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, tlb[i].asid);
+      if (attr.exbit)
+        tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, tlb[i].asid);
       return blackhole_dev.start;
     } else {
       // # pfn_PABITS-1-12..0 corresponds to pa_PABITS-1..12
@@ -129,6 +131,7 @@ vaddr_t page_translate(vaddr_t vaddr, bool rwbit) {
 #if 0
   printf("[TLB@%08x] TLBMiss %08x\n", cpu.pc, vaddr);
 #endif
-  tlb_exception(EX_TLB_REFILL, exccode, vaddr, cpu.cp0.entry_hi.asid);
+  if (attr.exbit)
+    tlb_exception(EX_TLB_REFILL, exccode, vaddr, cpu.cp0.entry_hi.asid);
   return blackhole_dev.start;
 }

@@ -434,6 +434,14 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
+    /* should be bad state */
+#if defined(DEBUG) && defined(KERNEL_ELF_PATH)
+    if (cpu.pc == 0x0) {
+      print_instr_queue();
+      check_kernel_image(KERNEL_ELF_PATH);
+    }
+#endif
+
     decode_cache_t *decode = instr_fetch(cpu.pc);
 
 #include "exec-handlers.h"

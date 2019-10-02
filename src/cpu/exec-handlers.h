@@ -160,6 +160,7 @@ make_entry() {
   if (decode->handler) {
 #ifdef DEBUG
     instr_enqueue_instr(decode->inst.val);
+    assert (decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
 #endif
     goto *(decode->handler);
   }
@@ -415,8 +416,7 @@ make_exec_handler(mtc0) {
     break;
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
-    void check_kernel_image(const char *image);
-    check_kernel_image(LINUX_UIMAGE_PATH);
+    check_kernel_image(KERNEL_ELF_PATH);
     break;
   }
 #endif

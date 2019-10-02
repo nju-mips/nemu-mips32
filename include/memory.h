@@ -58,13 +58,18 @@ uint32_t paddr_peek(paddr_t, int);
 uint32_t dbg_vaddr_read(vaddr_t, int);
 void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data);
 
-vaddr_t page_translate(vaddr_t, bool rwbit);
+typedef struct {
+  uint32_t rwbit : 1;
+  uint32_t exbit : 1;
+} mmu_attr_t;
+
+vaddr_t page_translate(vaddr_t, mmu_attr_t attr);
 
 static inline vaddr_t iomap(vaddr_t vaddr) { return vaddr & 0x1FFFFFFF; }
 
 enum { MMU_LOAD, MMU_STORE };
 
-static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
+static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t attr) {
 #ifdef ENABLE_SEGMENT
   addr += cpu.base;
 #endif
@@ -76,12 +81,17 @@ static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
     return iomap(addr);
   } else {
 #if defined ENABLE_PAGING
-    vaddr_t paddr = page_translate(addr, rwbit);
+    vaddr_t paddr = page_translate(addr, attr);
     return iomap(paddr);
 #else
     return addr;
 #endif
   }
+}
+
+static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
+  mmu_attr_t attr = {.rwbit = rwbit, .exbit = 1};
+  return prot_addr_with_attr(addr, attr);
 }
 
 #endif

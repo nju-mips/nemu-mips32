@@ -28,18 +28,19 @@ CFLAGS += -DENABLE_EXCEPTION
 
 # CFLAGS += -DPERF_SOFTMMU
 # CFLAGS += -DPERF_PREDECODE
-# enable interrupt will lose about 1000 marks
-CFLAGS += -DDEBUG
 
+# enable interrupt will lose about 1000 marks
+# CFLAGS += -DDEBUG
 
 # CFLAGS for linux
-LINUX_HOME := $(shell echo ~)/linux-noop-4.11.4
-LINUX_ELF_PATH := $(LINUX_HOME)/vmlinux
-LINUX_UIMAGE_PATH := $(LINUX_HOME)/arch/mips/boot/uImage.bin
+KERNEL_HOME := $(shell echo ~)/linux-noop-4.11.4
+KERNEL_ELF_PATH := $(KERNEL_HOME)/vmlinux
+KERNEL_UIMAGE_PATH := $(KERNEL_HOME)/arch/mips/boot/uImage.bin
 
 CFLAGS += -DENABLE_KERNEL_DEBUG
-CFLAGS += -DLINUX_UIMAGE_PATH=\"$(LINUX_UIMAGE_PATH)\"
-CFLAGS += -DLINUX_UIMAGE_BASE=0x84000000 # where the linux be loaded
+CFLAGS += -DKERNEL_ELF_PATH=\"$(KERNEL_ELF_PATH)\"
+CFLAGS += -DKERNEL_UIMAGE_PATH=\"$(KERNEL_UIMAGE_PATH)\"
+CFLAGS += -DKERNEL_UIMAGE_BASE=0x84000000 # where the linux be loaded
 CFLAGS += -DENABLE_PRELOAD_LINUX
 
 # Files to be compiled

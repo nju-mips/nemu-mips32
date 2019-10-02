@@ -28,20 +28,22 @@ void *vaddr_map(paddr_t addr, uint32_t len) {
 
   addr = iomap(addr);
   device_t *dev = find_device(addr);
-  Assert(dev && dev->map, "invalid address(0x%08x), pc(0x%08x)\n",
-         addr, cpu.pc);
+  Assert(
+      dev && dev->map, "invalid address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);
   return dev->map(addr - dev->start, len);
 }
 
 uint32_t dbg_vaddr_read(vaddr_t addr, int len) {
-  addr = prot_addr(addr, MMU_LOAD);
+  mmu_attr_t attr = {.rwbit = MMU_LOAD, .exbit = 0};
+  addr = prot_addr_with_attr(addr, attr);
   device_t *dev = find_device(addr);
   if (!dev || !dev->read) return 0;
   return dev->read(addr - dev->start, len);
 }
 
 void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  addr = prot_addr(addr, MMU_STORE);
+  mmu_attr_t attr = {.rwbit = MMU_STORE, .exbit = 0};
+  addr = prot_addr_with_attr(addr, attr);
   device_t *dev = find_device(addr);
   if (!dev || !dev->write) return;
   dev->write(addr - dev->start, len, data);

@@ -9,6 +9,8 @@
 
 #include "monitor.h"
 
+extern void check_kernel_image(const char *image);
+
 extern void instr_enqueue_pc(uint32_t pc);
 extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);

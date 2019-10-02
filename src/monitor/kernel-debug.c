@@ -23,6 +23,7 @@ void check_kernel_image(const char *image) {
   for (int i = 0; i < elf->e_phnum; i++) {
     Elf32_Phdr *ph = (void *)buf + i * elf->e_phentsize + elf->e_phoff;
     if (ph->p_type != PT_LOAD) { continue; }
+    if (ph->p_flags & PF_W) { continue; }
 
     void *ptr = vaddr_map(ph->p_vaddr, ph->p_filesz);
     for (int i = 0; i < ph->p_filesz; i += 4) {
