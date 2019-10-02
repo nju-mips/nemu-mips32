@@ -437,10 +437,12 @@ void cpu_exec(uint64_t n) {
 #endif
 
     /* should be bad state */
-#if defined(DEBUG) && defined(KERNEL_ELF_PATH)
+#ifdef ENABLE_KERNEL_DEBUG
     if (cpu.pc == 0x0) {
       print_instr_queue();
+#ifdef KERNEL_ELF_PATH
       check_kernel_image(KERNEL_ELF_PATH);
+#endif
     }
 #endif
 
