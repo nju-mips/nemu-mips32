@@ -14,24 +14,33 @@ AR = ar
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
 
-# CFLAGS += -D__ARCH_MIPS32_R1__ 
-CFLAGS += -D__ARCH_LOONGSON__ 
+CFLAGS += -D__ARCH_MIPS32_R1__ 
+# CFLAGS += -D__ARCH_LOONGSON__ 
 
 CFLAGS += -DENABLE_DELAYSLOT
 # CFLAGS += -DENABLE_SEGMENT # prior to PAGING
 CFLAGS += -DENABLE_PAGING
 
-# CFLAGS += -DENABLE_INTR
+CFLAGS += -DENABLE_INTR
 # enable EXCEPTION will lose about 200 marks
 CFLAGS += -DENABLE_EXCEPTION
 # CFLAGS += -DENABLE_CAE_CHECK # consistence after exception
 
 # CFLAGS += -DPERF_SOFTMMU
 # CFLAGS += -DPERF_PREDECODE
-# CFLAGS += -DENABLE_KERNEL_DEBUG
-# CFLAGS += -DENABLE_QUICK_LINUX_LOADING
 # enable interrupt will lose about 1000 marks
-# CFLAGS += -DDEBUG
+CFLAGS += -DDEBUG
+
+
+# CFLAGS for linux
+LINUX_HOME := $(shell echo ~)/linux-noop-4.11.4
+LINUX_ELF_PATH := $(LINUX_HOME)/vmlinux
+LINUX_UIMAGE_PATH := $(LINUX_HOME)/arch/mips/boot/uImage.bin
+
+CFLAGS += -DENABLE_KERNEL_DEBUG
+CFLAGS += -DLINUX_UIMAGE_PATH=\"$(LINUX_UIMAGE_PATH)\"
+CFLAGS += -DLINUX_UIMAGE_BASE=0x84000000 # where the linux be loaded
+CFLAGS += -DENABLE_PRELOAD_LINUX
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")

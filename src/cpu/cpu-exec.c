@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <elf.h>
 
 #include "debug.h"
 #include "device.h"

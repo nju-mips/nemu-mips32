@@ -344,13 +344,6 @@ make_exec_handler(mfc0) {
 }
 
 make_exec_handler(mtc0) {
-  // this serial is for debugging,
-  // please don't use it in real codes
-#ifdef ENABLE_KERNEL_DEBUG
-  if (decode->rd == CP0_RESERVED && decode->sel == CP0_RESERVED_SERIAL)
-    putchar(cpu.gpr[decode->rt]);
-#endif
-
   switch (CPRS(decode->rd, decode->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
     cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt];
@@ -414,6 +407,19 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_INDEX, 0): {
     cpu.cp0.index.idx = cpu.gpr[decode->rt];
   } break;
+#ifdef ENABLE_KERNEL_DEBUG
+  // this serial is for debugging,
+  // please don't use it in real codes
+  case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
+    putchar(cpu.gpr[decode->rt]);
+    break;
+  }
+  case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
+    void check_kernel_image(const char *image);
+    check_kernel_image(LINUX_UIMAGE_PATH);
+    break;
+  }
+#endif
   default: cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt]; break;
   }
 }

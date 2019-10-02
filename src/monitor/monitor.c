@@ -186,15 +186,13 @@ work_mode_t init_monitor(void) {
 
   if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
 
-#ifdef ENABLE_QUICK_LINUX_LOADING
+#ifdef ENABLE_PRELOAD_LINUX
 #if 1
-  const uint32_t linux_elf_base = 0x84000000;
-  const char *linux_elf_path = "/home/wierton/linux-noop-4.11.4/arch/mips/boot/uImage.bin";
-  load_image(linux_elf_path, linux_elf_base);
+  load_image(LINUX_UIMAGE_PATH, LINUX_UIMAGE_BASE);
 
   /* send command to uboot */
   char cmd[1024], *p = cmd;
-  p += sprintf(p, "bootm 0x%08x\n", linux_elf_base);
+  p += sprintf(p, "bootm 0x%08x\n", LINUX_UIMAGE_BASE);
 #else
   p += sprintf(p, "set serverip 192.168.3.1\n");
   p += sprintf(p, "set ipaddr 114.212.81.241\n");

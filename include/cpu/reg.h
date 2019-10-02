@@ -10,7 +10,7 @@
 #endif
 
 #define CP0_RESERVED_SERIAL 1
-#define CP0_RESERVED_STOP   2
+#define CP0_RESERVED_CHECK  2
 
 #define CP0_INDEX        0
 #define CP0_RANDOM       1
