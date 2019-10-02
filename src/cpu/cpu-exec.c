@@ -265,9 +265,6 @@ void signal_exception(uint32_t exception) {
     cpu.cp0.epc = cpu.pc;
   }
 
-  // eprintf("signal exception %d@%08x, badvaddr:%08x\n",
-  // code, cpu.pc, cpu.cp0.badvaddr);
-
   cpu.has_exception = true;
 
 #ifdef __ARCH_LOONGSON__
@@ -379,7 +376,7 @@ static inline void check_intrs() {
 #endif
 
 void update_cp0_timer() {
-  static const uint32_t step = 23;
+  static const uint32_t step = 1;
   uint32_t count0 = cpu.cp0.count[0];
   uint32_t compare = cpu.cp0.compare;
   *(uint64_t *)cpu.cp0.count += step;
