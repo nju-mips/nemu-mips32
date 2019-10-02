@@ -374,10 +374,14 @@ static inline void check_intrs() {
 #endif
 
 void update_cp0_timer() {
-  ++(*(uint64_t *)cpu.cp0.count);
+  static const uint32_t step = 23;
+  uint32_t count0 = cpu.cp0.count[0];
+  uint32_t compare = cpu.cp0.compare;
+  *(uint64_t *)cpu.cp0.count += step;
+  bool meet_compare = count0 < compare && count0 + step >= compare;
 
   // update IP
-  if (cpu.cp0.compare != 0 && cpu.cp0.count[0] == cpu.cp0.compare) {
+  if (compare != 0 && meet_compare) {
     cpu.cp0.cause.IP |= CAUSE_IP_TIMER;
   }
 }
