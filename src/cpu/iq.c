@@ -24,7 +24,7 @@ void instr_enqueue_instr(uint32_t instr) {
 }
 
 uint32_t get_current_pc() {
-#ifndef DEBUG
+#ifndef ENABLE_INSTR_LOG
   panic("please enable DEBUG macro in Makefile\n");
 #endif
   return iq[instr_ptr].pc;
