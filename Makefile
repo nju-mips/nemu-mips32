@@ -13,6 +13,7 @@ LD = gcc
 AR = ar
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
+# CFLAGS   += -fsanitize=undefined
 
 # CFLAGS += -D__ARCH_MIPS32_R1__ 
 CFLAGS += -D__ARCH_LOONGSON__ 

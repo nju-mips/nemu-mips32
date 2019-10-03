@@ -157,7 +157,7 @@ make_entry() {
 
   Inst inst = {.val = load_mem(cpu.pc, 4)};
 #if defined(ENABLE_INSTR_LOG) || defined(ENABLE_DECODE_CACHE_CHECK)
-  decode->inst.val = load_mem(cpu.pc, 4);
+  decode->inst.val = inst.val;
 #endif
 #ifdef ENABLE_INSTR_LOG
   instr_enqueue_instr(decode->inst.val);

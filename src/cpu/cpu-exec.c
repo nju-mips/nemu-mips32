@@ -326,6 +326,9 @@ void signal_exception(uint32_t exception) {
   cpu.cp0.status.EXL = 1;
 
   cpu.cp0.cause.ExcCode = code;
+
+  clear_mmu_cache();
+  clear_decode_cache();
 }
 
 int init_cpu(vaddr_t entry) {
