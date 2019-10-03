@@ -28,5 +28,6 @@ void *read_file(const char *filename) {
   void *buf = malloc(size);
   int len = 0;
   while (len < size) { len += read(fd, buf, size - len); }
+  close(fd);
   return buf;
 }
