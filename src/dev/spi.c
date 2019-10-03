@@ -5,7 +5,6 @@
 #include <fcntl.h>
 
 #include "common.h"
-#include "nemu.h"
 #include "device.h"
 
 #define SPI_ADDR 0x1fe80000

@@ -1,7 +1,7 @@
-#include "device.h"
-#include "nemu.h"
 #include <SDL/SDL.h>
 #include <stdio.h>
+
+#include "device.h"
 
 #define VGA_BASE 0x10400000
 #define VGA_SIZE 0x100000

@@ -1,5 +1,6 @@
-#include "pcap.h"
 #include <arpa/inet.h>
+
+#include "utils.h"
 
 pcap_handler pcap_open(const char *filename) {
   FILE *fp = fopen(filename, "wa+");

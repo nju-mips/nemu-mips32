@@ -1,5 +1,5 @@
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
+#ifndef DEBUG_H
+#define DEBUG_H
 
 #include <assert.h>
 #include <setjmp.h>

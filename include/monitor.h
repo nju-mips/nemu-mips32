@@ -1,5 +1,5 @@
-#ifndef __MONITOR_H__
-#define __MONITOR_H__
+#ifndef MONITOR_H
+#define MONITOR_H
 
 typedef enum { NEMU_STOP, NEMU_RUNNING, NEMU_END } nemu_state_t;
 typedef enum {

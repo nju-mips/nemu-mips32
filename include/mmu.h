@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "cpu/reg.h"
+
+#include "cpu.h"
 
 typedef struct {
   uint32_t pfn : 24;
@@ -25,19 +26,15 @@ typedef struct {
   tlb_phyn_t p1;
 } tlb_entry_t;
 
-typedef union {
-  struct {
-	uint32_t off    : 12;
-	uint32_t oddbit : 1;
-	uint32_t vpn    : 19;
-  };
-  uint32_t val;
-} vaddr_mapped_t;
-
-
 void tlb_present();
 void tlb_read(uint32_t i);
 void tlb_write(uint32_t i);
 
+typedef struct {
+  uint32_t rwbit : 1;
+  uint32_t exbit : 1;
+} mmu_attr_t;
+
+vaddr_t page_translate(vaddr_t, mmu_attr_t attr);
 
 #endif

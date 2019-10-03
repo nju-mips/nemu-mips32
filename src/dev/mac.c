@@ -1,6 +1,3 @@
-#include "device.h"
-#include "nemu.h"
-
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/ether.h>
@@ -9,7 +6,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "pcap.h"
+#include "utils.h"
+#include "device.h"
 
 static pcap_handler pcap;
 

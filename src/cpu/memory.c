@@ -1,7 +1,6 @@
 #include "device.h"
 #include "memory.h"
-#include "monitor.h"
-#include "nemu.h"
+
 #include <SDL/SDL.h>
 #include <stdlib.h>
 
@@ -26,7 +25,7 @@ void *vaddr_map(paddr_t addr, uint32_t len) {
   // only unmapped address can be map
   Assert(is_unmapped(addr), "addr %08x should be unmapped\n", addr);
 
-  addr = iomap(addr);
+  addr = ioremap(addr);
   device_t *dev = find_device(addr);
   Assert(
       dev && dev->map, "invalid address(0x%08x), pc(0x%08x)\n", addr, cpu.pc);

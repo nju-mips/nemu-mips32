@@ -1,5 +1,5 @@
 #include "common.h"
-#include "cpu/reg.h"
+#include "cpu.h"
 #include "device.h"
 #include "memory.h"
 #include "mmu.h"

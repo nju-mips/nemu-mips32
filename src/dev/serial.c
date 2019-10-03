@@ -2,7 +2,6 @@
 #include <stdbool.h>
 
 #include "device.h"
-#include "nemu.h"
 
 // UART
 #define SERIAL_ADDR 0x1fe50000

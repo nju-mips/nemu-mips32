@@ -1,12 +1,3 @@
-/* @{{
- *   `skip_need_br_check'
- *   `cpu.pc' for jmp instruction
- *   `instr'  for special table
- * @}}
- */
-
-// checked delayslot: jal, jalr,
-
 #define make_label(l) \
   l:
 #define make_entry()
@@ -148,10 +139,6 @@ static const void *opcode_table[64] = {
 /* clang-format on */
 
 make_entry() {
-#ifdef DEBUG
-  instr_enqueue_pc(cpu.pc);
-#endif
-
 #ifdef ENABLE_DECODE_CACHE_PERF
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;

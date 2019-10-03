@@ -1,9 +1,14 @@
-#ifndef PCAP_H
-#define PCAP_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <stdio.h>
 #include <stdint.h>
 
+/* file */
+size_t get_file_size(const char *img_file);
+void *read_file(const char *filename);
+
+/* pcap */
 #define PCAP_HEADER_MAGIC 0xa1b2cd34
 #define PCAP_HEADER_MAJOR 0x02
 #define PCAP_HEADER_MINOR 0x04

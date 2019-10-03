@@ -1,12 +1,15 @@
-#include "monitor.h"
-#include "nemu.h"
-#include "protocol.h"
-
 #include <arpa/inet.h>
 #include <malloc.h>
 #include <setjmp.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "cpu.h"
+#include "memory.h"
+#include "monitor.h"
+#include "protocol.h"
 
 void cpu_exec(uint64_t);
 

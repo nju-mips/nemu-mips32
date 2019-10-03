@@ -12,7 +12,6 @@
 #include "memory.h"
 #include "mmu.h"
 #include "monitor.h"
-#include "nemu.h"
 
 /* some global bariables */
 nemu_state_t nemu_state = NEMU_STOP;
@@ -425,6 +424,10 @@ void cpu_exec(uint64_t n) {
     update_cp0_timer();
 #endif
 
+#ifdef ENABLE_INSTR_LOG
+    instr_enqueue_pc(cpu.pc);
+#endif
+
 #ifdef ENABLE_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
@@ -445,7 +448,7 @@ void cpu_exec(uint64_t n) {
 
     decode_cache_t *decode = instr_fetch(cpu.pc);
 
-#include "exec-handlers.h"
+#include "instr-handlers.h"
 
 #ifdef ENABLE_INSTR_LOG
     if (work_mode == MODE_LOG) print_registers();

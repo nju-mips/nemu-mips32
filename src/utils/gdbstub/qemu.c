@@ -3,11 +3,9 @@
 #include <sys/prctl.h>
 #include <signal.h>
 
-#include "common.h"
 #include "protocol.h"
-#include "cpu/reg.h"
+#include "cpu.h"
 #include "memory.h"
-#include "device.h"
 
 /* only for debug, print the packets */
 /*

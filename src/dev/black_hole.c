@@ -1,5 +1,4 @@
 #include "device.h"
-#include "nemu.h"
 
 // bad phsical address
 #define BLACKHOLE_ADDR 0x1fe96000

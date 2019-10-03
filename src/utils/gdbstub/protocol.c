@@ -17,7 +17,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common.h"
 #include <ctype.h>
 #include <err.h>
 #include <stdbool.h>
@@ -35,7 +34,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-
+#include "common.h"
 #include "protocol.h"
 
 struct gdb_conn {

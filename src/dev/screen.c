@@ -1,6 +1,6 @@
-#include "device.h"
-#include "nemu.h"
 #include <SDL/SDL.h>
+
+#include "device.h"
 
 #define SCREEN_ADDR 0x10003000
 

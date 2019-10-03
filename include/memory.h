@@ -1,8 +1,9 @@
-#ifndef __MEMORY_H__
-#define __MEMORY_H__
+#ifndef MEMORY_H
+#define MEMORY_H
 
 #include "common.h"
-#include "cpu/reg.h"
+#include "cpu.h"
+#include "mmu.h"
 
 /*
  * FFFF FFFF -\
@@ -58,14 +59,7 @@ uint32_t paddr_peek(paddr_t, int);
 uint32_t dbg_vaddr_read(vaddr_t, int);
 void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data);
 
-typedef struct {
-  uint32_t rwbit : 1;
-  uint32_t exbit : 1;
-} mmu_attr_t;
-
-vaddr_t page_translate(vaddr_t, mmu_attr_t attr);
-
-static inline vaddr_t iomap(vaddr_t vaddr) { return vaddr & 0x1FFFFFFF; }
+static inline vaddr_t ioremap(vaddr_t vaddr) { return vaddr & 0x1FFFFFFF; }
 
 enum { MMU_LOAD, MMU_STORE };
 
@@ -78,11 +72,11 @@ static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t attr) {
     //  0x90000000 -> 0x10000000
     //  0xA0000000 -> 0x00000000
     //  0xB0000000 -> 0x10000000
-    return iomap(addr);
+    return ioremap(addr);
   } else {
 #if defined ENABLE_PAGING
     vaddr_t paddr = page_translate(addr, attr);
-    return iomap(paddr);
+    return ioremap(paddr);
 #else
     return addr;
 #endif

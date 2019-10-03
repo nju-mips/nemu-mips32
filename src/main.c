@@ -1,6 +1,7 @@
-#include "monitor.h"
 #include <stdint.h>
 #include <stdio.h>
+
+#include "monitor.h"
 
 void init_mmio();
 void init_sdl();

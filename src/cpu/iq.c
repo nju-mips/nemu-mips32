@@ -1,6 +1,4 @@
-#include "nemu.h"
-#include "monitor.h"
-#include "memory.h"
+#include "common.h"
 
 typedef struct {
   vaddr_t pc;

@@ -1,7 +1,6 @@
-#include "device.h"
-#include "monitor.h"
-#include "nemu.h"
 #include <stdlib.h>
+
+#include "device.h"
 
 #define RTC_ADDR 0x10002000
 #define RTC_SIZE 0x4

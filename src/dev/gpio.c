@@ -1,12 +1,7 @@
-#include "device.h"
-#include "monitor.h"
-#include "nemu.h"
 #include <stdlib.h>
 
-#ifdef PERF_SOFTMMU
-extern uint64_t softmmu_hit;
-extern uint64_t softmmu_miss;
-#endif
+#include "device.h"
+#include "monitor.h"
 
 #define GPIO_BASE 0x10000000
 #define GPIO_SIZE 0x1000

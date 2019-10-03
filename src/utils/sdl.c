@@ -1,9 +1,9 @@
-#include "device.h"
-#include "nemu.h"
 #include <SDL/SDL.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
+
+#include "device.h"
 
 SDL_Surface *screen;
 

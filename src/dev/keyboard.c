@@ -2,7 +2,6 @@
 #include <stdbool.h>
 
 #include "device.h"
-#include "nemu.h"
 
 #define KB_ADDR 0x1fe94000
 #define KB_CODE 0x0

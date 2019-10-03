@@ -1,5 +1,4 @@
 #include "device.h"
-#include "nemu.h"
 
 // block ram
 #define BRAM_BASE 0x1fc00000
