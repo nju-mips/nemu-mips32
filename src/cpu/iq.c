@@ -24,15 +24,15 @@ void instr_enqueue_instr(uint32_t instr) {
 }
 
 uint32_t get_current_pc() {
-#ifndef ENABLE_INSTR_LOG
-  panic("please enable ENABLE_INSTR_LOG macro in Makefile\n");
+#ifndef CONFIG_INSTR_LOG
+  panic("please enable CONFIG_INSTR_LOG macro in Makefile\n");
 #endif
   return iq[instr_ptr].pc;
 }
 
 uint32_t get_current_instr() {
-#ifndef ENABLE_INSTR_LOG
-  panic("please enable ENABLE_INSTR_LOG macro in Makefile\n");
+#ifndef CONFIG_INSTR_LOG
+  panic("please enable CONFIG_INSTR_LOG macro in Makefile\n");
 #endif
   if(iq[instr_ptr].instr_enq)
     return iq[instr_ptr].instr;

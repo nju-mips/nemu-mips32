@@ -4,3 +4,7 @@ build/
 serial
 perf.data
 perf.data.old
+.config
+.config.old
+include/generated
+include/config

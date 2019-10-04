@@ -85,7 +85,7 @@ void print_registers(void) {
 
 /* if you run your os with multiple processes, disable this
  */
-#ifdef ENABLE_CAE_CHECK
+#ifdef CONFIG_CAE_CHECK
 
 #  define NR_GPR 32
 static uint32_t saved_gprs[NR_GPR];
@@ -104,7 +104,7 @@ void check_usual_registers(void) {
 
 #endif
 
-#ifdef ENABLE_MMU_CACHE_PERF
+#ifdef CONFIG_MMU_CACHE_PERF
 uint64_t mmu_cache_hit = 0;
 uint64_t mmu_cache_miss = 0;
 #endif
@@ -135,7 +135,7 @@ static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
 
 static inline void update_mmu_cache(
     vaddr_t vaddr, paddr_t paddr, device_t *dev) {
-#ifdef ENABLE_MMU_CACHE_PERF
+#ifdef CONFIG_MMU_CACHE_PERF
   mmu_cache_miss++;
 #endif
   if (dev->map) {
@@ -149,12 +149,12 @@ static inline void update_mmu_cache(
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef ENABLE_MMU_CACHE_PERF
+#ifdef CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
     uint32_t data = *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
                     (~0u >> ((4 - len) << 3));
-#ifdef ENABLE_MMU_CACHE_CHECK
+#ifdef CONFIG_MMU_CACHE_CHECK
     assert(data == dbg_vaddr_read(addr, len));
 #endif
     return data;
@@ -170,7 +170,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
   if (mmu_cache[idx].id == mmu_cache_id(addr)) {
-#ifdef ENABLE_MMU_CACHE_PERF
+#ifdef CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
@@ -183,7 +183,7 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   }
 }
 
-#ifdef ENABLE_DECODE_CACHE_PERF
+#ifdef CONFIG_DECODE_CACHE_PERF
 uint64_t decode_cache_hit = 0;
 uint64_t decode_cache_miss = 0;
 #endif
@@ -215,7 +215,7 @@ typedef struct {
 
   int sel; /* put here will improve performance */
 
-#if defined(ENABLE_INSTR_LOG) || defined(ENABLE_DECODE_CACHE_CHECK)
+#if defined(CONFIG_INSTR_LOG) || defined(CONFIG_DECODE_CACHE_CHECK)
   Inst inst;
 #endif
 } decode_cache_t;
@@ -252,11 +252,11 @@ void signal_exception(uint32_t exception) {
 
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
 
-#ifdef ENABLE_CAE_CHECK
+#ifdef CONFIG_CAE_CHECK
   save_usual_registers();
 #endif
 
-#ifdef ENABLE_DELAYSLOT
+#ifdef CONFIG_DELAYSLOT
   if (cpu.is_delayslot) {
     cpu.cp0.epc = cpu.pc - 4;
     cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
@@ -323,7 +323,7 @@ void signal_exception(uint32_t exception) {
   }
 #endif
 
-#ifdef ENABLE_SEGMENT
+#ifdef CONFIG_SEGMENT
   cpu.base = 0; // kernel segment base is zero
 #endif
 
@@ -372,7 +372,7 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+#if defined(CONFIG_EXCEPTION) || defined(CONFIG_INTR)
 static inline void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
@@ -393,13 +393,13 @@ void update_cp0_timer() {
 }
 
 void nemu_exit() {
-#ifdef ENABLE_MMU_CACHE_PERF
+#ifdef CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
       mmu_cache_hit / (double)(mmu_cache_hit + mmu_cache_miss));
 #endif
 
-#ifdef ENABLE_DECODE_CACHE_PERF
+#ifdef CONFIG_DECODE_CACHE_PERF
   printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
       decode_cache_hit + decode_cache_miss,
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
@@ -427,15 +427,15 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
-#ifdef ENABLE_INTR
+#ifdef CONFIG_INTR
     update_cp0_timer();
 #endif
 
-#ifdef ENABLE_INSTR_LOG
+#ifdef CONFIG_INSTR_LOG
     instr_enqueue_pc(cpu.pc);
 #endif
 
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
       signal_exception(EXC_AdEL);
@@ -444,7 +444,7 @@ void cpu_exec(uint64_t n) {
 #endif
 
     /* should be bad state */
-#ifdef ENABLE_KERNEL_DEBUG
+#ifdef CONFIG_KERNEL_DEBUG
     if (cpu.pc == 0x0) {
       print_instr_queue();
 #ifdef KERNEL_ELF_PATH
@@ -457,11 +457,11 @@ void cpu_exec(uint64_t n) {
 
 #include "instr-handlers.h"
 
-#ifdef ENABLE_INSTR_LOG
+#ifdef CONFIG_INSTR_LOG
     if (work_mode == MODE_LOG) print_registers();
 #endif
 
-#if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
+#if defined(CONFIG_EXCEPTION) || defined(CONFIG_INTR)
   check_exception:;
     check_intrs();
 

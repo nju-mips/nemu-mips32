@@ -155,7 +155,7 @@ work_mode_t init_monitor(void) {
 
   if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
 
-#ifdef ENABLE_PRELOAD_LINUX
+#ifdef CONFIG_PRELOAD_LINUX
 #if 1
   load_image(KERNEL_UIMAGE_PATH, KERNEL_UIMAGE_BASE);
 

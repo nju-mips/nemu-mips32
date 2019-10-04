@@ -3,7 +3,7 @@
 #define make_entry()
 #define make_exit() make_label(exit)
 
-#ifdef ENABLE_DELAYSLOT
+#ifdef CONFIG_DELAYSLOT
 #  define make_exec_handler(name) \
     goto inst_end;                \
     make_label(name)
@@ -21,7 +21,7 @@
     goto exit;
 #endif
 
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
 #  define InstAssert(cond)         \
     do {                           \
       if (!(cond)) {               \
@@ -148,27 +148,27 @@ static const void *opcode_table[64] = {
 /* clang-format on */
 
 make_entry() {
-#ifdef ENABLE_DECODE_CACHE_PERF
+#ifdef CONFIG_DECODE_CACHE_PERF
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;
 #endif
 
   if (decode->handler) {
-#ifdef ENABLE_INSTR_LOG
+#ifdef CONFIG_INSTR_LOG
     instr_enqueue_instr(decode->inst.val);
 #endif
 
-#ifdef ENABLE_DECODE_CACHE_CHECK
+#ifdef CONFIG_DECODE_CACHE_CHECK
     assert(decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
 #endif
     goto *(decode->handler);
   }
 
   Inst inst = {.val = load_mem(cpu.pc, 4)};
-#if defined(ENABLE_INSTR_LOG) || defined(ENABLE_DECODE_CACHE_CHECK)
+#if defined(CONFIG_INSTR_LOG) || defined(CONFIG_DECODE_CACHE_CHECK)
   decode->inst.val = inst.val;
 #endif
-#ifdef ENABLE_INSTR_LOG
+#ifdef CONFIG_INSTR_LOG
   instr_enqueue_instr(decode->inst.val);
 #endif
 
@@ -254,7 +254,7 @@ make_exec_handler(exec_cop0) {
 make_exec_handler(inv) {
 // the pc corresponding to this inst
 // pc has been updated by instr_fetch
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
   signal_exception(EXC_RI);
 #else
   uint32_t instr = load_mem(cpu.pc, 4);
@@ -310,11 +310,11 @@ make_exec_handler(eret) {
   cpu.cp0.cause.BD = 0;
   cpu.cp0.status.EXL = 0;
 
-#ifdef ENABLE_CAE_CHECK
+#ifdef CONFIG_CAE_CHECK
   check_usual_registers();
 #endif
 
-#ifdef ENABLE_SEGMENT
+#ifdef CONFIG_SEGMENT
   cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
 #endif
 }
@@ -322,7 +322,7 @@ make_exec_handler(eret) {
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
 
 make_exec_handler(mfc0) {
-#ifdef ENABLE_INTR
+#ifdef CONFIG_INTR
   cpu.gpr[decode->rt] = cpu.cp0.cpr[decode->rd][decode->sel];
 #else
   /* only for microbench */
@@ -406,7 +406,7 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_INDEX, 0): {
     cpu.cp0.index.idx = cpu.gpr[decode->rt];
   } break;
-#ifdef ENABLE_KERNEL_DEBUG
+#ifdef CONFIG_KERNEL_DEBUG
   // this serial is for debugging,
   // please don't use it in real codes
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
@@ -515,7 +515,7 @@ make_exec_handler(add) {
   ret.val = (int64_t)(int32_t)cpu.gpr[decode->rs] +
             (int64_t)(int32_t)cpu.gpr[decode->rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
     signal_exception(EXC_OV);
 #else
     CPUAssert(0, "add overflow, %08x + %08x\n", cpu.gpr[decode->rs],
@@ -532,7 +532,7 @@ make_exec_handler(sub) {
   ret.val = (int64_t)(int32_t)cpu.gpr[decode->rs] -
             (int64_t)(int32_t)cpu.gpr[decode->rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
     signal_exception(EXC_OV);
 #else
     CPUAssert(0, "sub overflow, %08x - %08x\n", cpu.gpr[decode->rs],
@@ -664,7 +664,7 @@ make_exec_handler(addi) {
   ret.val =
       (int64_t)(int32_t)cpu.gpr[decode->rs] + (int64_t)(int32_t)decode->simm;
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
     signal_exception(EXC_OV);
 #else
     CPUAssert(
@@ -699,7 +699,7 @@ make_exec_handler(slti) {
   cpu.gpr[decode->rt] = (int32_t)cpu.gpr[decode->rs] < decode->simm;
 }
 
-#ifdef ENABLE_EXCEPTION
+#ifdef CONFIG_EXCEPTION
 
 #  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
     if (((addr) & (align - 1)) != 0) {         \
@@ -1004,7 +1004,7 @@ make_exec_handler(j) {
   prepare_delayslot();
 }
 
-#ifdef ENABLE_DELAYSLOT
+#ifdef CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (cpu.is_delayslot) {
     cpu.pc = cpu.br_target;

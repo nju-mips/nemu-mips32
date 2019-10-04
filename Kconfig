@@ -1,0 +1,87 @@
+mainmenu "This is an config generator for nemu-mips32"
+
+menu "Features of nemu-mips32"
+
+config DELAYSLOT
+  bool "Delayslot in mips architecture"
+
+config SEGMENT
+  bool "Segment mode"
+
+config PAGING
+  bool "Paging mode"
+
+config INTR
+  bool "Interrupt"
+
+config EXCEPTION
+  bool "Exception"
+
+endmenu
+
+menu "Debug options for nemu-mips32"
+config MMU_CACHE_PERF
+  bool "Profile mmu cache hit rate"
+
+config DECODE_CACHE_PERF
+  bool "Profile decode cache hit rate"
+
+config DEBUG
+  bool "DEBUG mode (useless)"
+
+config INSTR_LOG
+  bool "Log when every instruction commit (used to diff with noop)"
+
+config MMU_CACHE_CHECK
+  bool "Check the validness of mmu cache"
+
+config DECODE_CACHE_CHECK
+  bool "Check the validness of decode cache"
+
+endmenu
+
+menu "Kernel debug options"
+config CAE_CHECK
+  bool "Check general registers after eret"
+
+config KERNEL_HOME
+  string "The home directory of kernel"
+  default "$(HOME)/linux-noop-4.11.4"
+
+config KERNEL_ELF_PATH
+  string "The path of kernel executable"
+  default "$(KERNEL_HOME)/vmlinux"
+
+config KERNEL_UIMAGE_PATH
+  string "The path of uImage.bin"
+  default "$(KERNEL_HOME)/arch/mips/boot/uImage.bin"
+
+config KERNEL_DEBUG
+  bool "Whether enable some features for kernel debugging"
+
+config PRELOAD_LINUX
+  bool "Preload linux kernel into memory"
+  depends on KERNEL_ELF_PATH
+  depends on KERNEL_UIMAGE_PATH
+endmenu
+
+menu "Machine selection"
+
+choice
+  prompt "mips32r1"
+  default ARCH_LOONGSON
+
+config ARCH_MIPS32_R1
+  bool "standard mips32 release 1"
+  select DELAYSLOT
+  select EXCEPTION
+  select INTR
+
+config ARCH_LOONGSON 
+  bool "compatible with loongson 132"
+  select DELAYSLOT
+  select EXCEPTION
+
+endchoice
+
+endmenu

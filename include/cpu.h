@@ -5,7 +5,7 @@
 
 #define CPU_INIT_PC 0xbfc00000
 
-#ifdef ENABLE_SEGMENT
+#ifdef CONFIG_SEGMENT
 #define CP0_RESERVED_BASE 0   // for segment
 #endif
 
@@ -260,12 +260,12 @@ typedef struct {
   uint32_t hi, lo;
   cp0_t cp0;
   vaddr_t pc;
-#ifdef ENABLE_SEGMENT
+#ifdef CONFIG_SEGMENT
   vaddr_t base;
 #endif
 
   vaddr_t br_target;
-#ifdef ENABLE_DELAYSLOT
+#ifdef CONFIG_DELAYSLOT
   bool is_delayslot;
 #endif
   bool has_exception;
