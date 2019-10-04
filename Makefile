@@ -11,8 +11,11 @@ SHARED ?= $(BUILD_DIR)/$(NAME).a
 CC = gcc
 LD = gcc
 AR = ar
-INCLUDES  = $(addprefix -I, $(INC_DIR))
+MCONF := menuconfig/mconf
+CONF := menuconfig/conf
+CONFIG := ./.config
 AUTOCONF_H := include/generated/autoconf.h
+INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
 CFLAGS   += -include $(AUTOCONF_H)
 # CFLAGS   += -fsanitize=undefined
@@ -21,11 +24,19 @@ CFLAGS   += -include $(AUTOCONF_H)
 SRCS = $(shell find src/ -name "*.c")
 OBJS = $(SRCS:src/%.c=$(OBJ_DIR)/%.o)
 
-menuconfig/mconf:
-	cd $(@D) && make
+$(MCONF):
+	@cd $(@D) && make -s mconf
 
-$(AUTOCONF_H): Kconfig menuconfig/mconf
-	menuconfig/mconf ./Kconfig
+$(CONF):
+	@cd $(@D) && make -s conf
+
+$(CONFIG): $(MCONF) Kconfig
+	@echo + GEN $@
+	@$< Kconfig
+
+$(AUTOCONF_H): $(CONFIG)
+	@echo + GEN $@
+	@$(CONF) --syncconfig ./Kconfig
 
 # Compilation patterns
 $(OBJ_DIR)/%.o: src/%.c Makefile $(AUTOCONF_H)
@@ -38,13 +49,8 @@ $(OBJ_DIR)/%.o: src/%.c Makefile $(AUTOCONF_H)
 
 # Some convinient rules
 
-.PHONY: app run debug submit clean menuconfig
+.PHONY: app clean menuconfig
 app: $(BINARY) $(SHARED)
-
-# IMG ?= $(BUILD_DIR)/nanos-mips32-npc
-# IMG ?= $(AM_HOME)/tests/cputest/build/bubble-sort-mips32-npc
-# IMG = ~/linux-4.11.4/vmlinux-mips
-# Command to execute NEMU
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
@@ -54,11 +60,8 @@ $(SHARED): $(OBJS)
 	@echo + AR $@
 	@$(AR) -r -o $@ $^
 
-gdb: $(BINARY)
-	gdb -s $(BINARY) --args $(BINARY) $(ARGS)
-
 clean: 
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) perf.*
 
-menuconfig:
-	menuconfig/mconf ./Kconfig
+menuconfig: $(MCONF)
+	$(MCONF) ./Kconfig

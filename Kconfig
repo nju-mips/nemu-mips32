@@ -1,25 +1,25 @@
-mainmenu "This is an config generator for nemu-mips32"
+mainmenu "This is an configure for nemu-mips32"
 
-menu "Features of nemu-mips32"
-
+if ! ARCH_BENCH
+menu "NEMU-MIPS32 features"
 config DELAYSLOT
-  bool "Delayslot in mips architecture"
+  bool "Delayslot support"
 
 config SEGMENT
-  bool "Segment mode"
+  bool "Segment mode support"
 
 config PAGING
-  bool "Paging mode"
+  bool "Paging mode support"
 
 config INTR
-  bool "Interrupt"
+  bool "Interrupt support"
 
 config EXCEPTION
-  bool "Exception"
-
+  bool "Exception support"
 endmenu
+endif
 
-menu "Debug options for nemu-mips32"
+menu "NEMU-MIPS32 debug options"
 config MMU_CACHE_PERF
   bool "Profile mmu cache hit rate"
 
@@ -50,38 +50,39 @@ config KERNEL_HOME
 
 config KERNEL_ELF_PATH
   string "The path of kernel executable"
-  default "$(KERNEL_HOME)/vmlinux"
 
 config KERNEL_UIMAGE_PATH
   string "The path of uImage.bin"
-  default "$(KERNEL_HOME)/arch/mips/boot/uImage.bin"
 
 config KERNEL_DEBUG
-  bool "Whether enable some features for kernel debugging"
-
-config PRELOAD_LINUX
-  bool "Preload linux kernel into memory"
+  bool "Some features for kernel debugging"
   depends on KERNEL_ELF_PATH
-  depends on KERNEL_UIMAGE_PATH
+
 endmenu
 
-menu "Machine selection"
-
 choice
-  prompt "mips32r1"
+  prompt "Machine selection"
   default ARCH_LOONGSON
 
+config ARCH_BENCH
+  bool "optimized for microbench"
+
 config ARCH_MIPS32_R1
-  bool "standard mips32 release 1"
+  bool "mips32 release 1"
   select DELAYSLOT
   select EXCEPTION
+  select PAGING
   select INTR
 
 config ARCH_LOONGSON 
-  bool "compatible with loongson 132"
+  bool "loongson 132"
   select DELAYSLOT
   select EXCEPTION
 
 endchoice
 
-endmenu
+config PRELOAD_LINUX
+  bool "Preload linux kernel into memory (you can then run it)"
+  depends on ARCH_MIPS32_R1
+  depends on KERNEL_ELF_PATH
+  depends on KERNEL_UIMAGE_PATH
