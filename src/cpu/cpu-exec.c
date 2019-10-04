@@ -464,12 +464,12 @@ void cpu_exec(uint64_t n) {
 #if defined(ENABLE_EXCEPTION) || defined(ENABLE_INTR)
   check_exception:;
     check_intrs();
-#endif
 
     if (cpu.has_exception) {
       cpu.has_exception = false;
       cpu.pc = cpu.br_target;
     }
+#endif
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
