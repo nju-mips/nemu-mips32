@@ -30,9 +30,9 @@ $(MCONF):
 $(CONF):
 	@cd $(@D) && make -s conf
 
-$(CONFIG): $(MCONF) Kconfig
+$(CONFIG): $(CONF) Kconfig
 	@echo + GEN $@
-	@$< Kconfig
+	@$(CONF) --syncconfig ./Kconfig
 
 $(AUTOCONF_H): $(CONFIG)
 	@echo + GEN $@
@@ -62,6 +62,7 @@ $(SHARED): $(OBJS)
 
 clean: 
 	rm -rf $(BUILD_DIR) perf.*
+	rm -rf include/generated include/config
 
 menuconfig: $(MCONF)
 	$(MCONF) ./Kconfig

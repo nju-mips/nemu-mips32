@@ -372,7 +372,7 @@ int init_cpu(vaddr_t entry) {
   return 0;
 }
 
-#if CONFIG_INTR
+#if CONFIG_EXCEPTION || CONFIG_INTR
 static inline void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
@@ -461,15 +461,10 @@ void cpu_exec(uint64_t n) {
     if (work_mode == MODE_LOG) print_registers();
 #endif
 
-#if CONFIG_EXCEPTION
+#if CONFIG_EXCEPTION || CONFIG_INTR
   check_exception:;
-#endif
+    check_intrs(); /* soft intr */
 
-#if CONFIG_INTR
-    check_intrs();
-#endif
-
-#if CONFIG_EXCEPTION
     if (cpu.has_exception) {
       cpu.has_exception = false;
       cpu.pc = cpu.br_target;

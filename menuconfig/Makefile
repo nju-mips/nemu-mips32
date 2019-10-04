@@ -21,24 +21,24 @@ OBJS := \
 OBJS := $(OBJS:%=$(OBJ_DIR)/%)
 
 ./parser.tab.c ./parser.tab.h: parser.y
-	@echo + $@
+	@echo + YACC $@
 	@bison -v $< --defines=./parser.tab.h -o ./parser.tab.c
 
 ./lexer.lex.c: lexer.l ./parser.tab.h
-	@echo + $@
+	@echo + LEX $@
 	@flex -o $@ $<
 
 $(OBJ_DIR)/%.o: ./%.c
-	@echo + $<
+	@echo + CC $<
 	@mkdir -p $(@D)
 	@gcc -c $(CFLAGS) $< -o $@
 
 mconf: $(OBJS)
-	@echo + $@
+	@echo + GEN $@
 	@gcc $^ -o $@ -lncurses -ltinfo
 
 conf: $(patsubst %/mconf.o,%/conf.o,$(OBJS))
-	@echo + $@
+	@echo + GEN $@
 	@gcc $^ -o $@ -lncurses -ltinfo
 
 clean:

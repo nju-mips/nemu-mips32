@@ -78,6 +78,7 @@ config ARCH_LOONGSON
   bool "loongson 132"
   select DELAYSLOT
   select EXCEPTION
+  select PAGING
 
 endchoice
 
