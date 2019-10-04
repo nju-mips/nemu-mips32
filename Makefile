@@ -18,6 +18,7 @@ AUTOCONF_H := include/generated/autoconf.h
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
 CFLAGS   += -include $(AUTOCONF_H)
+export KERNEL_HOME := $(shell echo ~)/linux-noop-4.11.4
 # CFLAGS   += -fsanitize=undefined
 
 # Files to be compiled

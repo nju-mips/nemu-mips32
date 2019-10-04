@@ -44,19 +44,17 @@ menu "Kernel debug options"
 config CAE_CHECK
   bool "Check general registers after eret"
 
-config KERNEL_HOME
-  string "The home directory of kernel"
-  default "$(HOME)/linux-noop-4.11.4"
-
 config KERNEL_ELF_PATH
   string "The path of kernel executable"
+  default "$(KERNEL_HOME)/vmlinux"
 
 config KERNEL_UIMAGE_PATH
   string "The path of uImage.bin"
+  default "$(KERNEL_HOME)/arch/mips/boot/uImage.bin"
 
 config KERNEL_DEBUG
-  bool "Some features for kernel debugging"
-  depends on KERNEL_ELF_PATH
+  bool "Kernel debug features"
+  depends on KERNEL_ELF_PATH != ""
 
 endmenu
 
@@ -82,8 +80,16 @@ config ARCH_LOONGSON
 
 endchoice
 
+menu "Preload kernel image"
 config PRELOAD_LINUX
-  bool "Preload linux kernel into memory (you can then run it)"
+  bool "Preload linux kernel into memory (bootm)"
   depends on ARCH_MIPS32_R1
-  depends on KERNEL_ELF_PATH
-  depends on KERNEL_UIMAGE_PATH
+  depends on KERNEL_ELF_PATH != ""
+  depends on KERNEL_UIMAGE_PATH != ""
+
+config KERNEL_UIMAGE_BASE
+  hex "Address to load kernel image"
+  range 0x80000000 0xA0000000
+  default 0x84000000
+
+endmenu

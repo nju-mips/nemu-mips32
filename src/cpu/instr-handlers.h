@@ -414,7 +414,7 @@ make_exec_handler(mtc0) {
     break;
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
-    check_kernel_image(KERNEL_ELF_PATH);
+    check_kernel_image(CONFIG_KERNEL_ELF_PATH);
     break;
   }
 #endif

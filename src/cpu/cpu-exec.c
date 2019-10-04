@@ -447,8 +447,8 @@ void cpu_exec(uint64_t n) {
 #if CONFIG_KERNEL_DEBUG
     if (cpu.pc == 0x0) {
       print_instr_queue();
-#if KERNEL_ELF_PATH
-      check_kernel_image(KERNEL_ELF_PATH);
+#ifdef CONFIG_KERNEL_ELF_PATH
+      check_kernel_image(CONFIG_KERNEL_ELF_PATH);
 #endif
     }
 #endif

@@ -157,11 +157,11 @@ work_mode_t init_monitor(void) {
 
 #if CONFIG_PRELOAD_LINUX
 #if 1
-  load_image(KERNEL_UIMAGE_PATH, KERNEL_UIMAGE_BASE);
+  load_image(CONFIG_KERNEL_UIMAGE_PATH, CONFIG_KERNEL_UIMAGE_BASE);
 
   /* send command to uboot */
   char cmd[1024], *p = cmd;
-  p += sprintf(p, "bootm 0x%08x\n", KERNEL_UIMAGE_BASE);
+  p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
 #else
   p += sprintf(p, "set serverip 192.168.3.1\n");
   p += sprintf(p, "set ipaddr 114.212.81.241\n");
