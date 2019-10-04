@@ -20,6 +20,11 @@ MIPS32-NPC中的内存映射定义如下（来自nexus-am/am/arch/mips32-npc/REA
 0xb0400000 - 0xb04fffff: video memory
 ```
 
+## 配置
+```
+make menuconfig
+```
+
 ## 编译
 ```
 make
@@ -33,16 +38,16 @@ make
 ## linux
 
 * important files:
- * linux/arch/mips/boot/dts/noop/noop.dts
+  * linux/arch/mips/boot/dts/noop/noop.dts
 * commands:
- * cd linux && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make uImage
- * cd uboot && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make
- * cd nemu-mips32 && vim Makefile # ENABLE\_QUICK\_LINUX\_LOADING and __ARCH_MIPS32_R1__
- * cd nemu-mips32 && make && build/nemu -b -e u-boot.elf
+  * cd linux && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make uImage
+  * cd uboot && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make
+  * cd nemu-mips32 && vim Makefile # ENABLE\_QUICK\_LINUX\_LOADING and __ARCH_MIPS32_R1__
+  * cd nemu-mips32 && make && build/nemu -b -e u-boot.elf
 * linux configuration
- * bootargs: linux/arch/mips/boot/dts/noop/noop.dts
- * initramfs:
-   * menuconfig@Device Drivers -> Block devices -> RAM block device support
-   * menuconfig@General setup -> Initial RAM filesystem and RAM disk (initramfs/initrd) support
+  * bootargs: linux/arch/mips/boot/dts/noop/noop.dts
+  * initramfs:
+    * menuconfig@Device Drivers -> Block devices -> RAM block device support
+    * menuconfig@General setup -> Initial RAM filesystem and RAM disk (initramfs/initrd) support
 * make initramfs
- * cd initramfs && make
+  * cd initramfs && make
