@@ -3,14 +3,23 @@
 #define make_entry()
 #define make_exit() make_label(exit)
 
-#define make_exec_handler(name) \
-  goto inst_end;                \
-  make_label(name)
-
-#define exec_delayslot()   \
-  cpu.is_delayslot = true; \
-  cpu.pc += 4;             \
-  goto exit;
+#ifdef ENABLE_DELAYSLOT
+#  define make_exec_handler(name) \
+    goto inst_end;                \
+    make_label(name)
+#  define prepare_delayslot() \
+    cpu.is_delayslot = true;  \
+    cpu.pc += 4;              \
+    goto exit;
+#else
+#  define make_exec_handler(name) \
+    cpu.pc += 4;                  \
+    goto exit;                    \
+    make_label(name)
+#  define prepare_delayslot() \
+    cpu.pc = cpu.br_target;   \
+    goto exit;
+#endif
 
 #ifdef ENABLE_EXCEPTION
 #  define InstAssert(cond)         \
@@ -150,7 +159,7 @@ make_entry() {
 #endif
 
 #ifdef ENABLE_DECODE_CACHE_CHECK
-    assert (decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
+    assert(decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
 #endif
     goto *(decode->handler);
   }
@@ -482,7 +491,7 @@ make_exec_handler(tnei) {
 make_exec_handler(jr) {
   InstAssert(decode->rt == 0 && decode->rd == 0);
   cpu.br_target = cpu.gpr[decode->rs];
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 #define R_SIMPLE(name, op, t)                                               \
@@ -641,7 +650,7 @@ make_exec_handler(jalr) {
   InstAssert(decode->rt == 0 && decode->shamt == 0);
   cpu.gpr[decode->rd] = cpu.pc + 8;
   cpu.br_target = cpu.gpr[decode->rs];
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(lui) {
@@ -834,7 +843,7 @@ make_exec_handler(sync) {}
 make_exec_handler(beql) {
   if (cpu.gpr[decode->rs] == cpu.gpr[decode->rt]) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -844,7 +853,7 @@ make_exec_handler(beql) {
 make_exec_handler(bnel) {
   if (cpu.gpr[decode->rs] != cpu.gpr[decode->rt]) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -855,7 +864,7 @@ make_exec_handler(blezl) {
   InstAssert(decode->rt == 0);
   if ((int32_t)cpu.gpr[decode->rs] <= 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -865,7 +874,7 @@ make_exec_handler(blezl) {
 make_exec_handler(bgtzl) {
   if ((int32_t)cpu.gpr[decode->rs] > 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -875,7 +884,7 @@ make_exec_handler(bgtzl) {
 make_exec_handler(bltzl) {
   if ((int32_t)cpu.gpr[decode->rs] < 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -885,7 +894,7 @@ make_exec_handler(bltzl) {
 make_exec_handler(bgezl) {
   if ((int32_t)cpu.gpr[decode->rs] >= 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -896,7 +905,7 @@ make_exec_handler(bgezall) {
   cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[decode->rs] >= 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -907,7 +916,7 @@ make_exec_handler(bltzall) {
   cpu.gpr[31] = cpu.pc + 8;
   if ((int32_t)cpu.gpr[decode->rs] < 0) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
-    exec_delayslot();
+    prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
@@ -922,7 +931,7 @@ make_exec_handler(beq) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bne) {
@@ -930,7 +939,7 @@ make_exec_handler(bne) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(blez) {
@@ -939,7 +948,7 @@ make_exec_handler(blez) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bgtz) {
@@ -947,7 +956,7 @@ make_exec_handler(bgtz) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bltz) {
@@ -955,7 +964,7 @@ make_exec_handler(bltz) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bgez) {
@@ -963,7 +972,7 @@ make_exec_handler(bgez) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bgezal) {
@@ -972,7 +981,7 @@ make_exec_handler(bgezal) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(bltzal) {
@@ -981,20 +990,21 @@ make_exec_handler(bltzal) {
     cpu.br_target = cpu.pc + (decode->simm << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(jal) {
   cpu.gpr[31] = cpu.pc + 8;
   cpu.br_target = (cpu.pc & 0xf0000000) | (decode->addr << 2);
-  exec_delayslot();
+  prepare_delayslot();
 }
 
 make_exec_handler(j) {
   cpu.br_target = (cpu.pc & 0xf0000000) | (decode->addr << 2);
-  exec_delayslot();
+  prepare_delayslot();
 }
 
+#ifdef ENABLE_DELAYSLOT
 make_label(inst_end) {
   if (cpu.is_delayslot) {
     cpu.pc = cpu.br_target;
@@ -1004,5 +1014,6 @@ make_label(inst_end) {
   }
   /* fall through */
 }
+#endif
 
-make_exit();
+make_exit() {}

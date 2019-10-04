@@ -256,6 +256,7 @@ void signal_exception(uint32_t exception) {
   save_usual_registers();
 #endif
 
+#ifdef ENABLE_DELAYSLOT
   if (cpu.is_delayslot) {
     cpu.cp0.epc = cpu.pc - 4;
     cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
@@ -263,6 +264,9 @@ void signal_exception(uint32_t exception) {
   } else {
     cpu.cp0.epc = cpu.pc;
   }
+#else
+  cpu.cp0.epc = cpu.pc;
+#endif
 
   cpu.has_exception = true;
 

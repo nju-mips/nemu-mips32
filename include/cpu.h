@@ -265,7 +265,9 @@ typedef struct {
 #endif
 
   vaddr_t br_target;
+#ifdef ENABLE_DELAYSLOT
   bool is_delayslot;
+#endif
   bool has_exception;
 } CPU_state;
 
