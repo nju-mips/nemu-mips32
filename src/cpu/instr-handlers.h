@@ -366,7 +366,9 @@ make_exec_handler(mtc0) {
     cpu.cp0.status.CU = newVal->CU;
     cpu.cp0.status.RP = newVal->RP;
     cpu.cp0.status.RE = newVal->RE;
+#if CONFIG_ARCH_MIPS32_R1
     cpu.cp0.status.BEV = newVal->BEV;
+#endif
     cpu.cp0.status.TS = newVal->TS;
     cpu.cp0.status.SR = newVal->SR;
     cpu.cp0.status.NMI = newVal->NMI;
@@ -1032,4 +1034,4 @@ make_label(inst_end) {
 }
 #endif
 
-make_exit() {}
+make_exit() { }

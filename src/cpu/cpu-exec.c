@@ -422,7 +422,8 @@ void cpu_exec(uint64_t n) {
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
   check_exception:;
-    check_intrs(); /* soft intr */
+    if (!cpu.has_exception)
+      check_intrs(); /* soft intr */
 
     if (cpu.has_exception) {
       cpu.has_exception = false;
