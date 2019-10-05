@@ -115,7 +115,7 @@ static const void *cop0_table_func[64] = {
     /* 0x18 */ &&eret, &&inv,  &&inv,   &&inv,
     /* 0x1c */ &&inv,  &&inv,  &&inv,   &&inv,
 
-    /* 0x20 */ &&inv,  &&inv,  &&inv,   &&inv,
+    /* 0x20 */ &&wait,  &&inv,  &&inv,   &&inv,
     /* 0x24 */ &&inv,  &&inv,  &&inv,   &&inv,
     /* 0x28 */ &&inv,  &&inv,  &&inv,   &&inv,
     /* 0x2c */ &&inv,  &&inv,  &&inv,   &&inv,
@@ -293,7 +293,13 @@ make_exec_handler(tlbwr) {
 }
 
 /* temporary strategy: store timer registers in C0 */
-make_exec_handler(syscall) { signal_exception(EXC_SYSCALL); }
+make_exec_handler(syscall) {
+  signal_exception(EXC_SYSCALL);
+#if CONFIG_KERNEL_DEBUG
+  void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
+  dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1], cpu.gpr[R_a2]);
+#endif
+}
 
 make_exec_handler(breakpoint) {
   if (work_mode == MODE_GDB) {
@@ -301,6 +307,9 @@ make_exec_handler(breakpoint) {
   } else {
     signal_exception(EXC_BP);
   }
+}
+
+make_exec_handler(wait) {
 }
 
 make_exec_handler(eret) {
@@ -313,6 +322,11 @@ make_exec_handler(eret) {
     cpu.br_target = cpu.cp0.epc;
     cpu.cp0.status.EXL = 0;
   }
+
+#if CONFIG_KERNEL_DEBUG
+  if (cpu.cp0.cause.ExcCode == EXC_SYSCALL)
+    printf("==> v0: %d\n", cpu.gpr[R_v0]);
+#endif
 
 #if CONFIG_CAE_CHECK
   check_usual_registers();
@@ -421,18 +435,20 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_INDEX, 0): {
     cpu.cp0.index.idx = cpu.gpr[decode->rt];
   } break;
-#if CONFIG_KERNEL_DEBUG
   // this serial is for debugging,
   // please don't use it in real codes
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
+#if CONFIG_KERNEL_DEBUG
     putchar(cpu.gpr[decode->rt]);
+#endif
     break;
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
+#if CONFIG_KERNEL_DEBUG
     check_kernel_image(CONFIG_KERNEL_ELF_PATH);
+#endif
     break;
   }
-#endif
   default:
     printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[decode->rt], decode->rd,
         decode->sel);
