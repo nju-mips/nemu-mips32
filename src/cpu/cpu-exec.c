@@ -256,80 +256,41 @@ void signal_exception(uint32_t exception) {
   save_usual_registers();
 #endif
 
-#if CONFIG_DELAYSLOT
-  if (cpu.is_delayslot) {
-    cpu.cp0.epc = cpu.pc - 4;
-    cpu.cp0.cause.BD = cpu.is_delayslot && cpu.cp0.status.EXL == 0;
-    cpu.is_delayslot = false;
-  } else {
-    cpu.cp0.epc = cpu.pc;
-  }
-#else
-  cpu.cp0.epc = cpu.pc;
-#endif
-
   cpu.has_exception = true;
 
-#if CONFIG_ARCH_LOONGSON || CONFIG_ARCH_NOOP || CONFIG_ARCH_BENCH
-  /* for loongson testcase, the only exception entry is
-   * 'h0380' */
-  cpu.br_target = 0xbfc00380;
-  if (extra == EX_TLB_REFILL) { cpu.br_target = 0xbfc00200; }
-#else
-  /* reference linux: arch/mips/kernel/cps-vec.S */
-  switch (code) {
-  case EXC_INTR:
-    if (cpu.cp0.status.BEV) {
-      if (cpu.cp0.cause.IV) {
-        cpu.br_target = 0xbfc00400;
-      } else {
-        cpu.br_target = 0xbfc00380;
-      }
+  uint32_t vecOff = 0;
+  if (cpu.cp0.status.EXL == 0) {
+    if (cpu.is_delayslot) {
+      cpu.cp0.epc = cpu.pc - 4;
+      cpu.cp0.cause.BD = 1;
     } else {
-      if (cpu.cp0.cause.IV) {
-        cpu.br_target = 0x80000200;
-      } else {
-        cpu.br_target = 0x80000180;
-      }
+      cpu.cp0.epc = cpu.pc;
+      cpu.cp0.cause.BD = 0;
     }
-    break;
-  case EXC_TLBM:
-  case EXC_TLBL:
-  case EXC_TLBS: {
-    if (extra == EX_TLB_REFILL) {
-      if (cpu.cp0.status.BEV) {
-        if (cpu.cp0.status.EXL) {
-          cpu.br_target = 0xbfc00380;
-        } else {
-          cpu.br_target = 0xbfc00200;
-        }
-      } else {
-        if (cpu.cp0.status.EXL) {
-          cpu.br_target = 0x80000180;
-        } else {
-          cpu.br_target = 0x80000000;
-        }
-      }
-      break;
-    }
-    /* fall through */
+
+    if (extra == EX_TLB_REFILL)
+      vecOff = 0x000;
+    else if (code == EXC_INTR && cpu.cp0.cause.IV == 1)
+      vecOff = 0x200;
+    else
+      vecOff = 0x180;
+  } else {
+    vecOff = 0x180;
   }
-  default:
-    if (cpu.cp0.status.BEV) {
-      cpu.br_target = 0xbfc00380;
-    } else {
-      cpu.br_target = 0x80000180;
-    }
-  }
+
+  cpu.cp0.cause.ExcCode = code;
+  cpu.cp0.status.EXL = 1;
+  if (cpu.cp0.status.BEV == 1) {
+    cpu.br_target = 0xbfc00200 + vecOff;
+#if CONFIG_MIPS32_R1
+  } else {
+    cpu.br_target = 0x80000000 + vecOff;
 #endif
+  }
 
 #if CONFIG_SEGMENT
   cpu.base = 0; // kernel segment base is zero
 #endif
-
-  cpu.cp0.status.EXL = 1;
-
-  cpu.cp0.cause.ExcCode = code;
 
   clear_mmu_cache();
   clear_decode_cache();
@@ -447,9 +408,9 @@ void cpu_exec(uint64_t n) {
 #if CONFIG_KERNEL_DEBUG
     if (cpu.pc == 0x0) {
       print_instr_queue();
-#ifdef CONFIG_KERNEL_ELF_PATH
+#  ifdef CONFIG_KERNEL_ELF_PATH
       check_kernel_image(CONFIG_KERNEL_ELF_PATH);
-#endif
+#  endif
     }
 #endif
 

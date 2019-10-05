@@ -306,9 +306,13 @@ make_exec_handler(breakpoint) {
 make_exec_handler(eret) {
   cpu.has_exception = true;
 
-  cpu.br_target = cpu.cp0.epc;
-  cpu.cp0.cause.BD = 0;
-  cpu.cp0.status.EXL = 0;
+  if (cpu.cp0.status.ERL == 1) {
+    cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
+    cpu.cp0.status.ERL = 0;
+  } else {
+    cpu.br_target = cpu.cp0.epc;
+    cpu.cp0.status.EXL = 0;
+  }
 
 #if CONFIG_CAE_CHECK
   check_usual_registers();
@@ -345,9 +349,18 @@ make_exec_handler(mfc0) {
 make_exec_handler(mtc0) {
   switch (CPRS(decode->rd, decode->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
+  case CPRS(CP0_EPC, CP0_EBASE_SEL):
     cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt];
     break;
   case CPRS(CP0_BADVADDR, 0): break;
+  case CPRS(CP0_CONTEXT, 0): {
+    cp0_context_t *newVal = (void *)&(cpu.gpr[decode->rt]);
+    cpu.cp0.context.PTEBase = newVal->PTEBase;
+  } break;
+  case CPRS(CP0_CONFIG, 0): {
+    cp0_config_t *newVal = (void *)&(cpu.gpr[decode->rt]);
+    cpu.cp0.config.K0 = newVal->K0;
+  } break;
   case CPRS(CP0_STATUS, 0): {
     cp0_status_t *newVal = (void *)&(cpu.gpr[decode->rt]);
     cpu.cp0.status.CU = newVal->CU;
@@ -418,7 +431,10 @@ make_exec_handler(mtc0) {
     break;
   }
 #endif
-  default: cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt]; break;
+  default:
+    printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[decode->rt], decode->rd,
+        decode->sel);
+    break;
   }
 }
 

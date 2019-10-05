@@ -30,6 +30,7 @@
 #define CP0_PRID         15 // sel = 0
 #define CP0_EBASE        15 // sel = 1
 #define CP0_CONFIG       16
+#define CP0_ErrorEPC     30
 
 #define CP0_PRID_SEL     0 // sel = 0
 #define CP0_EBASE_SEL    1 // sel = 1
