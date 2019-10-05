@@ -270,6 +270,9 @@ typedef struct {
   bool is_delayslot;
 #endif
   bool has_exception;
+#if CONFIG_KERNEL_DEBUG
+  bool is_syscall;
+#endif
 } CPU_state;
 
 

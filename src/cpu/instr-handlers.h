@@ -296,6 +296,7 @@ make_exec_handler(tlbwr) {
 make_exec_handler(syscall) {
   signal_exception(EXC_SYSCALL);
 #if CONFIG_KERNEL_DEBUG
+  cpu.is_syscall = true;
   void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
   dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1], cpu.gpr[R_a2]);
 #endif
@@ -324,8 +325,10 @@ make_exec_handler(eret) {
   }
 
 #if CONFIG_KERNEL_DEBUG
-  if (cpu.cp0.cause.ExcCode == EXC_SYSCALL)
+  if (cpu.is_syscall) {
     printf("==> v0: %d\n", cpu.gpr[R_v0]);
+    cpu.is_syscall = false;
+  }
 #endif
 
 #if CONFIG_CAE_CHECK
