@@ -1,8 +1,8 @@
+#include <assert.h>
+#include <elf.h>
 #include <malloc.h>
 #include <stdint.h>
-#include <assert.h>
 #include <stdio.h>
-#include <elf.h>
 
 #include "device.h"
 #include "memory.h"
@@ -20,17 +20,17 @@ void check_kernel_image(const char *image) {
   uint32_t *p_magic = buf;
   assert(*p_magic == elf_magic);
 
-  for (int i = 0; i < elf->e_phnum; i++) {
-    Elf32_Phdr *ph = (void *)buf + i * elf->e_phentsize + elf->e_phoff;
-    if (ph->p_type != PT_LOAD) { continue; }
-    if (ph->p_flags & PF_W) { continue; }
+  for (int i = 0; i < elf->e_shnum; i++) {
+    Elf32_Shdr *sh = (void *)buf + i * elf->e_shentsize + elf->e_shoff;
+    if (sh->sh_type != SHT_PROGBITS) { continue; }
+    if (!(sh->sh_flags & SHF_ALLOC)) continue;
 
-    void *ptr = vaddr_map(ph->p_vaddr, ph->p_filesz);
-    for (int i = 0; i < ph->p_filesz; i += 4) {
+    void *ptr = vaddr_map(sh->sh_addr, sh->sh_size);
+    for (int i = 0; i < sh->sh_size; i += 4) {
       uint32_t *loaded = ptr + i;
-      uint32_t *standard = buf + ph->p_offset + i;
+      uint32_t *standard = buf + sh->sh_offset + i;
       if (*loaded != *standard) {
-        printf("inconsistent@%08x: %08x <> %08x\n", ph->p_vaddr + i, *loaded,
+        printf("inconsistent@%08x: %08x <> %08x\n", sh->sh_addr + i, *loaded,
             *standard);
       }
     }
