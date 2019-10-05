@@ -8,14 +8,11 @@
 #include "monitor.h"
 #include "utils.h"
 
-void serial_enqueue_ascii(char);
-
 char *elf_file = NULL;
 char *symbol_file = NULL;
 static char *img_file = NULL;
 // static char *kernel_img = NULL;
 
-extern char *eth_iface;
 
 vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
@@ -91,7 +88,9 @@ const struct option long_options[] = {
     {"image", 1, NULL, 'i'},
     {"elf", 1, NULL, 'e'},
     {"help", 0, NULL, 'h'},
+#if CONFIG_ETHERLITE
     {"iface", 1, NULL, 'I'},
+#endif
     {NULL, 0, NULL, 0},
 };
 
@@ -135,10 +134,13 @@ void parse_args(int argc, char *argv[]) {
       else
         img_file = optarg;
       break;
-    case 'I':
+#if CONFIG_ETHERLITE
+    case 'I': {
+      extern char *eth_iface;
       eth_iface = optarg;
       printf("set eth_iface to %s\n", eth_iface);
-      break;
+    } break;
+#endif
     case 'h':
     default: print_help(argv[0]); exit(0);
     }
@@ -168,7 +170,7 @@ work_mode_t init_monitor(void) {
   p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
   p += sprintf(p, "ping 127.0.0.1\n");
 #endif
-  for (p = cmd; *p; p++) serial_enqueue_ascii(*p);
+  for (p = cmd; *p; p++) serial_enqueue(*p);
 #endif
 
   /* Initialize this virtual computer system. */

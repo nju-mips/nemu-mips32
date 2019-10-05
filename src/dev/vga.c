@@ -1,21 +1,17 @@
-#include <SDL/SDL.h>
-#include <stdio.h>
+#if CONFIG_VGA
+#  include <SDL/SDL.h>
+#  include <stdio.h>
 
-#include "device.h"
+#  include "device.h"
 
-#define VGA_BASE 0x10400000
-#define VGA_SIZE 0x100000
-#define VMEM_SIZE (WINDOW_H * WINDOW_W)
+#  define VGA_SIZE 0x100000
+#  define VMEM_SIZE (WINDOW_H * WINDOW_W)
 
 extern SDL_Surface *screen;
 
-static inline uint32_t get_x(uint32_t addr) {
-  return (addr / 4) % SCR_W;
-}
+static inline uint32_t get_x(uint32_t addr) { return (addr / 4) % SCR_W; }
 
-static inline uint32_t get_y(uint32_t addr) {
-  return (addr / 4) / SCR_W;
-}
+static inline uint32_t get_y(uint32_t addr) { return (addr / 4) / SCR_W; }
 
 static uint32_t vga_read(paddr_t addr, int len) {
   check_ioaddr(addr, len, VMEM_SIZE, "VGA.read");
@@ -45,10 +41,11 @@ static void vga_write(paddr_t addr, int len, uint32_t data) {
   memcpy((void *)&ptr[2 * y + 1][2 * x + 1] + offset, &data, len);
 }
 
-device_t vga_dev = {
+DEF_DEV(vga_dev) = {
     .name = "VGA",
-    .start = VGA_BASE,
-    .end = VGA_BASE + VGA_SIZE,
+    .start = CONFIG_VGA_BASE,
+    .end = CONFIG_VGA_BASE + VGA_SIZE,
     .read = vga_read,
     .write = vga_write,
 };
+#endif

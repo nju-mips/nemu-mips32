@@ -1,9 +1,9 @@
-#include <stdlib.h>
+#if CONFIG_RTC
+#  include <stdlib.h>
 
-#include "device.h"
+#  include "device.h"
 
-#define RTC_ADDR 0x10002000
-#define RTC_SIZE 0x4
+#  define RTC_SIZE 0x4
 
 uint64_t get_current_time(); // us
 
@@ -12,10 +12,11 @@ static uint32_t rtc_read(paddr_t addr, int len) {
   return get_current_time() / 1000;
 }
 
-device_t rtc_dev = {
+DEF_DEV(rtc_dev) = {
     .name = "RTC",
-    .start = RTC_ADDR,
-    .end = RTC_ADDR + RTC_SIZE,
+    .start = CONFIG_RTC_BASE,
+    .end = CONFIG_RTC_BASE + RTC_SIZE,
     .read = rtc_read,
     .peek = rtc_read,
 };
+#endif

@@ -270,7 +270,7 @@ void signal_exception(uint32_t exception) {
 
   cpu.has_exception = true;
 
-#if CONFIG_ARCH_LOONGSON
+#if CONFIG_ARCH_LOONGSON || CONFIG_ARCH_NOOP || CONFIG_ARCH_BENCH
   /* for loongson testcase, the only exception entry is
    * 'h0380' */
   cpu.br_target = 0xbfc00380;

@@ -9,7 +9,6 @@ SDL_Surface *screen;
 
 static struct itimerval it;
 
-extern void serial_enqueue(SDL_EventType, SDLKey);
 extern void keyboard_enqueue(SDL_EventType, SDLKey);
 static void device_update(int signum) {
   SDL_Event event = {0};
@@ -18,8 +17,10 @@ static void device_update(int signum) {
   /* If a key was pressed */
   case SDL_KEYUP:
   case SDL_KEYDOWN:
-    serial_enqueue(event.type, event.key.keysym.sym);
+    serial_enqueue_SDLKey(event.type, event.key.keysym.sym);
+#if CONFIG_KEYBOARD
     keyboard_enqueue(event.type, event.key.keysym.sym);
+#endif
     break;
   case SDL_QUIT:
     nemu_exit();

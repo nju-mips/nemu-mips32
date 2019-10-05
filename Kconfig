@@ -1,5 +1,56 @@
 mainmenu "This is an configure for nemu-mips32"
 
+choice
+  prompt "Machine selection"
+  default ARCH_LOONGSON
+
+config ARCH_BENCH
+  bool "optimized for microbench"
+  select GPIO
+  select UARTLITE
+  select RTC
+  select BRAM
+  select DDR
+  select VGA_CONTROLLER
+
+config ARCH_MIPS32_R1
+  bool "mips32 release 1"
+  select DELAYSLOT
+  select EXCEPTION
+  select PAGING
+  select INTR
+  select GPIO
+  select UARTLITE
+  select BRAM
+  select DDR
+
+config ARCH_LOONGSON 
+  bool "loongson 132"
+  select DELAYSLOT
+  select EXCEPTION
+  select PAGING
+  select GPIO
+  select UARTLITE
+  select BRAM
+  select DDR
+
+config ARCH_NOOP
+  bool "NJU OOP"
+  select DELAYSLOT
+  select EXCEPTION
+  select PAGING
+  select GPIO
+  select RTC
+  select UARTLITE
+  select BRAM
+  select DDR
+  select VGA
+  select VGA_CONTROLLER
+  select PERF_COUNTER
+  select KEYBOARD
+
+endchoice
+
 if ! ARCH_BENCH
 menu "NEMU-MIPS32 features"
 config DELAYSLOT
@@ -58,28 +109,6 @@ config KERNEL_DEBUG
 
 endmenu
 
-choice
-  prompt "Machine selection"
-  default ARCH_LOONGSON
-
-config ARCH_BENCH
-  bool "optimized for microbench"
-
-config ARCH_MIPS32_R1
-  bool "mips32 release 1"
-  select DELAYSLOT
-  select EXCEPTION
-  select PAGING
-  select INTR
-
-config ARCH_LOONGSON 
-  bool "loongson 132"
-  select DELAYSLOT
-  select EXCEPTION
-  select PAGING
-
-endchoice
-
 menu "Preload kernel image"
 config PRELOAD_LINUX
   bool "Preload linux kernel into memory (bootm)"
@@ -89,7 +118,111 @@ config PRELOAD_LINUX
 
 config KERNEL_UIMAGE_BASE
   hex "Address to load kernel image"
+  depends on PRELOAD_LINUX=y
   range 0x80000000 0xA0000000
   default 0x84000000
+
+endmenu
+
+menu "Device simulation"
+config BRAM
+  bool "Block RAM (1 MB)"
+
+config BRAM_BASE
+  hex "address of block RAM"
+  range 0x00000000 0x20000000
+  depends on BRAM=y
+  default 0x1fc00000
+
+config DDR
+  bool "DDR (128 MB, main memory)"
+
+config DDR_BASE
+  hex "address of DDR"
+  range 0x00000000 0x20000000
+  depends on DDR=y
+  default 0x00000000
+
+config GPIO
+  bool "General purpose IO (nemu_trap)"
+
+config GPIO_BASE
+  hex "address of GPIO"
+  range 0x00000000 0x20000000
+  depends on GPIO=y
+  default 0x10000000
+
+config KEYBOARD
+  bool "PS/2 Keyboard"
+
+config KEYBOARD_BASE
+  hex "address of keyboard"
+  range 0x00000000 0x20000000
+  depends on KEYBOARD=y
+  default 0x1fe94000
+
+config ETHERLITE
+  bool "Xilinx Etherlite"
+
+config ETHERLITE_BASE
+  hex "address of Xilinx Etherlite"
+  range 0x00000000 0x20000000
+  depends on ETHERLITE=y
+  default 0x1ff00000
+
+config PERF_COUNTER
+  bool "Performance counter (for compatibility)"
+
+config PERF_COUNTER_BASE
+  hex "address of Performance Counter"
+  range 0x00000000 0x20000000
+  depends on PERF_COUNTER=y
+  default 0x1fe95000
+
+config RTC
+  bool "Real Time Clock (ns)"
+
+config RTC_BASE
+  hex "address of RTC"
+  range 0x00000000 0x20000000
+  depends on RTC=y
+  default 0x10002000
+
+config VGA
+  bool "VGA"
+  select VGA_CONTROLLER
+
+config VGA_BASE
+  hex "address of VMEM"
+  range 0x00000000 0x20000000
+  depends on VGA_CONTROLLER=y
+  default 0x10400000
+
+config VGA_CONTROLLER
+  bool "VGA controller"
+
+config VGA_CONTROLLER_BASE
+  hex "address of RTC"
+  range 0x00000000 0x20000000
+  depends on VGA_CONTROLLER=y
+  default 0x10003000
+
+config UARTLITE
+  bool "Xilinx Uartlite device"
+
+config UARTLITE_BASE
+  hex "address of uartlite"
+  range 0x00000000 0x20000000
+  depends on UARTLITE=y
+  default 0x1fe50000
+
+config XILINX_SPI
+  bool "Xilinx spi device"
+
+config XILINX_SPI_BASE
+  hex "address of spi"
+  range 0x00000000 0x20000000
+  depends on XILINX_SPI=y
+  default 0x1fe80000
 
 endmenu

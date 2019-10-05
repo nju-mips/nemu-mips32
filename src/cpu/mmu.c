@@ -4,6 +4,8 @@
 #include "memory.h"
 #include "mmu.h"
 
+extern device_t blackhole_dev;
+
 tlb_entry_t tlb[NR_TLB_ENTRY];
 
 extern void signal_exception(unsigned);

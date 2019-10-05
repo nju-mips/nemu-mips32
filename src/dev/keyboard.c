@@ -1,18 +1,19 @@
-#include <SDL/SDL.h>
-#include <stdbool.h>
+#if CONFIG_KEYBOARD
+#  include <SDL/SDL.h>
+#  include <stdbool.h>
 
-#include "device.h"
+#  include "device.h"
 
-#define KB_ADDR 0x1fe94000
-#define KB_CODE 0x0
-#define KB_STAT 0x4
-#define KB_SIZE 0x10
+#  define KB_ADDR 0x1fe94000
+#  define KB_CODE 0x0
+#  define KB_STAT 0x4
+#  define KB_SIZE 0x10
 
 /////////////////////////////////////////////////////////////////
 //                     keyboard simulation //
 /////////////////////////////////////////////////////////////////
 
-#define KEYBOARD_QUEUE_LEN 1024
+#  define KEYBOARD_QUEUE_LEN 1024
 static int keyboard_queue[KEYBOARD_QUEUE_LEN];
 static int keyboard_f = 0, keyboard_r = 0;
 
@@ -122,9 +123,8 @@ struct {
 
 void keyboard_enqueue(SDL_EventType type, SDLKey key) {
   if (key < 0 || key >= SDLK_LAST) return;
-  int scancode = type == SDL_KEYUP
-                     ? SDLK_to_scancode[key].upcode
-                     : SDLK_to_scancode[key].downcode;
+  int scancode = type == SDL_KEYUP ? SDLK_to_scancode[key].upcode
+                                   : SDLK_to_scancode[key].downcode;
 
   if (scancode == 0) return;
 
@@ -146,17 +146,16 @@ static uint32_t kb_read(paddr_t addr, int len) {
     return code;
   }
   default:
-    CPUAssert(false,
-              "keyboard: address(0x%08x) is not readable",
-              addr);
+    CPUAssert(false, "keyboard: address(0x%08x) is not readable", addr);
     break;
   }
   return 0;
 }
 
-device_t keyboard_dev = {
+DEF_DEV(keyboard_dev) = {
     .name = "KEYBOARD",
     .start = KB_ADDR,
     .end = KB_ADDR + KB_SIZE,
     .read = kb_read,
 };
+#endif

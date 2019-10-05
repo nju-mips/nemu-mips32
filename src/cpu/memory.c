@@ -8,7 +8,7 @@ void clear_decode_cache();
 
 device_t *memory_regions[1024 * 1024]; /* 8 MB */
 
-void register_device(device_t *dev) {
+void realize_device(device_t *dev) {
   assert(dev && (dev->start & 0xFFF) == 0);
   // assert((dev->end & 0xFFF) == 0);
 
@@ -70,10 +70,7 @@ void vaddr_write(vaddr_t addr, int len, uint32_t data) {
 }
 
 void init_mmio() {
-  extern char *eth_iface;
-#define X(dev)         \
-  extern device_t dev; \
-  if (eth_iface || &dev != &mac_dev) register_device(&dev);
-
-  DEVOP(X);
+  for (device_t *head = get_device_list_head(); head; head = head->next) {
+    realize_device(head);
+  }
 }
