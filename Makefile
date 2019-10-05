@@ -66,4 +66,7 @@ clean:
 	rm -rf include/generated include/config
 
 menuconfig: $(MCONF)
-	$(MCONF) ./Kconfig
+	@$(MCONF) ./Kconfig
+
+%_defconfig:
+	@cp configs/$@ ./.config

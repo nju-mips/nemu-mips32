@@ -1,0 +1,56 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# This is an configure for nemu-mips32
+#
+CONFIG_ARCH_BENCH=y
+# CONFIG_ARCH_MIPS32_R1 is not set
+# CONFIG_ARCH_LOONGSON is not set
+# CONFIG_ARCH_NOOP is not set
+
+#
+# NEMU-MIPS32 debug options
+#
+# CONFIG_MMU_CACHE_PERF is not set
+# CONFIG_DECODE_CACHE_PERF is not set
+# CONFIG_DEBUG is not set
+# CONFIG_INSTR_LOG is not set
+# CONFIG_MMU_CACHE_CHECK is not set
+# CONFIG_DECODE_CACHE_CHECK is not set
+# end of NEMU-MIPS32 debug options
+
+#
+# Kernel debug options
+#
+# CONFIG_CAE_CHECK is not set
+CONFIG_KERNEL_ELF_PATH="/home/wierton/linux-noop-4.11.4/vmlinux"
+CONFIG_KERNEL_UIMAGE_PATH="/home/wierton/linux-noop-4.11.4/arch/mips/boot/uImage.bin"
+# CONFIG_KERNEL_DEBUG is not set
+# end of Kernel debug options
+
+#
+# Preload kernel image
+#
+# end of Preload kernel image
+
+#
+# Device simulation
+#
+CONFIG_BRAM=y
+CONFIG_BRAM_BASE=0x1fc00000
+CONFIG_DDR=y
+CONFIG_DDR_BASE=0x00000000
+CONFIG_GPIO=y
+CONFIG_GPIO_BASE=0x10000000
+# CONFIG_KEYBOARD is not set
+# CONFIG_ETHERLITE is not set
+# CONFIG_PERF_COUNTER is not set
+CONFIG_RTC=y
+CONFIG_RTC_BASE=0x10002000
+# CONFIG_VGA is not set
+CONFIG_VGA_BASE=0x10400000
+CONFIG_VGA_CONTROLLER=y
+CONFIG_VGA_CONTROLLER_BASE=0x10003000
+CONFIG_UARTLITE=y
+CONFIG_UARTLITE_BASE=0x1fe50000
+# CONFIG_XILINX_SPI is not set
+# end of Device simulation
