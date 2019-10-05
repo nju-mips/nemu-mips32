@@ -349,7 +349,7 @@ make_exec_handler(mfc0) {
 make_exec_handler(mtc0) {
   switch (CPRS(decode->rd, decode->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
-  case CPRS(CP0_EPC, CP0_EBASE_SEL):
+  case CPRS(CP0_EPC, 0):
     cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt];
     break;
   case CPRS(CP0_BADVADDR, 0): break;

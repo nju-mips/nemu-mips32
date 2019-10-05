@@ -282,10 +282,8 @@ void signal_exception(uint32_t exception) {
   cpu.cp0.status.EXL = 1;
   if (cpu.cp0.status.BEV == 1) {
     cpu.br_target = 0xbfc00200 + vecOff;
-#if CONFIG_MIPS32_R1
   } else {
     cpu.br_target = 0x80000000 + vecOff;
-#endif
   }
 
 #if CONFIG_SEGMENT
