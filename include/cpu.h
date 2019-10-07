@@ -340,6 +340,6 @@ typedef struct {
 
 extern CPU_state cpu;
 int init_cpu(vaddr_t entry);
-
+void signal_irq(unsigned irqno);
 
 #endif

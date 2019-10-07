@@ -348,7 +348,14 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   // update IP
-  if (compare != 0 && meet_compare) { cpu.cp0.cause.IP |= CAUSE_IP_TIMER; }
+  if (compare != 0 && meet_compare) {
+    signal_irq(7);
+  }
+}
+
+void signal_irq(unsigned irqno) {
+  assert (0 <= irqno && irqno < 8);
+  cpu.cp0.cause.IP |= 1 << irqno;
 }
 
 void nemu_exit() {
