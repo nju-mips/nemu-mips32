@@ -318,10 +318,13 @@ make_exec_handler(wait) {
 make_exec_handler(eret) {
   cpu.has_exception = true;
 
+#if CONFIG_ARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
     cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
     cpu.cp0.status.ERL = 0;
-  } else {
+  } else
+#endif
+  {
     cpu.br_target = cpu.cp0.epc;
     cpu.cp0.status.EXL = 0;
   }
@@ -368,6 +371,7 @@ make_exec_handler(mfc0) {
 make_exec_handler(mtc0) {
   switch (CPRS(decode->rd, decode->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
+  case CPRS(CP0_COUNT, 0):
   case CPRS(CP0_EPC, 0):
     cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt];
     break;
@@ -404,7 +408,9 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_CAUSE, 0): {
     uint32_t sw_ip_mask = 3;
     cp0_cause_t *newVal = (void *)&(cpu.gpr[decode->rt]);
+#if CONFIG_ARCH_MIPS32_R1
     cpu.cp0.cause.IV = newVal->IV;
+#endif
     cpu.cp0.cause.WP = newVal->WP;
     cpu.cp0.cause.IP =
         (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
@@ -1055,4 +1061,4 @@ make_label(inst_end) {
 }
 #endif
 
-make_exit() { }
+make_exit() {}

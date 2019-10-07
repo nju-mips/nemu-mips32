@@ -305,6 +305,8 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.status.BEV = 1;
   cpu.cp0.status.IM = 0x00;
 
+  cpu.cp0.cause.IV = 0;
+
   cpu.pc = entry;
   cpu.cp0.cpr[CP0_PRID][0] = 0x00018000; // MIPS32 4Kc
 
