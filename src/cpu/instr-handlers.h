@@ -311,6 +311,8 @@ make_exec_handler(breakpoint) {
 }
 
 make_exec_handler(wait) {
+  /* didn't +4 for pc */
+  goto exit;
 }
 
 make_exec_handler(eret) {
