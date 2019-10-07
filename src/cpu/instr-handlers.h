@@ -348,24 +348,7 @@ make_exec_handler(eret) {
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
 
 make_exec_handler(mfc0) {
-#if CONFIG_INTR
   cpu.gpr[decode->rt] = cpu.cp0.cpr[decode->rd][decode->sel];
-#else
-  /* only for microbench */
-  if (decode->rd == CP0_COUNT) {
-    L64_t us;
-    us.val = get_current_time() * 50; // for 50 MHZ
-    if (decode->sel == 0) {
-      cpu.gpr[decode->rt] = us.lo;
-    } else if (decode->sel == 1) {
-      cpu.gpr[decode->rt] = us.hi;
-    } else {
-      assert(0);
-    }
-  } else {
-    cpu.gpr[decode->rt] = cpu.cp0.cpr[decode->rd][decode->sel];
-  }
-#endif
 }
 
 make_exec_handler(mtc0) {

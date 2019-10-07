@@ -20,8 +20,8 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
-#define glue_impl(a, b) a ## b
-#define glue(a, b) glue_impl(a, b)
+#define glue_prim(a, b) a ## b
+#define glue(a, b) glue_prim(a, b)
 
 #define BIT(nr)		(1 << (nr))
 #define GENMASK(h, l) \
@@ -38,5 +38,19 @@ typedef uint8_t u8;
 #define ANSI_WIDTHOR_MAGENTA "\e[35m"
 #define ANSI_WIDTHOR_CYAN    "\e[36m"
 #define ANSI_WIDTHOR_RESET   "\e[0m"
+
+/* #define CONFIG_X 0
+ * #define CONFIG_Y 1
+ * #undef  CONFIG_O
+ * CONFIG_IS_ENABLED(X) ==> 0
+ * CONFIG_IS_ENABLED(Y) ==> 1
+ * CONFIG_IS_ENABLED(O) ==> 0
+ * */
+#define _2nd_of_N_impl(a, b, ...) b
+#define _2nd_of_N(...) _2nd_of_N_impl(__VA_ARGS__, 0)
+#define EXPAND(a) glue_prim(EXPAND_, a)
+#define EXPAND_0 _, 0
+#define EXPAND_1 _, 1
+#define CONFIG_IS_ENABLED(v) _2nd_of_N(EXPAND(glue(CONFIG_, v)), 0)
 
 #endif

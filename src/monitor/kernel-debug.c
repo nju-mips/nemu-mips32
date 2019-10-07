@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <dlfcn.h>
 #include <elf.h>
+#include <getopt.h>
 #include <malloc.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -56,10 +58,9 @@ void dump_argv(uint32_t addr, uint32_t limit) {
   if (addr == 0) return;
 
   printf("{");
-  for (int i = 0; i < limit; i ++) {
+  for (int i = 0; i < limit; i++) {
     uint32_t argp = dbg_vaddr_read(addr + 4 * i, 4);
-    if (argp == 0)
-      break;
+    if (argp == 0) break;
     dump_string(argp, limit);
     printf(", ");
   }
@@ -79,9 +80,7 @@ void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2) {
     dump_string(a0, 40);
     printf(", %d)\n", a1);
     break;
-  case __NR_close:
-    printf("close(%d)\n", a0);
-    break;
+  case __NR_close: printf("close(%d)\n", a0); break;
   case __NR_uname: printf("uname(0x%08x)\n", a0); break;
   case __NR_brk: printf("brk(0x%08x)\n", a0); break;
   case __NR_readlink:
@@ -140,21 +139,72 @@ void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2) {
     printf("0x%08x", a1);
     printf(")\n");
     break;
-  case __NR_clone:
-    printf("clone()\n");
-    break;
-  case __NR_waitpid:
-    printf("waitpid(%d, 0x%08x, %d)\n", a0, a1, a2);
-    break;
-  case __NR_fcntl64:
-    printf("fcntl64()\n");
-    break;
-  case __NR_dup2:
-    printf("dup2(%d, %d)\n", a0, a1);
-    break;
-  case __NR_dup:
-    printf("dup(%d)\n", a0);
-    break;
+  case __NR_clone: printf("clone()\n"); break;
+  case __NR_waitpid: printf("waitpid(%d, 0x%08x, %d)\n", a0, a1, a2); break;
+  case __NR_fcntl64: printf("fcntl64()\n"); break;
+  case __NR_dup2: printf("dup2(%d, %d)\n", a0, a1); break;
+  case __NR_dup: printf("dup(%d)\n", a0); break;
   default: printf("syscall(%d)\n", v0); break;
   }
+}
+
+static void *handler = NULL;
+
+static CPU_state(*s_cpu);
+static void (*s_cpu_exec)(uint64_t);
+static work_mode_t (*s_parse_args)(int argc, const char *argv[]);
+static work_mode_t (*s_init_monitor)(void);
+static void (*s_init_mmio)(void);
+
+void init_nemu_dylib() {
+  handler = dlopen("/home/wierton/nscscc-system-18/nemu-mips32/build/nemu",
+      RTLD_LOCAL | RTLD_NOW | DT_SYMENT);
+  assert(handler);
+
+  assert(dlsym(handler, "main"));
+
+  s_cpu = dlsym(handler, "cpu");
+  s_cpu_exec = dlsym(handler, "cpu_exec");
+  s_parse_args = dlsym(handler, "parse_args");
+  s_init_monitor = dlsym(handler, "init_monitor");
+  s_init_mmio = dlsym(handler, "init_mmio");
+
+  assert(s_cpu && s_cpu_exec && s_parse_args && s_init_monitor && s_init_mmio);
+
+  const char *argv[] = {"nemu", "-b", "-e",
+      "/home/wierton/nscscc-system-18/nanos/build/nanos-mips32-npc", NULL};
+
+  optind = 0;
+  optarg = NULL;
+  s_parse_args(4, argv);
+  s_init_mmio();
+
+  s_init_monitor();
+}
+
+extern unsigned int counter;
+void diff_with_nemu() {
+  if (!handler) { init_nemu_dylib(); }
+
+  s_cpu_exec(1);
+
+  if (cpu.cp0.epc != s_cpu->cp0.epc) {
+    print_instr_queue();
+    printf("PC %08x: epc %08x <> %08x\n", cpu.pc, cpu.cp0.epc, s_cpu->cp0.epc);
+    assert(0);
+  }
+
+  if (cpu.pc != s_cpu->pc) {
+    print_instr_queue();
+    printf("PC %08x <> %08x\n", cpu.pc, s_cpu->pc);
+    assert(0);
+  }
+
+  for (int i = 0; i < 32; i++)
+    if (cpu.gpr[i] != s_cpu->gpr[i]) {
+      print_instr_queue();
+      printf(
+          "PC %08x: reg %d: %08x <> %08x\n", cpu.pc, i, cpu.gpr[i], s_cpu->gpr[i]);
+      assert(0);
+    }
 }

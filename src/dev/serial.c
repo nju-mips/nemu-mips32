@@ -135,7 +135,10 @@ void serial_enqueue_SDLKey(SDL_EventType type, SDLKey key) {
   while (p && *p) {
     int next = (serial_r + 1) % SERIAL_QUEUE_LEN;
     if (next != serial_f) { // if not full
+#if CONFIG_INTR
+      /* [UARTLITE] serial irq */
       signal_irq(4);
+#endif
       serial_queue[serial_r] = *p;
       serial_r = next;
     } else {

@@ -55,7 +55,7 @@ app: $(BINARY) $(SHARED)
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
-	@$(LD) -O2 -o $@ $^ -lSDL -lreadline
+	@$(LD) -O2 -o $@ $^ -lSDL -lreadline -ldl
 
 $(SHARED): $(OBJS)
 	@echo + AR $@
