@@ -5,10 +5,7 @@
 
 #define CPU_INIT_PC 0xbfc00000
 
-#if CONFIG_SEGMENT
-#define CP0_RESERVED_BASE 0   // for segment
-#endif
-
+#define CP0_RESERVED_BASE   0   // for segment
 #define CP0_RESERVED_SERIAL 1
 #define CP0_RESERVED_CHECK  2
 

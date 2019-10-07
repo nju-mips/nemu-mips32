@@ -448,6 +448,11 @@ make_exec_handler(mtc0) {
   } break;
   // this serial is for debugging,
   // please don't use it in real codes
+  case CPRS(CP0_RESERVED, CP0_RESERVED_BASE):
+#if CONFIG_SEGMENT
+    cpu.cp0.cpr[decode->rd][decode->sel] = cpu.gpr[decode->rt];
+#endif
+    break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
 #if CONFIG_KERNEL_DEBUG
     putchar(cpu.gpr[decode->rt]);

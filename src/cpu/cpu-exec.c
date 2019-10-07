@@ -260,10 +260,13 @@ void signal_exception(uint32_t exception) {
 
   uint32_t vecOff = 0;
   if (cpu.cp0.status.EXL == 0) {
+#if CONFIG_DELAYSLOT
     if (cpu.is_delayslot) {
       cpu.cp0.epc = cpu.pc - 4;
       cpu.cp0.cause.BD = 1;
-    } else {
+    } else
+#endif
+    {
       cpu.cp0.epc = cpu.pc;
       cpu.cp0.cause.BD = 0;
     }
@@ -350,13 +353,11 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   // update IP
-  if (compare != 0 && meet_compare) {
-    signal_irq(7);
-  }
+  if (compare != 0 && meet_compare) { signal_irq(7); }
 }
 
 void signal_irq(unsigned irqno) {
-  assert (0 <= irqno && irqno < 8);
+  assert(0 <= irqno && irqno < 8);
   cpu.cp0.cause.IP |= 1 << irqno;
 }
 
@@ -431,8 +432,7 @@ void cpu_exec(uint64_t n) {
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
   check_exception:;
-    if (!cpu.has_exception)
-      check_intrs(); /* soft intr */
+    if (!cpu.has_exception) check_intrs(); /* soft intr */
 
     if (cpu.has_exception) {
       cpu.has_exception = false;
