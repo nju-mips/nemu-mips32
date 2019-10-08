@@ -18,6 +18,9 @@ AUTOCONF_H := include/generated/autoconf.h
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
 CFLAGS   += -include $(AUTOCONF_H)
+
+UBOOT_HOME := $(abspath ../uboot)
+BUSYBOX_HOME := $(shell echo ~)/busybox-1.20.1
 export KERNEL_HOME := $(shell echo ~)/linux-noop-4.11.4
 # CFLAGS   += -fsanitize=undefined
 
@@ -70,3 +73,12 @@ menuconfig: $(MCONF)
 
 %_defconfig:
 	@cp configs/$@ ./.config
+
+linux:
+	make -s -C $(BUSYBOX_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32
+	cp $(BUSYBOX_HOME)/busybox ../initramfs/root/bin/busybox
+	make -s -C ../initramfs
+	make -C $(KERNEL_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32
+
+run-linux:
+	build/nemu -b -e $(UBOOT_HOME)/u-boot

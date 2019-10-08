@@ -103,13 +103,18 @@ config KERNEL_UIMAGE_PATH
   string "The path of uImage.bin"
   default "$(KERNEL_HOME)/arch/mips/boot/uImage.bin"
 
-config KERNEL_DEBUG
-  bool "Kernel debug features"
+config KERNEL_DEBUG_SERIAL
+  bool "Kernel debug serial (cpr $7, 1)"
   depends on KERNEL_ELF_PATH != ""
+
+config CHECK_IMAGE
+  bool "Check the consistence of kernel image"
+
+config WARN_PC_EQUALS_ZERO
+  bool "Warning when PC is zero"
 
 config DUMP_SYSCALL
   bool "Dump syscalls (posix)"
-  depends on KERNEL_DEBUG = y
 
 endmenu
 

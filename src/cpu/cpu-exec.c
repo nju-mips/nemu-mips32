@@ -413,7 +413,7 @@ void cpu_exec(uint64_t n) {
 #endif
 
     /* should be bad state */
-#if CONFIG_KERNEL_DEBUG
+#if CONFIG_WARN_PC_EQUALS_ZERO
     if (cpu.pc == 0x0) {
       print_instr_queue();
 #  ifdef CONFIG_KERNEL_ELF_PATH

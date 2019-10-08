@@ -331,7 +331,7 @@ make_exec_handler(eret) {
 
 #if CONFIG_DUMP_SYSCALL
   if (cpu.is_syscall) {
-    printf("==> v0: %d\n", cpu.gpr[R_v0]);
+    printf("==> v0: %08x & %d\n", cpu.gpr[R_v0], cpu.gpr[R_v0]);
     cpu.is_syscall = false;
   }
 #endif
@@ -454,13 +454,13 @@ make_exec_handler(mtc0) {
 #endif
     break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
-#if CONFIG_KERNEL_DEBUG
+#if CONFIG_KERNEL_DEBUG_SERIAL
     putchar(cpu.gpr[decode->rt]);
 #endif
     break;
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
-#if CONFIG_KERNEL_DEBUG
+#if CONFIG_CHECK_IMAGE
     check_kernel_image(CONFIG_KERNEL_ELF_PATH);
 #endif
     break;
