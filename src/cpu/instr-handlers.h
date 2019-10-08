@@ -348,7 +348,7 @@ make_exec_handler(eret) {
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
 
 make_exec_handler(mfc0) {
-#if CONFIG_ARCH_NOOP
+#if CONFIG_ARCH_NOOP || CONFIG_ARCH_MIPS32_R1
   /* used for nanos: pal and litenes */
   if (decode->rd == CP0_COUNT) {
     L64_t us;
