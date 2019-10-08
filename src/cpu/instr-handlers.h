@@ -295,7 +295,7 @@ make_exec_handler(tlbwr) {
 /* temporary strategy: store timer registers in C0 */
 make_exec_handler(syscall) {
   signal_exception(EXC_SYSCALL);
-#if CONFIG_KERNEL_DEBUG
+#if CONFIG_DUMP_SYSCALL
   cpu.is_syscall = true;
   void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
   dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1], cpu.gpr[R_a2]);
@@ -318,7 +318,7 @@ make_exec_handler(wait) {
 make_exec_handler(eret) {
   cpu.has_exception = true;
 
-#if CONFIG_ARCH_MIPS32_R1
+#if CONFIG_MARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
     cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
     cpu.cp0.status.ERL = 0;
@@ -329,7 +329,7 @@ make_exec_handler(eret) {
     cpu.cp0.status.EXL = 0;
   }
 
-#if CONFIG_KERNEL_DEBUG
+#if CONFIG_DUMP_SYSCALL
   if (cpu.is_syscall) {
     printf("==> v0: %d\n", cpu.gpr[R_v0]);
     cpu.is_syscall = false;
@@ -348,7 +348,7 @@ make_exec_handler(eret) {
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
 
 make_exec_handler(mfc0) {
-#if CONFIG_ARCH_NOOP || CONFIG_ARCH_MIPS32_R1
+#if CONFIG_MARCH_NOOP || CONFIG_MARCH_MIPS32_R1
   /* used for nanos: pal and litenes */
   if (decode->rd == CP0_COUNT) {
     L64_t us;
@@ -389,7 +389,7 @@ make_exec_handler(mtc0) {
     cpu.cp0.status.CU = newVal->CU;
     cpu.cp0.status.RP = newVal->RP;
     cpu.cp0.status.RE = newVal->RE;
-#if CONFIG_ARCH_MIPS32_R1
+#if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.status.BEV = newVal->BEV;
 #endif
     cpu.cp0.status.TS = newVal->TS;
@@ -408,7 +408,7 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_CAUSE, 0): {
     uint32_t sw_ip_mask = 3;
     cp0_cause_t *newVal = (void *)&(cpu.gpr[decode->rt]);
-#if CONFIG_ARCH_MIPS32_R1
+#if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.cause.IV = newVal->IV;
 #endif
     cpu.cp0.cause.WP = newVal->WP;

@@ -2,10 +2,10 @@
 # Automatically generated file; DO NOT EDIT.
 # This is an configure for nemu-mips32
 #
-# CONFIG_ARCH_BENCH is not set
-CONFIG_ARCH_MIPS32_R1=y
-# CONFIG_ARCH_LOONGSON is not set
-# CONFIG_ARCH_NOOP is not set
+# CONFIG_MARCH_BENCH is not set
+CONFIG_MARCH_MIPS32_R1=y
+# CONFIG_MARCH_LOONGSON is not set
+# CONFIG_MARCH_NOOP is not set
 
 #
 # NEMU-MIPS32 features

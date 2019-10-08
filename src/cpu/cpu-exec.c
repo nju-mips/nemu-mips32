@@ -259,7 +259,7 @@ void signal_exception(uint32_t exception) {
   cpu.has_exception = true;
 
   uint32_t vecOff = 0;
-  if (CONFIG_IS_ENABLED(ARCH_NOOP) || cpu.cp0.status.EXL == 0) {
+  if (CONFIG_IS_ENABLED(MARCH_NOOP) || cpu.cp0.status.EXL == 0) {
 #if CONFIG_DELAYSLOT
     if (cpu.is_delayslot) {
       cpu.cp0.epc = cpu.pc - 4;

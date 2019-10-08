@@ -2,9 +2,9 @@ mainmenu "This is an configure for nemu-mips32"
 
 choice
   prompt "Machine selection"
-  default ARCH_LOONGSON
+  default MARCH_LOONGSON
 
-config ARCH_BENCH
+config MARCH_BENCH
   bool "optimized for microbench"
   select GPIO
   select UARTLITE
@@ -13,7 +13,7 @@ config ARCH_BENCH
   select DDR
   select VGA_CONTROLLER
 
-config ARCH_MIPS32_R1
+config MARCH_MIPS32_R1
   bool "mips32 release 1"
   select DELAYSLOT
   select EXCEPTION
@@ -24,7 +24,7 @@ config ARCH_MIPS32_R1
   select BRAM
   select DDR
 
-config ARCH_LOONGSON 
+config MARCH_LOONGSON 
   bool "loongson 132"
   select DELAYSLOT
   select EXCEPTION
@@ -34,7 +34,7 @@ config ARCH_LOONGSON
   select BRAM
   select DDR
 
-config ARCH_NOOP
+config MARCH_NOOP
   bool "NJU OOP"
   select DELAYSLOT
   select EXCEPTION
@@ -51,7 +51,7 @@ config ARCH_NOOP
 
 endchoice
 
-if ! ARCH_BENCH
+if ! MARCH_BENCH
 menu "NEMU-MIPS32 features"
 config DELAYSLOT
   bool "Delayslot support"
@@ -107,12 +107,16 @@ config KERNEL_DEBUG
   bool "Kernel debug features"
   depends on KERNEL_ELF_PATH != ""
 
+config DUMP_SYSCALL
+  bool "Dump syscalls (posix)"
+  depends on KERNEL_DEBUG = y
+
 endmenu
 
 menu "Preload kernel image"
 config PRELOAD_LINUX
   bool "Preload linux kernel into memory (bootm)"
-  depends on ARCH_MIPS32_R1
+  depends on MARCH_MIPS32_R1
   depends on KERNEL_ELF_PATH != ""
   depends on KERNEL_UIMAGE_PATH != ""
 

@@ -42,7 +42,7 @@ make
 * commands:
   * cd linux && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make uImage
   * cd uboot && ARCH=mips CROSS\_COMPILE=mips-linux-gnu- make
-  * cd nemu-mips32 && vim Makefile # ENABLE\_QUICK\_LINUX\_LOADING and __ARCH_MIPS32_R1__
+  * cd nemu-mips32 && vim Makefile # ENABLE\_QUICK\_LINUX\_LOADING and __MARCH_MIPS32_R1__
   * cd nemu-mips32 && make && build/nemu -b -e u-boot.elf
 * linux configuration
   * bootargs: linux/arch/mips/boot/dts/noop/noop.dts
