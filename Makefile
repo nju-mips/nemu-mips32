@@ -75,10 +75,10 @@ menuconfig: $(MCONF)
 	@cp configs/$@ ./.config
 
 linux:
-	make -s -C $(BUSYBOX_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32
+	make -s -C $(BUSYBOX_HOME) ARCH=mips CROSS_COMPILE=mipsel-linux-gnu- -j32
 	cp $(BUSYBOX_HOME)/busybox ../initramfs/root/bin/busybox
 	make -s -C ../initramfs
-	make -C $(KERNEL_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32
+	make -C $(KERNEL_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32 uImage
 
 run-linux:
 	build/nemu -b -e $(UBOOT_HOME)/u-boot
