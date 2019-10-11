@@ -415,10 +415,8 @@ void cpu_exec(uint64_t n) {
     /* should be bad state */
 #if CONFIG_WARN_PC_EQUALS_ZERO
     if (cpu.pc == 0x0) {
+      printf("[NEMU] warning: cpu.pc == 0\n");
       print_instr_queue();
-#  ifdef CONFIG_KERNEL_ELF_PATH
-      check_kernel_image(CONFIG_KERNEL_ELF_PATH);
-#  endif
     }
 #endif
 
