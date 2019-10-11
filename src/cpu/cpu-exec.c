@@ -353,12 +353,12 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   /* update IP */
-  if (compare != 0 && meet_compare) { signal_irq(7); }
+  if (compare != 0 && meet_compare) { signal_irq(5); }
 }
 
 void signal_irq(unsigned irqno) {
-  assert(0 <= irqno && irqno < 8);
-  cpu.cp0.cause.IP |= 1 << irqno;
+  assert(0 <= irqno && irqno < 6);
+  cpu.cp0.cause.IP |= 1 << (irqno + 2);
 }
 
 void nemu_exit() {

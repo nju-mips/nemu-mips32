@@ -8,6 +8,8 @@
 #define CP0_RESERVED_BASE   0   // for segment
 #define CP0_RESERVED_SERIAL 1
 #define CP0_RESERVED_CHECK  2
+#define CP0_RESERVED_PRINT_REGISTERS    3
+#define CP0_RESERVED_PRINT_INSTR_QUEUE  4
 
 #define CP0_INDEX        0
 #define CP0_RANDOM       1

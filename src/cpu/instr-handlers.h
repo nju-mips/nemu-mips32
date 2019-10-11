@@ -343,6 +343,9 @@ make_exec_handler(eret) {
 #if CONFIG_SEGMENT
   cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
 #endif
+
+  clear_mmu_cache();
+  clear_decode_cache();
 }
 
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
@@ -465,6 +468,16 @@ make_exec_handler(mtc0) {
 #endif
     break;
   }
+  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_REGISTERS): {
+#if CONFIG_INSTR_LOG
+    print_registers();
+#endif
+  } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
+#if CONFIG_INSTR_LOG
+    print_instr_queue();
+#endif
+  } break;
   default:
     printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[decode->rt], decode->rd,
         decode->sel);
