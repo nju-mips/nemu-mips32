@@ -48,7 +48,7 @@ void tlb_read(uint32_t i) {
 void tlb_write(uint32_t i) {
 #if 1
   uint32_t mask = cpu.cp0.pagemask.mask;
-  uint32_t vpn = (tlb[i].vpn & ~mask) << 13;
+  uint32_t vpn = (cpu.cp0.entry_hi.vpn & ~mask) << 13;
   uint32_t pfn0 = (cpu.cp0.entry_lo0.pfn & ~mask) << 12;
   uint32_t pfn1 = (cpu.cp0.entry_lo1.pfn & ~mask) << 12;
   eprintf("%08x: TLB[%d]: MAP %08x -> %08x, %08x -> %08x\n", cpu.pc, i, vpn,
@@ -116,6 +116,14 @@ vaddr_t page_translate(vaddr_t vaddr, mmu_attr_t attr) {
 
       uint32_t highbits = (phyn->pfn & ~mask) << 12;
       uint32_t lowbits = vaddr & (((mask + 1) << 12) - 1);
+#if 1
+      uint32_t mask = tlb[i].pagemask;
+      uint32_t vpn = (tlb[i].vpn & ~mask) << 13;
+      uint32_t pfn0 = (tlb[i].p0.pfn & ~mask) << 12;
+      uint32_t pfn1 = (tlb[i].p1.pfn & ~mask) << 12;
+      eprintf("%08x: TLB[%d]: %08x -> %08x, %08x -> %08x, R: %08x -> %08x\n",
+          cpu.pc, i, vpn, pfn0, vpn | 0x1000, pfn1, vaddr, highbits | lowbits);
+#endif
       return highbits | lowbits;
     }
   }

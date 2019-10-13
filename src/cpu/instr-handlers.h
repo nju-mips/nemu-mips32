@@ -363,8 +363,6 @@ make_exec_handler(wait) {
 
 make_exec_handler(eret) {
   cpu.has_exception = true;
-  eprintf("%08x: ERET: ERL %d, EXL %d\n", cpu.pc, cpu.cp0.status.ERL,
-      cpu.cp0.status.EXL);
 
 #if CONFIG_MARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
@@ -376,6 +374,9 @@ make_exec_handler(eret) {
     cpu.br_target = cpu.cp0.epc;
     cpu.cp0.status.EXL = 0;
   }
+
+  eprintf("%08x: ERET to %08x: ERL %d, EXL %d\n", cpu.pc, cpu.br_target,
+      cpu.cp0.status.ERL, cpu.cp0.status.EXL);
 
 #if CONFIG_DUMP_SYSCALL
   if (cpu.is_syscall) {

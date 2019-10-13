@@ -138,6 +138,7 @@ static inline void update_mmu_cache(
 #if CONFIG_MMU_CACHE_PERF
   mmu_cache_miss++;
 #endif
+  if (cpu.has_exception) return;
   if (dev->map) {
     uint32_t idx = mmu_cache_index(vaddr);
     mmu_cache[idx].id = mmu_cache_id(vaddr);
