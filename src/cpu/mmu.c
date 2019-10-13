@@ -51,7 +51,7 @@ void tlb_write(uint32_t i) {
   uint32_t vpn = (tlb[i].vpn & ~mask) << 13;
   uint32_t pfn0 = (cpu.cp0.entry_lo0.pfn & ~mask) << 12;
   uint32_t pfn1 = (cpu.cp0.entry_lo1.pfn & ~mask) << 12;
-  eprintf("TLB[%d]@%08x: MAP %08x -> %08x, %08x -> %08x\n", i, cpu.pc, vpn,
+  eprintf("%08x: TLB[%d]: MAP %08x -> %08x, %08x -> %08x\n", cpu.pc, i, vpn,
       pfn0, vpn | 0x1000, pfn1);
 #endif
   tlb[i].pagemask = cpu.cp0.pagemask.mask;
@@ -78,8 +78,8 @@ static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
   cpu.cp0.entry_hi.asid = asid;
   signal_exception(MAKE_EX(ex, code));
 #if 1
-  eprintf("TLB ex %d, code %d, vaddr %08x, pc %08x, ERL %d\n", ex, code, vaddr,
-      cpu.pc, cpu.cp0.status.ERL);
+  eprintf("%08x: TLB ex %d, code %d, vaddr %08x, ERL %d\n", cpu.pc, ex, code,
+      vaddr, cpu.cp0.status.ERL);
 #endif
 }
 

@@ -363,7 +363,7 @@ make_exec_handler(wait) {
 
 make_exec_handler(eret) {
   cpu.has_exception = true;
-  eprintf("ERET from %08x, ERL %d, EXL %d\n", cpu.pc, cpu.cp0.status.ERL,
+  eprintf("%08x: ERET: ERL %d, EXL %d\n", cpu.pc, cpu.cp0.status.ERL,
       cpu.cp0.status.EXL);
 
 #if CONFIG_MARCH_MIPS32_R1

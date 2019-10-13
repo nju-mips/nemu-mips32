@@ -77,7 +77,6 @@ static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t attr) {
       return addr;
     } else {
       vaddr_t paddr = page_translate(addr, attr);
-      eprintf("%08x ==> %08x, EX: %d\n", addr, paddr, cpu.cp0.cause.ExcCode);
       return ioremap(paddr);
     }
   case 0 ... 3: /* kuseg */
