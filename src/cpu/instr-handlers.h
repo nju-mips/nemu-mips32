@@ -81,6 +81,37 @@ static const void *special2_table[64] = {
     /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
 };
 
+static const void *special3_table[64] = {
+    /* 0x00 */ &&inv, &&inv, &&mul, &&inv,
+    /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x10 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x20 */ &&exec_bshfl, &&inv, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x30 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x34 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x38 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
+};
+
+/* shamt */
+static const void *bshfl_table[64] = {
+    /* 0x00 */ &&inv, &&inv, &&mul, &&inv,
+    /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x10 */ &&seb, &&inv, &&inv, &&inv,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&seh, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
+};
+
 /* I-type */
 static const void *regimm_table[64] = {
     /* 0x00 */ &&bltz, &&bgez, &&bltzl, &&bgezl,
@@ -134,7 +165,7 @@ static const void *opcode_table[64] = {
     /* 0x10 */ &&exec_cop0, &&inv, &&inv, &&inv,
     /* 0x14 */ &&beql, &&bnel, &&blezl, &&bgtzl,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x1c */ &&exec_special2, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&exec_special2, &&inv, &&inv, &&exec_special3,
     /* 0x20 */ &&lb, &&lh, &&lwl, &&lw,
     /* 0x24 */ &&lbu, &&lhu, &&lwr, &&inv,
     /* 0x28 */ &&sb, &&sh, &&swl, &&sw,
@@ -187,7 +218,11 @@ make_entry() {
     }
     break;
   case 0x1c: goto S2type;
-
+  case 0x1f:
+    if (inst.func == 0x20)
+      goto bshflType;
+    else
+      goto S3Type;
   default: goto Itype;
   }
 
@@ -228,6 +263,16 @@ make_entry() {
     decode->handler = special2_table[inst.func];
     break;
   }
+  S3Type : {
+    decode->handler = special3_table[inst.func];
+    break;
+  }
+  bshflType : {
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->handler = bshfl_table[inst.shamt];
+    break;
+  }
   } while (0);
 
 Handler:
@@ -238,8 +283,9 @@ Handler:
 /* make_entry() { goto *opcode_table[inst.op]; } */
 
 make_exec_handler(exec_special) { goto *special_table[decode->func]; }
-
 make_exec_handler(exec_special2) { goto *special2_table[decode->func]; }
+make_exec_handler(exec_special3) { goto *special3_table[decode->func]; }
+make_exec_handler(exec_bshfl) { goto *bshfl_table[decode->shamt]; }
 
 make_exec_handler(exec_regimm) { goto *regimm_table[decode->rt]; }
 
@@ -317,6 +363,8 @@ make_exec_handler(wait) {
 
 make_exec_handler(eret) {
   cpu.has_exception = true;
+  eprintf("ERET from %08x, ERL %d, EXL %d\n", cpu.pc, cpu.cp0.status.ERL,
+      cpu.cp0.status.EXL);
 
 #if CONFIG_MARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
@@ -389,6 +437,10 @@ make_exec_handler(mtc0) {
   } break;
   case CPRS(CP0_STATUS, 0): {
     cp0_status_t *newVal = (void *)&(cpu.gpr[decode->rt]);
+    if (cpu.cp0.status.ERL != newVal->ERL) {
+      clear_decode_cache();
+      clear_mmu_cache();
+    }
     cpu.cp0.status.CU = newVal->CU;
     cpu.cp0.status.RP = newVal->RP;
     cpu.cp0.status.RE = newVal->RE;
@@ -1065,6 +1117,14 @@ make_exec_handler(jal) {
 make_exec_handler(j) {
   cpu.br_target = (cpu.pc & 0xf0000000) | (decode->addr << 2);
   prepare_delayslot();
+}
+
+make_exec_handler(seb) {
+  cpu.gpr[decode->rd] = (int32_t)(int8_t)cpu.gpr[decode->rt];
+}
+
+make_exec_handler(seh) {
+  cpu.gpr[decode->rd] = (int32_t)(int16_t)cpu.gpr[decode->rt];
 }
 
 #if CONFIG_DELAYSLOT

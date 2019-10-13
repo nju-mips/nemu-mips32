@@ -46,17 +46,13 @@ void tlb_read(uint32_t i) {
 }
 
 void tlb_write(uint32_t i) {
-#if 0
-  printf("[NEMU] map 0x282b990:%08x v:[%08x, %08x] to p:[%08x, %08x], v:[%d %d], d:[%d, %d], g:[%d, %d]\n",
-	  paddr_peek(0x282b990, 4),
-	  cpu.cp0.entry_hi.vpn << 13,
-	  (cpu.cp0.entry_hi.vpn << 13) + (4 * 1024),
-	  cpu.cp0.entry_lo0.pfn << 12,
-	  cpu.cp0.entry_lo1.pfn << 12,
-	  cpu.cp0.entry_lo0.v, cpu.cp0.entry_lo1.v,
-	  cpu.cp0.entry_lo0.d, cpu.cp0.entry_lo1.d,
-	  cpu.cp0.entry_lo0.g, cpu.cp0.entry_lo1.g
-  );
+#if 1
+  uint32_t mask = cpu.cp0.pagemask.mask;
+  uint32_t vpn = (tlb[i].vpn & ~mask) << 13;
+  uint32_t pfn0 = (cpu.cp0.entry_lo0.pfn & ~mask) << 12;
+  uint32_t pfn1 = (cpu.cp0.entry_lo1.pfn & ~mask) << 12;
+  eprintf("TLB[%d]@%08x: MAP %08x -> %08x, %08x -> %08x\n", i, cpu.pc, vpn,
+      pfn0, vpn | 0x1000, pfn1);
 #endif
   tlb[i].pagemask = cpu.cp0.pagemask.mask;
   tlb[i].vpn = cpu.cp0.entry_hi.vpn & ~cpu.cp0.pagemask.mask;
@@ -81,6 +77,10 @@ static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
   cpu.cp0.entry_hi.vpn = vaddr >> 13;
   cpu.cp0.entry_hi.asid = asid;
   signal_exception(MAKE_EX(ex, code));
+#if 1
+  eprintf("TLB ex %d, code %d, vaddr %08x, pc %08x, ERL %d\n", ex, code, vaddr,
+      cpu.pc, cpu.cp0.status.ERL);
+#endif
 }
 
 vaddr_t page_translate(vaddr_t vaddr, mmu_attr_t attr) {
@@ -97,16 +97,10 @@ vaddr_t page_translate(vaddr_t vaddr, mmu_attr_t attr) {
     /* match the vpn and asid */
     tlb_phyn_t *phyn = EvenOddBit ? &(tlb[i].p1) : &(tlb[i].p0);
     if (phyn->v == 0) {
-#if 0
-      printf("[TLB@%08x] invalid phyn, signal(%d)\n", cpu.pc, exccode);
-#endif
       if (attr.exbit)
         tlb_exception(EX_TLB_INVALID, exccode, vaddr, tlb[i].asid);
       return blackhole_dev.start;
     } else if (phyn->d == 0 && attr.rwbit == MMU_STORE) {
-#if 0
-      printf("[TLB@%08x] modified phyn, signal(%d)\n", cpu.pc, exccode);
-#endif
       if (attr.exbit)
         tlb_exception(EX_TLB_MODIFIED, EXC_TLBM, vaddr, tlb[i].asid);
       return blackhole_dev.start;
@@ -122,17 +116,10 @@ vaddr_t page_translate(vaddr_t vaddr, mmu_attr_t attr) {
 
       uint32_t highbits = (phyn->pfn & ~mask) << 12;
       uint32_t lowbits = vaddr & (((mask + 1) << 12) - 1);
-#if 0
-      printf("[TLB@%08x] matched %08x -> %08x\n", cpu.pc, vaddr,
-          highbits | lowbits);
-#endif
       return highbits | lowbits;
     }
   }
 
-#if 0
-  printf("[TLB@%08x] TLBMiss %08x\n", cpu.pc, vaddr);
-#endif
   if (attr.exbit)
     tlb_exception(EX_TLB_REFILL, exccode, vaddr, cpu.cp0.entry_hi.asid);
   return blackhole_dev.start;

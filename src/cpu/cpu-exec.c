@@ -304,7 +304,7 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.compare = 0xFFFFFFFF;
 
   cpu.cp0.status.CU = CU0_ENABLE;
-  cpu.cp0.status.ERL = 1;
+  cpu.cp0.status.ERL = 0;
   cpu.cp0.status.BEV = 1;
   cpu.cp0.status.IM = 0x00;
 
@@ -373,6 +373,8 @@ void nemu_exit() {
       decode_cache_hit + decode_cache_miss,
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
 #endif
+
+  print_instr_queue();
 
   exit(0);
 }

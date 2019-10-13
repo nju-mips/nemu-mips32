@@ -67,20 +67,28 @@ static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t attr) {
 #if CONFIG_SEGMENT
   addr += cpu.base;
 #endif
-  if (is_unmapped(addr)) {
-    //  0x80000000 -> 0x00000000
-    //  0x90000000 -> 0x10000000
-    //  0xA0000000 -> 0x00000000
-    //  0xB0000000 -> 0x10000000
+  switch ((addr >> 29) & 0x7) {
+  case 4: /* kseg0 */
+  case 5: /* kseg1 */
     return ioremap(addr);
-  } else {
-#if defined CONFIG_PAGING
-    vaddr_t paddr = page_translate(addr, attr);
-    return ioremap(paddr);
-#else
-    return addr;
-#endif
+  case 6: /* supervisor */
+  case 7: /* kseg3 */
+    if (!CONFIG_IS_ENABLED(PAGING)) {
+      return addr;
+    } else {
+      vaddr_t paddr = page_translate(addr, attr);
+      eprintf("%08x ==> %08x, EX: %d\n", addr, paddr, cpu.cp0.cause.ExcCode);
+      return ioremap(paddr);
+    }
+  case 0 ... 3: /* kuseg */
+    if (!CONFIG_IS_ENABLED(PAGING) || cpu.cp0.status.ERL) {
+      return addr;
+    } else {
+      vaddr_t paddr = page_translate(addr, attr);
+      return ioremap(paddr);
+    }
   }
+  assert (0);
 }
 
 static inline vaddr_t prot_addr(vaddr_t addr, bool rwbit) {
