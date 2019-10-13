@@ -179,6 +179,7 @@ static const void *opcode_table[64] = {
 /* clang-format on */
 
 make_entry() {
+  cpu.gpr[0] = 0;
 #if CONFIG_DECODE_CACHE_PERF
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;
@@ -529,6 +530,11 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
 #if CONFIG_INSTR_LOG
     print_instr_queue();
+#endif
+  } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_TOGGLE_COMMITS): {
+#if CONFIG_INSTR_LOG
+    nemu_needs_commit = !nemu_needs_commit;
 #endif
   } break;
   default:
@@ -1140,4 +1146,5 @@ make_label(inst_end) {
 }
 #endif
 
-make_exit() {}
+make_exit() {
+}

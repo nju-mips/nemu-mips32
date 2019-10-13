@@ -396,6 +396,10 @@ void cpu_exec(uint64_t n) {
     return;
   }
 
+#if CONFIG_INSTR_LOG
+  bool nemu_needs_commit = work_mode == MODE_LOG;
+#endif
+
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
@@ -428,7 +432,7 @@ void cpu_exec(uint64_t n) {
 #include "instr-handlers.h"
 
 #if CONFIG_INSTR_LOG
-    if (work_mode == MODE_LOG) print_registers();
+    if (nemu_needs_commit) print_registers();
 #endif
 
 #if CONFIG_EXCEPTION || CONFIG_INTR

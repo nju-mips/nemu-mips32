@@ -7,7 +7,7 @@ typedef struct {
 } iq_element_t;
 
 static int pc_ptr = 0, instr_ptr = 0;
-static iq_element_t iq[10];
+static iq_element_t iq[20];
 
 #define NR_IQ (sizeof(iq) / sizeof(iq[0]))
 
