@@ -12,6 +12,8 @@ config MARCH_BENCH
   select BRAM
   select DDR
   select VGA_CONTROLLER
+  select MMU_CACHE
+  select DECODE_CACHE
 
 config MARCH_MIPS32_R1
   bool "mips32 release 1"
@@ -69,10 +71,10 @@ config EXCEPTION
   bool "Exception support"
 
 config MMU_CACHE
-  bool "Cache mmu resutls"
+  bool "Cache mmu results"
 
 config DECODE_CACHE
-  bool "Cache decode resutls"
+  bool "Cache decode results"
 endmenu
 endif
 

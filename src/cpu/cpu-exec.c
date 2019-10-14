@@ -36,6 +36,8 @@ const char *regs[32] = {
 extern uint32_t get_current_pc();
 extern uint32_t get_current_instr();
 
+extern void stop_cpu_when_uartlite_send(const char *string);
+
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
@@ -388,6 +390,8 @@ void cpu_exec(uint64_t n) {
     int code = setjmp(gdb_mode_top_caller);
     if (code != 0) nemu_state = NEMU_END;
   }
+
+  stop_cpu_when_uartlite_send("Starting syslogd:");
 
   if (nemu_state == NEMU_END) {
     printf(

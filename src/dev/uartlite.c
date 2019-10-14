@@ -11,7 +11,25 @@
 #  define CTRL 0xC
 #  define UARTLITE_SIZE 0x10
 
+static const char *uartlite_stop_string = NULL;
+static const char *uartlite_stop_string_ptr = NULL;
 static uint32_t uartlite_ctrl_reg = 0;
+
+void stop_cpu_when_uartlite_send(const char *string) {
+  uartlite_stop_string = string;
+  uartlite_stop_string_ptr = string;
+}
+
+static void stop_cpu_check(char ch) {
+  if (!uartlite_stop_string_ptr) return;
+
+  if (*uartlite_stop_string_ptr == ch) {
+    uartlite_stop_string_ptr++;
+    if (*uartlite_stop_string_ptr == 0) { nemu_state = NEMU_STOP; }
+  } else {
+    uartlite_stop_string_ptr = uartlite_stop_string;
+  }
+}
 
 /* status */
 #  define SR_TX_FIFO_FULL (1 << 3)       /* transmit FIFO full */
@@ -46,6 +64,7 @@ static void uartlite_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
   case Tx:
     putchar((char)data);
+    stop_cpu_check(data);
     fflush(stdout);
     break;
   case CTRL: uartlite_ctrl_reg = data; break;
