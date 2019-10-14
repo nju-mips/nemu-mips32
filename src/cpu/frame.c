@@ -1,4 +1,5 @@
 #include "common.h"
+#include "utils.h"
 
 struct frame_t {
   enum { NONE, CALL, RET } property;
@@ -25,14 +26,23 @@ void frames_enqueue_ret(vaddr_t pc, vaddr_t target) {
   pc_ptr = (pc_ptr + 1) % NR_FRAMES;
 }
 
+static void prepare_symbols() {
+  static bool prepared = false;
+  if (!prepared) load_elf_symtab(CONFIG_KERNEL_ELF_PATH);
+}
+
 void print_frames(void) {
+  prepare_symbols();
+
   eprintf("last collected %ld frames:\n", NR_FRAMES);
   int i = pc_ptr;
   do {
     if (frames[i].property == CALL)
-      eprintf("%08x: CALL   %08x\n", frames[i].pc, frames[i].target);
+      eprintf("%08x: CALL   %08x %s\n", frames[i].pc, frames[i].target,
+          find_symbol_by_addr(frames[i].target));
     else if (frames[i].property == RET)
-      eprintf("%08x: RET TO %08x\n", frames[i].pc, frames[i].target);
+      eprintf("%08x: RET TO %08x %s\n", frames[i].pc, frames[i].target,
+          find_symbol_by_addr(frames[i].target));
     else
       eprintf("XXXXXXXX: NONE   xxxxxxxx\n");
     i = (i + 1) % NR_FRAMES;
@@ -40,6 +50,8 @@ void print_frames(void) {
 }
 
 void print_backtrace() {
+  prepare_symbols();
+
 #define NR_BACKTRACE 100
   static uint32_t backtraces[NR_BACKTRACE];
   uint32_t top = 0;
@@ -55,5 +67,6 @@ void print_backtrace() {
   } while (i != pc_ptr);
 
   eprintf("last collected %ld backtraces:\n", NR_FRAMES);
-  for (int i = 0; i < top; i++) eprintf(">> %08x\n", backtraces[i]);
+  for (int i = 0; i < top; i++)
+    eprintf(">> %08x %s\n", backtraces[i], find_symbol_by_addr(backtraces[i]));
 }

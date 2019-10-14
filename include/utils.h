@@ -38,4 +38,9 @@ int pcap_write(pcap_handler h, const void *data, const int len);
 void pcap_flush(pcap_handler h);
 void pcap_close(pcap_handler h);
 
+void load_elf_symtab(const char *elf_file);
+void elf_symbols_release_memory();
+uint32_t find_addr_of_symbol(const char *symbol);
+const char *find_symbol_by_addr(uint32_t addr);
+
 #endif

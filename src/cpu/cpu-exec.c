@@ -458,18 +458,12 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    static int flag = 0;
-    if (!flag && nemu_state == NEMU_STOP) {
-      flag = 1;
-      nemu_state = NEMU_RUNNING;
-    }
-    if (flag == 1 && get_current_pc() == 0x8031ca64) {
+    if (nemu_state == NEMU_STOP) {
       eprintf("For ulite_transmite\n");
       void print_frames();
       void print_backtrace();
       print_frames();
       print_backtrace();
-      flag = 0;
     }
 
     if (nemu_state != NEMU_RUNNING) { return; }
