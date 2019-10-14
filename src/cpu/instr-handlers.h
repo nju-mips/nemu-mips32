@@ -534,7 +534,7 @@ make_exec_handler(mtc0) {
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_REGISTERS): {
 #if CONFIG_INSTR_LOG
-    print_registers();
+    // print_registers();
 #endif
   } break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
@@ -620,12 +620,6 @@ make_exec_handler(tnei) {
   if ((int32_t)cpu.gpr[operands->rs] != operands->simm) {
     signal_exception(EXC_TRAP);
   }
-}
-
-make_exec_handler(jr) {
-  InstAssert(operands->rt == 0 && operands->rd == 0);
-  cpu.br_target = cpu.gpr[operands->rs];
-  prepare_delayslot();
 }
 
 #define R_SIMPLE(name, op, t)                                 \
@@ -782,13 +776,6 @@ make_exec_handler(mflo) {
 make_exec_handler(mtlo) {
   InstAssert(operands->rt == 0 && operands->rd == 0 && operands->shamt == 0);
   cpu.lo = cpu.gpr[operands->rs];
-}
-
-make_exec_handler(jalr) {
-  InstAssert(operands->rt == 0 && operands->shamt == 0);
-  cpu.gpr[operands->rd] = cpu.pc + 8;
-  cpu.br_target = cpu.gpr[operands->rs];
-  prepare_delayslot();
 }
 
 make_exec_handler(lui) {
@@ -1134,11 +1121,34 @@ make_exec_handler(bltzal) {
 make_exec_handler(jal) {
   cpu.gpr[31] = cpu.pc + 8;
   cpu.br_target = (cpu.pc & 0xf0000000) | (operands->addr << 2);
+#if CONFIG_FRAMES_LOG
+  frames_enqueue_call(cpu.pc, cpu.br_target);
+#endif
+  prepare_delayslot();
+}
+
+make_exec_handler(jalr) {
+  InstAssert(operands->rt == 0 && operands->shamt == 0);
+  cpu.gpr[operands->rd] = cpu.pc + 8;
+  cpu.br_target = cpu.gpr[operands->rs];
+#if CONFIG_FRAMES_LOG
+  frames_enqueue_call(cpu.pc, cpu.br_target);
+#endif
   prepare_delayslot();
 }
 
 make_exec_handler(j) {
   cpu.br_target = (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  prepare_delayslot();
+}
+
+make_exec_handler(jr) {
+  InstAssert(operands->rt == 0 && operands->rd == 0);
+  cpu.br_target = cpu.gpr[operands->rs];
+#if CONFIG_FRAMES_LOG
+  if (operands->rs == R_ra)
+    frames_enqueue_ret(cpu.pc, cpu.br_target);
+#endif
   prepare_delayslot();
 }
 

@@ -91,6 +91,9 @@ config DEBUG
 config INSTR_LOG
   bool "Log when every instruction commit (used to diff with noop)"
 
+config FRAMES_LOG
+  bool "Log when encounter call and return"
+
 config MMU_CACHE_CHECK
   bool "Check the validness of mmu cache"
 

@@ -36,6 +36,9 @@ const char *regs[32] = {
 extern uint32_t get_current_pc();
 extern uint32_t get_current_instr();
 
+void frames_enqueue_call(vaddr_t pc, vaddr_t target);
+void frames_enqueue_ret(vaddr_t pc, vaddr_t target);
+
 extern void stop_cpu_when_uartlite_send(const char *string);
 
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
@@ -455,15 +458,16 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    static bool flag = false;
+    static int flag = 0;
     if (!flag && nemu_state == NEMU_STOP) {
-      flag = true;
+      flag = 1;
       nemu_state = NEMU_RUNNING;
     }
-    if (flag && cpu.pc == 0x8031cb30) {
+    if (flag == 1 && get_current_pc() == 0x8031ca64) {
       eprintf("For ulite_transmite\n");
-      print_instr_queue();
-      flag = false;
+      void print_frames();
+      print_frames();
+      flag = 0;
     }
 
     if (nemu_state != NEMU_RUNNING) { return; }
