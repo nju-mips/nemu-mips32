@@ -56,9 +56,10 @@ void print_backtrace() {
   static uint32_t backtraces[NR_BACKTRACE];
   uint32_t top = 0;
   int i = pc_ptr;
+  memset(backtraces, -1, sizeof(backtraces));
   do {
     if (frames[i].property == CALL) {
-      backtraces[top++] = frames[i].target;
+      backtraces[top++] = i;
       assert(top < NR_BACKTRACE);
     } else if (frames[i].property == RET) {
       if (top > 0) top--;
@@ -67,6 +68,11 @@ void print_backtrace() {
   } while (i != pc_ptr);
 
   eprintf("last collected %ld backtraces:\n", NR_FRAMES);
-  for (int i = 0; i < top; i++)
-    eprintf(">> %08x %s\n", backtraces[i], find_symbol_by_addr(backtraces[i]));
+  for (int i = 0; i < top; i++) {
+    int idx = backtraces[i];
+    if (idx < 0) continue;
+    assert(idx < NR_FRAMES);
+    eprintf("%08x:%08x %s\n", frames[idx].pc, frames[idx].target,
+        find_symbol_by_addr(frames[idx].target));
+  }
 }
