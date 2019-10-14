@@ -67,6 +67,12 @@ config INTR
 
 config EXCEPTION
   bool "Exception support"
+
+config MMU_CACHE
+  bool "Cache mmu resutls"
+
+config DECODE_CACHE
+  bool "Cache decode resutls"
 endmenu
 endif
 

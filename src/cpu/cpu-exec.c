@@ -149,7 +149,7 @@ static inline void update_mmu_cache(
 
 static inline uint32_t load_mem(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
-  if (mmu_cache[idx].id == mmu_cache_id(addr)) {
+  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
@@ -170,7 +170,7 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
-  if (mmu_cache[idx].id == mmu_cache_id(addr)) {
+  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
@@ -237,7 +237,7 @@ static inline uint32_t decode_cache_id(vaddr_t vaddr) {
   return (vaddr >> DECODE_CACHE_BITS);
 }
 
-decode_cache_t *instr_fetch(vaddr_t pc) {
+decode_cache_t *decode_cache_fetch(vaddr_t pc) {
   uint32_t idx = decode_cache_index(pc);
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
@@ -403,6 +403,11 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
+    if ((get_current_pc() >> 28) == 0xd) {
+      eprintf("Trigger invalid pc %08x\n", get_current_pc());
+      print_instr_queue();
+    }
+
 #if CONFIG_INTR
     update_cp0_timer();
 #endif
@@ -427,7 +432,13 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    decode_cache_t *decode = instr_fetch(cpu.pc);
+#if CONFIG_DECODE_CACHE
+#define operands decode
+    decode_cache_t *decode = decode_cache_fetch(cpu.pc);
+#else
+#define operands (&inst)
+    Inst inst = {.val = load_mem(cpu.pc, 4)};
+#endif
 
 #include "instr-handlers.h"
 
