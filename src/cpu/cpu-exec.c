@@ -466,7 +466,9 @@ void cpu_exec(uint64_t n) {
     if (flag == 1 && get_current_pc() == 0x8031ca64) {
       eprintf("For ulite_transmite\n");
       void print_frames();
+      void print_backtrace();
       print_frames();
+      print_backtrace();
       flag = 0;
     }
 

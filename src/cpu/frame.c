@@ -29,12 +29,31 @@ void print_frames(void) {
   eprintf("last collected %ld frames:\n", NR_FRAMES);
   int i = pc_ptr;
   do {
-	if(frames[i].property == CALL)
-	  eprintf("%08x: CALL   %08x\n", frames[i].pc, frames[i].target);
-    else if(frames[i].property == RET)
-	  eprintf("%08x: RET TO %08x\n", frames[i].pc, frames[i].target);
-	else
-	  eprintf("XXXXXXXX: NONE   xxxxxxxx\n");
-	i = (i + 1) % NR_FRAMES;
-  } while(i != pc_ptr);
+    if (frames[i].property == CALL)
+      eprintf("%08x: CALL   %08x\n", frames[i].pc, frames[i].target);
+    else if (frames[i].property == RET)
+      eprintf("%08x: RET TO %08x\n", frames[i].pc, frames[i].target);
+    else
+      eprintf("XXXXXXXX: NONE   xxxxxxxx\n");
+    i = (i + 1) % NR_FRAMES;
+  } while (i != pc_ptr);
+}
+
+void print_backtrace() {
+#define NR_BACKTRACE 100
+  static uint32_t backtraces[NR_BACKTRACE];
+  uint32_t top = 0;
+  int i = pc_ptr;
+  do {
+    if (frames[i].property == CALL) {
+      backtraces[top++] = frames[i].target;
+      assert(top < NR_BACKTRACE);
+    } else if (frames[i].property == RET) {
+      if (top > 0) top--;
+    }
+    i = (i + 1) % NR_FRAMES;
+  } while (i != pc_ptr);
+
+  eprintf("last collected %ld backtraces:\n", NR_FRAMES);
+  for (int i = 0; i < top; i++) eprintf(">> %08x\n", backtraces[i]);
 }
