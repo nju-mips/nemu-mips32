@@ -283,6 +283,9 @@ Handler:
 #else
 make_entry() {
   cpu.gpr[0] = 0;
+#if CONFIG_INSTR_LOG
+  instr_enqueue_instr(inst.val);
+#endif
   goto *opcode_table[inst.op];
 }
 #endif
@@ -381,8 +384,10 @@ make_exec_handler(eret) {
     cpu.cp0.status.EXL = 0;
   }
 
+#if 0
   eprintf("%08x: ERET to %08x: ERL %d, EXL %d\n", cpu.pc, cpu.br_target,
       cpu.cp0.status.ERL, cpu.cp0.status.EXL);
+#endif
 
 #if CONFIG_DUMP_SYSCALL
   if (cpu.is_syscall) {
@@ -534,12 +539,12 @@ make_exec_handler(mtc0) {
   } break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
 #if CONFIG_INSTR_LOG
-    print_instr_queue();
+    // print_instr_queue();
 #endif
   } break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_TOGGLE_COMMITS): {
 #if CONFIG_INSTR_LOG
-    nemu_needs_commit = !nemu_needs_commit;
+    // nemu_needs_commit = !nemu_needs_commit;
 #endif
   } break;
   default:

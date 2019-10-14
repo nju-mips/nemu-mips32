@@ -391,7 +391,7 @@ void cpu_exec(uint64_t n) {
     if (code != 0) nemu_state = NEMU_END;
   }
 
-  stop_cpu_when_uartlite_send("Starting syslogd:");
+  stop_cpu_when_uartlite_send("Starting ");
 
   if (nemu_state == NEMU_END) {
     printf(
@@ -407,11 +407,6 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
-    if ((get_current_pc() >> 28) == 0xd) {
-      eprintf("Trigger invalid pc %08x\n", get_current_pc());
-      print_instr_queue();
-    }
-
 #if CONFIG_INTR
     update_cp0_timer();
 #endif
@@ -459,6 +454,17 @@ void cpu_exec(uint64_t n) {
       cpu.pc = cpu.br_target;
     }
 #endif
+
+    static bool flag = false;
+    if (!flag && nemu_state == NEMU_STOP) {
+      flag = true;
+      nemu_state = NEMU_RUNNING;
+    }
+    if (flag && cpu.pc == 0x8031cb30) {
+      eprintf("For ulite_transmite\n");
+      print_instr_queue();
+      flag = false;
+    }
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }
