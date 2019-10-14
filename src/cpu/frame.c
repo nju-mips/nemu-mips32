@@ -38,10 +38,12 @@ void print_frames(void) {
   int i = pc_ptr;
   do {
     if (frames[i].property == CALL)
-      eprintf("%08x: CALL   %08x %s\n", frames[i].pc, frames[i].target,
+      eprintf("%08x CALL   %08x: %-20s -> %-20s\n", frames[i].pc, frames[i].target,
+          find_symbol_by_addr(frames[i].pc),
           find_symbol_by_addr(frames[i].target));
     else if (frames[i].property == RET)
-      eprintf("%08x: RET TO %08x %s\n", frames[i].pc, frames[i].target,
+      eprintf("%08x RET TO %08x: %-20s -> %-20s\n", frames[i].pc, frames[i].target,
+          find_symbol_by_addr(frames[i].pc),
           find_symbol_by_addr(frames[i].target));
     else
       eprintf("XXXXXXXX: NONE   xxxxxxxx\n");
@@ -72,7 +74,8 @@ void print_backtrace() {
     int idx = backtraces[i];
     if (idx < 0) continue;
     assert(idx < NR_FRAMES);
-    eprintf("%08x:%08x %s\n", frames[idx].pc, frames[idx].target,
+    eprintf("%08x:%08x %-20s -> %-20s\n", frames[idx].pc, frames[idx].target,
+        find_symbol_by_addr(frames[idx].pc),
         find_symbol_by_addr(frames[idx].target));
   }
 }
