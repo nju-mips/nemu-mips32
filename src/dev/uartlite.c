@@ -31,9 +31,14 @@ static uint32_t ulite_tx_fifo_empty = 0;
 static const char *ulite_stop_string = NULL;
 static const char *ulite_stop_string_ptr = NULL;
 
+bool flag = false;
 void ulite_set_irq() {
 #  if CONFIG_INTR
   if (ulite_intr_enabled) {
+    if (!serial_queue_is_empty()) {
+      printf("xxx\n");
+      flag = true;
+    }
     set_irq(ULITE_IRQ_NO);
   }
 #  endif

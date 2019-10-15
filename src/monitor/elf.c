@@ -6,6 +6,14 @@
 #include <malloc.h>
 #include <elf.h>
 
+typedef struct {
+  const char *elf_path;
+  char *elf_strtab;
+  Elf32_Sym *elf_symtab;
+  int nr_symtab_entry;
+  int elf_strtab_size;
+} elf_desc_t;
+
 static char *elf_strtab = NULL;      /* needs free */
 static Elf32_Sym *elf_symtab = NULL; /* needs free */
 static int nr_symtab_entry = 0;
@@ -20,6 +28,9 @@ void elf_symbols_release_memory() {
     free(elf_symtab);
     elf_symtab = NULL;
   }
+
+  nr_symtab_entry = 0;
+  elf_strtab_size = 0;
 }
 
 void load_elf_symtab(const char *elf_file) {

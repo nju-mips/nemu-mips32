@@ -12,6 +12,7 @@
 #include "memory.h"
 #include "mmu.h"
 #include "monitor.h"
+#include "utils.h"
 
 /* some global bariables */
 nemu_state_t nemu_state = NEMU_STOP;
@@ -350,7 +351,7 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   /* update IP */
-  if (compare != 0 && meet_compare) { set_irq(5); }
+  if (compare != 0 && meet_compare) { set_irq(7); }
 }
 
 void nemu_exit() {
@@ -380,7 +381,7 @@ void cpu_exec(uint64_t n) {
     if (code != 0) nemu_state = NEMU_END;
   }
 
-  // stop_cpu_when_ulite_send("Starting ");
+  stop_cpu_when_ulite_send("Starting ");
 
   if (nemu_state == NEMU_END) {
     printf(
@@ -443,6 +444,15 @@ void cpu_exec(uint64_t n) {
       cpu.pc = cpu.br_target;
     }
 #endif
+
+    extern bool flag;
+    static int counter = 20;
+    if (flag && counter > 0) {
+      counter --;
+      printf("%08x: %08x [%02x %02x] %s\n", get_current_pc(), get_current_instr(),
+          cpu.cp0.status.IM, cpu.cp0.cause.IP,
+          find_symbol_by_addr(get_current_pc()));
+    }
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }

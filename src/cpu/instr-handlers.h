@@ -373,6 +373,11 @@ make_exec_handler(wait) {
 make_exec_handler(eret) {
   cpu.has_exception = true;
 
+  extern bool flag;
+  if (flag) {
+    flag = false;
+  }
+
 #if CONFIG_MARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
     cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];

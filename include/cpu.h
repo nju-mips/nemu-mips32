@@ -339,16 +339,16 @@ typedef struct {
 extern CPU_state cpu;
 int init_cpu(vaddr_t entry);
 static inline void set_irq(int irqno) {
-  assert(0 <= irqno && irqno < 6);
-  cpu.cp0.cause.IP |= 1 << (irqno + 2);
+  assert(2 <= irqno && irqno < 8);
+  cpu.cp0.cause.IP |= 1 << irqno;
 }
 
 static inline void clear_irq(int irqno) {
   if (irqno == -1) {
     cpu.cp0.cause.IP = 0;
   } else {
-    assert(0 <= irqno && irqno < 6);
-    cpu.cp0.cause.IP &= ~(1 << (irqno + 2));
+    assert(2 <= irqno && irqno < 8);
+    cpu.cp0.cause.IP &= ~(1 << irqno);
   }
 }
 

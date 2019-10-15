@@ -1,4 +1,5 @@
 #include "common.h"
+#include "utils.h"
 
 typedef struct {
   vaddr_t pc;
@@ -44,9 +45,9 @@ void print_instr_queue(void) {
   int i = pc_ptr;
   do {
 	if(iq[i].instr_enq)
-	  eprintf("0x%08x: %08x\n", iq[i].pc, iq[i].instr);
+	  eprintf("0x%08x: %08x %s\n", iq[i].pc, iq[i].instr, find_symbol_by_addr(iq[i].pc));
 	else
-	  eprintf("0x%08x: xxxxxxxx\n", iq[i].pc);
+	  eprintf("0x%08x: xxxxxxxx %s\n", iq[i].pc, find_symbol_by_addr(iq[i].pc));
 	i = (i + 1) % NR_IQ;
   } while(i != pc_ptr);
 }

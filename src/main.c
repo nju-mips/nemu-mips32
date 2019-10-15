@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
       qemu_diff();
     } else {
       cpu_exec(-1);
+      nemu_exit(0);
     }
   } else {
     gdb_mainloop();
