@@ -85,7 +85,10 @@ static uint32_t ulite_peek(paddr_t addr, int len) {
 
 static uint32_t ulite_read(paddr_t addr, int len) {
   check_ioaddr(addr, len, ULITE_SIZE, "serial.read");
-  if (addr == Rx) return serial_dequeue();
+  if (addr == Rx) {
+    clear_irq(ULITE_IRQ_NO);
+    return serial_dequeue();
+  }
   return ulite_peek(addr, len);
 }
 
@@ -98,7 +101,7 @@ static void ulite_write(paddr_t addr, int len, uint32_t data) {
     fflush(stdout);
     if ((char)data == '\n') {
       ulite_tx_fifo_empty |= SR_TX_FIFO_EMPTY;
-      ulite_set_irq();
+      // ulite_set_irq();
     }
     break;
   case CTRL:
