@@ -9,12 +9,28 @@
 
 #include "monitor.h"
 
+/* kernel-debug */
 extern void check_kernel_image(const char *image);
+extern void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
+
+/* nemu-diff */
+void init_nemu_dylib();
+void diff_with_nemu();
 
 extern void instr_enqueue_pc(uint32_t pc);
 extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);
 extern void print_registers(void);
+
+/* APIs from iq.c */
+extern uint32_t get_current_pc();
+extern uint32_t get_current_instr();
+
+/* frame recorder */
+void print_frames();
+void print_backtrace();
+void frames_enqueue_call(uint32_t pc, uint32_t target);
+void frames_enqueue_ret(uint32_t pc, uint32_t target);
 
 #define eprintf(...) fprintf(stderr, ##__VA_ARGS__)
 

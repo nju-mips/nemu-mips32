@@ -61,3 +61,5 @@ int serial_queue_top();
 bool serial_queue_is_empty();
 bool serial_queue_is_full();
 
+void ulite_set_irq();
+void stop_cpu_when_ulite_send(const char *string);

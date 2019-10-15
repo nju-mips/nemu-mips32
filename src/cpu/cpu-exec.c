@@ -32,15 +32,6 @@ const char *regs[32] = {
 };
 /* clang-format on */
 
-/* APIs from iq.c */
-extern uint32_t get_current_pc();
-extern uint32_t get_current_instr();
-
-void frames_enqueue_call(vaddr_t pc, vaddr_t target);
-void frames_enqueue_ret(vaddr_t pc, vaddr_t target);
-
-extern void stop_cpu_when_uartlite_send(const char *string);
-
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
@@ -359,12 +350,7 @@ void update_cp0_timer() {
   bool meet_compare = count0 < compare && count0 + step >= compare;
 
   /* update IP */
-  if (compare != 0 && meet_compare) { signal_irq(5); }
-}
-
-void signal_irq(unsigned irqno) {
-  assert(0 <= irqno && irqno < 6);
-  cpu.cp0.cause.IP |= 1 << (irqno + 2);
+  if (compare != 0 && meet_compare) { set_irq(5); }
 }
 
 void nemu_exit() {
@@ -394,7 +380,7 @@ void cpu_exec(uint64_t n) {
     if (code != 0) nemu_state = NEMU_END;
   }
 
-  stop_cpu_when_uartlite_send("Starting ");
+  // stop_cpu_when_ulite_send("Starting ");
 
   if (nemu_state == NEMU_END) {
     printf(
@@ -457,14 +443,6 @@ void cpu_exec(uint64_t n) {
       cpu.pc = cpu.br_target;
     }
 #endif
-
-    if (nemu_state == NEMU_STOP) {
-      eprintf("For ulite_transmite\n");
-      void print_frames();
-      void print_backtrace();
-      print_frames();
-      print_backtrace();
-    }
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }

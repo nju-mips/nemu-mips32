@@ -1173,6 +1173,8 @@ make_label(inst_end) {
 #endif
 
 make_exit() {
+#if 0
   if (cpu.gpr[0] != 0)
     eprintf("%08x: set zero to %08x\n", get_current_pc(), cpu.gpr[0]);
+#endif
 }

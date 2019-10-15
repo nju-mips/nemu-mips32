@@ -13,7 +13,6 @@ char *symbol_file = NULL;
 static char *img_file = NULL;
 // static char *kernel_img = NULL;
 
-
 vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
 
@@ -115,8 +114,8 @@ static void print_help(const char *file) {
 
 void parse_args(int argc, char *argv[]) {
   int o;
-  while ((o = getopt_long(argc, argv, "-bcDe:i:S:h", long_options, NULL)) !=
-         -1) {
+  while (
+      (o = getopt_long(argc, argv, "-bcDe:i:S:h", long_options, NULL)) != -1) {
     switch (o) {
     case 'S': symbol_file = optarg; break;
     case 'D': work_mode |= MODE_DIFF; break;
@@ -147,6 +146,21 @@ void parse_args(int argc, char *argv[]) {
   }
 }
 
+void prepare_serial_contents() {
+  /* send command to uboot */
+  char cmd[512], *p = cmd;
+#if 1
+  p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
+#else
+  p += sprintf(p, "set serverip 192.168.3.1\n");
+  p += sprintf(p, "set ipaddr 114.212.81.241\n");
+  p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
+  p += sprintf(p, "ping 127.0.0.1\n");
+#endif
+  assert (p < &cmd[sizeof(cmd)]);
+  for (p = cmd; *p; p++) serial_enqueue(*p);
+}
+
 work_mode_t init_monitor(void) {
   /* Load the image to memory. */
   if (elf_file) {
@@ -158,20 +172,10 @@ work_mode_t init_monitor(void) {
   if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
 
 #if CONFIG_PRELOAD_LINUX
-#if 1
   load_image(CONFIG_KERNEL_UIMAGE_PATH, CONFIG_KERNEL_UIMAGE_BASE);
+#endif
 
-  /* send command to uboot */
-  char cmd[1024], *p = cmd;
-  p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
-#else
-  p += sprintf(p, "set serverip 192.168.3.1\n");
-  p += sprintf(p, "set ipaddr 114.212.81.241\n");
-  p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
-  p += sprintf(p, "ping 127.0.0.1\n");
-#endif
-  for (p = cmd; *p; p++) serial_enqueue(*p);
-#endif
+  prepare_serial_contents();
 
   /* Initialize this virtual computer system. */
   init_cpu(CPU_INIT_PC);
