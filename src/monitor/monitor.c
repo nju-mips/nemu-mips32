@@ -76,7 +76,7 @@ static inline void assume_elf_file() {
   }
 }
 
-void sigint_handler(int no) { nemu_state = NEMU_STOP; }
+static void sigint_handler(int no) { nemu_state = NEMU_STOP; }
 
 const struct option long_options[] = {
     {"symbol", 1, NULL, 'S'},

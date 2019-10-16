@@ -176,7 +176,9 @@ void prepare_ulite_contents() {
 }
 
 static void ulite_init() {
-  device_bind_event(&ulite_dev, EVENT_STDIN_DATA);
+  event_add_handler(EVENT_CTRL_C, ulite_on_data);
+  event_add_handler(EVENT_CTRL_Z, ulite_on_data);
+  event_add_handler(EVENT_STDIN_DATA, ulite_on_data);
   prepare_ulite_contents();
 }
 

@@ -4,22 +4,22 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "utils.h"
 #include "device.h"
 #include "events.h"
+#include "utils.h"
 
 SDL_Surface *screen;
 static struct itimerval it;
 
 static event_t events[NR_EVENTS];
 
-void device_bind_event(device_t *dev, int event_type) {
-  assert (dev && dev->on_data);
+void event_add_handler(int event_type, event_handler_t handler) {
+  assert(handler);
   assert(0 <= event_type && event_type < NR_EVENTS);
 
   event_t *evt = &events[event_type];
   assert(evt->notify_queue_size + 1 < NR_EVENTS);
-  evt->notify_queue[evt->notify_queue_size++] = dev;
+  evt->notify_queue[evt->notify_queue_size++] = handler;
 }
 
 static void notify_event(int event_type, void *data, int len) {
@@ -27,8 +27,8 @@ static void notify_event(int event_type, void *data, int len) {
 
   event_t *evt = &events[event_type];
   for (int i = 0; i < evt->notify_queue_size; i++) {
-    assert (evt->notify_queue[i]);
-    evt->notify_queue[i]->on_data(data, len);
+    assert(evt->notify_queue[i]);
+    evt->notify_queue[i](data, len);
   }
 }
 
@@ -80,6 +80,18 @@ static void device_update(int signum) {
   update_timer();
 }
 
+static void ctrl_code_handler(int no) {
+  if (no == SIGINT) {
+    /* https://en.wikipedia.org/wiki/Control-C */
+    char data = '\x03';
+    notify_event(EVENT_CTRL_C, &data, 1);
+  } else if (no == SIGTSTP) {
+    /* https://en.wikipedia.org/wiki/Substitute_character */
+    char data = '\x1a';
+    notify_event(EVENT_CTRL_Z, &data, 1);
+  }
+}
+
 void init_timer() {
   struct sigaction s;
   memset(&s, 0, sizeof(s));
@@ -109,4 +121,7 @@ void init_events() {
   init_sdl();
   init_console();
   init_timer();
+
+  signal(SIGINT, ctrl_code_handler);
+  signal(SIGTSTP, ctrl_code_handler);
 }

@@ -57,7 +57,7 @@ DEF_DEV(kb_dev) = {
 };
 
 static void kb_init() {
-  device_bind_event(kv_dev, EVENT_SDL_KEYDOWN);
-  device_bind_event(kv_dev, EVENT_SDL_KEYUP);
+  event_add_handler(EVENT_SDL_KEYDOWN, kb_on_data);
+  event_add_handler(EVENT_SDL_KEYUP, kb_on_data);
 }
 #endif
