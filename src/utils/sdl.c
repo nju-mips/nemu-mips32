@@ -2,7 +2,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <unistd.h>
 
+#include "utils.h"
 #include "device.h"
 
 SDL_Surface *screen;
@@ -27,6 +29,19 @@ static void device_update(int signum) {
   default:
     /* do nothing */
     break;
+  }
+
+  /* read stdin */
+  int n = nchars_stdin();
+  if (n > 0) {
+    char *buf = malloc(n);
+    int ret = read(0, buf, n);
+    assert (ret == n);
+    for (int i = 0; i < n; i ++)
+      serial_enqueue(buf[i]);
+    free(buf);
+
+    ulite_set_irq();
   }
 
   int ret = setitimer(ITIMER_VIRTUAL, &it, NULL);
@@ -62,4 +77,8 @@ void init_sdl() {
   it.it_interval.tv_usec = 0;
   ret = setitimer(ITIMER_VIRTUAL, &it, NULL);
   Assert(ret == 0, "Can not set timer");
+
+  init_console();
+  disable_buffer();
+  echo_off();
 }
