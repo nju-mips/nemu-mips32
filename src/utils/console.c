@@ -24,6 +24,8 @@ void wrap_set_term_attr(struct termio *ptbuf) {
 
 void init_console() {
   wrap_get_term_attr(&raw_termio);
+  disable_buffer();
+  echo_off();
 }
 
 /* functions to change terminal state */

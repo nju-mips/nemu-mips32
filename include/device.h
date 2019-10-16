@@ -26,6 +26,10 @@ typedef struct device_t {
   void *(*map)(uint32_t vaddr, uint32_t size);
   uint32_t (*peek)(paddr_t addr, int len);
   struct device_t *next;
+
+  /* interrupt related */
+  void (*on_data)(void *buf, int len);
+  void (*on_update)();
 } device_t;
 
 static inline uint32_t mr_index(uint32_t addr) { return addr / (4 * 1024); }
@@ -54,12 +58,4 @@ void register_device(device_t *dev);
 
 #endif
 
-void serial_enqueue(int ch);
-void serial_enqueue_SDLKey(SDL_EventType type, SDLKey key);
-int serial_dequeue();
-int serial_queue_top();
-bool serial_queue_is_empty();
-bool serial_queue_is_full();
-
-void ulite_set_irq();
 void stop_cpu_when_ulite_send(const char *string);

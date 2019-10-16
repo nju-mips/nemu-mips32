@@ -4,7 +4,7 @@
 #include "monitor.h"
 
 void init_mmio();
-void init_sdl();
+void init_events();
 void parse_args(int, char *[]);
 int init_monitor(void);
 void gdb_mainloop();
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
   work_mode_t mode = init_monitor();
   if (mode & MODE_BATCH) {
-    init_sdl();
+    init_events();
     if (mode == MODE_DIFF) {
       qemu_diff();
     } else {

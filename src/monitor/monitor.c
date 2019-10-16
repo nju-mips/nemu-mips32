@@ -146,21 +146,6 @@ void parse_args(int argc, char *argv[]) {
   }
 }
 
-void prepare_serial_contents() {
-  /* send command to uboot */
-  char cmd[512], *p = cmd;
-#if 1
-  p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
-#else
-  p += sprintf(p, "set serverip 192.168.3.1\n");
-  p += sprintf(p, "set ipaddr 114.212.81.241\n");
-  p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
-  p += sprintf(p, "ping 127.0.0.1\n");
-#endif
-  assert (p < &cmd[sizeof(cmd)]);
-  for (p = cmd; *p; p++) serial_enqueue(*p);
-}
-
 work_mode_t init_monitor(void) {
   /* Load the image to memory. */
   if (elf_file) {
@@ -174,8 +159,6 @@ work_mode_t init_monitor(void) {
 #if CONFIG_PRELOAD_LINUX
   load_image(CONFIG_KERNEL_UIMAGE_PATH, CONFIG_KERNEL_UIMAGE_BASE);
 #endif
-
-  prepare_serial_contents();
 
   /* Initialize this virtual computer system. */
   init_cpu(CPU_INIT_PC);
