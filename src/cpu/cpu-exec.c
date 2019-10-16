@@ -367,7 +367,7 @@ void nemu_exit() {
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
 #endif
 
-  print_instr_queue();
+  /* print_instr_queue(); */
 
   exit(0);
 }
@@ -444,15 +444,6 @@ void cpu_exec(uint64_t n) {
       cpu.pc = cpu.br_target;
     }
 #endif
-
-    extern bool flag;
-    static int counter = 20;
-    if (flag && counter > 0) {
-      counter --;
-      printf("%08x: %08x [%02x %02x] %s\n", get_current_pc(), get_current_instr(),
-          cpu.cp0.status.IM, cpu.cp0.cause.IP,
-          find_symbol_by_addr(get_current_pc()));
-    }
 
     if (nemu_state != NEMU_RUNNING) { return; }
   }

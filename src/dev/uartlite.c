@@ -35,10 +35,6 @@ bool flag = false;
 void ulite_set_irq() {
 #  if CONFIG_INTR
   if (ulite_intr_enabled) {
-    if (!serial_queue_is_empty()) {
-      printf("xxx\n");
-      flag = true;
-    }
     set_irq(ULITE_IRQ_NO);
   }
 #  endif
