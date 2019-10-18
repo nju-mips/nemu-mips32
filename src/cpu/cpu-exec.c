@@ -111,6 +111,7 @@ uint64_t mmu_cache_miss = 0;
 struct mmu_cache_t {
   uint32_t id;
   uint8_t *ptr;
+  bool can_write;
 };
 
 static struct mmu_cache_t mmu_cache[1 << MMU_BITS];
@@ -131,7 +132,7 @@ static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
 }
 
 static inline void update_mmu_cache(
-    vaddr_t vaddr, paddr_t paddr, device_t *dev) {
+    vaddr_t vaddr, paddr_t paddr, device_t *dev, bool can_write) {
 #if CONFIG_MMU_CACHE_PERF
   mmu_cache_miss++;
 #endif
@@ -140,6 +141,7 @@ static inline void update_mmu_cache(
     uint32_t idx = mmu_cache_index(vaddr);
     mmu_cache[idx].id = mmu_cache_id(vaddr);
     mmu_cache[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
+    mmu_cache[idx].can_write = can_write;
     assert(mmu_cache[idx].ptr);
   }
 }
@@ -157,26 +159,36 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
 #endif
     return data;
   } else {
-    paddr_t paddr = prot_addr(addr, MMU_LOAD);
+    mmu_attr_t attr = {.rwbit = MMU_LOAD, .exbit = 1};
+    paddr_t paddr = prot_addr_with_attr(addr, &attr);
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
-    update_mmu_cache(addr, paddr, dev);
+    update_mmu_cache(addr, paddr, dev, attr.dirty);
     return dev->read(paddr - dev->start, len);
   }
 }
 
 static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
-  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
+  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr) &&
+      mmu_cache[idx].can_write) {
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
+#endif
+#if CONFIG_MMU_CACHE_CHECK
+    extern device_t blackhole_dev;
+    paddr_t paddr = prot_addr(addr, MMU_STORE);
+    assert(paddr != blackhole_dev.start);
+    device_t *dev = find_device(paddr);
+    assert(dev && dev->map);
+    assert(mmu_cache[idx].ptr == dev->map((paddr & ~0xFFF) - dev->start, 0));
 #endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
-    update_mmu_cache(addr, paddr, dev);
+    update_mmu_cache(addr, paddr, dev, true);
     dev->write(paddr - dev->start, len, data);
   }
 }
@@ -422,10 +434,10 @@ void cpu_exec(uint64_t n) {
 #endif
 
 #if CONFIG_DECODE_CACHE
-#define operands decode
+#  define operands decode
     decode_cache_t *decode = decode_cache_fetch(cpu.pc);
 #else
-#define operands (&inst)
+#  define operands (&inst)
     Inst inst = {.val = load_mem(cpu.pc, 4)};
 #endif
 

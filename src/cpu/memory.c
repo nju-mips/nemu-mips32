@@ -34,7 +34,7 @@ void *vaddr_map(paddr_t addr, uint32_t len) {
 
 uint32_t dbg_vaddr_read(vaddr_t addr, int len) {
   mmu_attr_t attr = {.rwbit = MMU_LOAD, .exbit = 0};
-  addr = prot_addr_with_attr(addr, attr);
+  addr = prot_addr_with_attr(addr, &attr);
   device_t *dev = find_device(addr);
   if (!dev || !dev->read) return 0;
   return dev->read(addr - dev->start, len);
@@ -42,7 +42,7 @@ uint32_t dbg_vaddr_read(vaddr_t addr, int len) {
 
 void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data) {
   mmu_attr_t attr = {.rwbit = MMU_STORE, .exbit = 0};
-  addr = prot_addr_with_attr(addr, attr);
+  addr = prot_addr_with_attr(addr, &attr);
   device_t *dev = find_device(addr);
   if (!dev || !dev->write) return;
   dev->write(addr - dev->start, len, data);

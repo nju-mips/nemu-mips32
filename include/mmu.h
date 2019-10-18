@@ -31,10 +31,14 @@ void tlb_read(uint32_t i);
 void tlb_write(uint32_t i);
 
 typedef struct {
+  /* as argument */
   uint32_t rwbit : 1;
   uint32_t exbit : 1;
+  /* as return value */
+  uint32_t dirty : 1;
+  uint32_t miss  : 1;
 } mmu_attr_t;
 
-vaddr_t page_translate(vaddr_t, mmu_attr_t attr);
+vaddr_t page_translate(vaddr_t, mmu_attr_t *attr);
 
 #endif
