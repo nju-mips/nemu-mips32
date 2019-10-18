@@ -162,6 +162,7 @@ DEF_DEV(ulite_dev) = {
 
 void prepare_ulite_contents() {
   /* send command to uboot */
+#if CONFIG_PRELOAD_LINUX
   char cmd[512], *p = cmd;
 #if 1
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
@@ -173,6 +174,7 @@ void prepare_ulite_contents() {
 #endif
   assert (p < &cmd[sizeof(cmd)]);
   for (p = cmd; *p; p++) ulite_enqueue(*p);
+#endif
 }
 
 static void ulite_init() {

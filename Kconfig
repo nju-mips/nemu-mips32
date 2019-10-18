@@ -53,8 +53,8 @@ config MARCH_NOOP
 
 endchoice
 
-if ! MARCH_BENCH
 menu "NEMU-MIPS32 features"
+if ! MARCH_BENCH
 config DELAYSLOT
   bool "Delayslot support"
 
@@ -69,6 +69,7 @@ config INTR
 
 config EXCEPTION
   bool "Exception support"
+endif
 
 config MMU_CACHE
   bool "Cache mmu results"
@@ -76,9 +77,10 @@ config MMU_CACHE
 config DECODE_CACHE
   bool "Cache decode results"
 endmenu
-endif
 
+if ! MARCH_BENCH
 menu "NEMU-MIPS32 debug options"
+
 config MMU_CACHE_PERF
   bool "Profile mmu cache hit rate"
 
@@ -101,6 +103,7 @@ config DECODE_CACHE_CHECK
   bool "Check the validness of decode cache"
 
 endmenu
+endif
 
 menu "Kernel debug options"
 config CAE_CHECK

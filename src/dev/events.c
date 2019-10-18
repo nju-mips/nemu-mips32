@@ -34,7 +34,7 @@ static void notify_event(int event_type, void *data, int len) {
 
 static void detect_sdl_event() {
   SDL_Event event = {0};
-  SDL_PollEvent(&event);
+  if (!SDL_PollEvent(&event)) return;
 
   int sdlk_data[2] = {event.type, event.key.keysym.sym};
   switch (event.type) {

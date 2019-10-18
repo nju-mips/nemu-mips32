@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <SDL/SDL.h>
 
 /* file */
 size_t get_file_size(const char *img_file);
@@ -56,5 +57,8 @@ int nchars_stdin();
 void save_cursor_pos();
 void load_cursor_pos();
 void init_scr_wh(int *w, int *h);
+
+uint32_t SDLKey_to_scancode(SDL_EventType type, SDLKey key);
+const char *SDLKey_to_ascii(SDL_EventType type, SDLKey key);
 
 #endif

@@ -4,6 +4,7 @@
 
 #  include "device.h"
 #  include "events.h"
+#  include "utils.h"
 
 #  define KB_ADDR 0x1fe94000
 #  define KB_CODE 0x0
@@ -19,7 +20,7 @@ static int kb_queue[KEYBOARD_QUEUE_LEN];
 static int kb_f = 0, kb_r = 0;
 
 static void kb_on_data(void *data, int len) {
-  assert(len == 2 * sizeof(data));
+  assert(len == 2 * sizeof(int));
   int *sdlk_data = data;
   uint32_t scancode = SDLKey_to_scancode(sdlk_data[0], sdlk_data[1]);
   int next = (kb_r + 1) % KEYBOARD_QUEUE_LEN;
@@ -57,7 +58,7 @@ DEF_DEV(kb_dev) = {
 };
 
 static void kb_init() {
-  event_add_handler(EVENT_SDL_KEYDOWN, kb_on_data);
-  event_add_handler(EVENT_SDL_KEYUP, kb_on_data);
+  event_add_handler(EVENT_SDL_KEY_DOWN, kb_on_data);
+  event_add_handler(EVENT_SDL_KEY_UP, kb_on_data);
 }
 #endif
