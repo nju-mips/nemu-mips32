@@ -232,7 +232,7 @@ static pcap_handler pcap;
 #  define FLOW_CTRL_TX 0x01
 #  define FLOW_CTRL_RX 0x02
 
-char *eth_iface = NULL;
+extern char *eth_iface;
 
 static u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E, 0x00, 0xFA, 0xCE};
 static u32 eth_ip_addr = 0;

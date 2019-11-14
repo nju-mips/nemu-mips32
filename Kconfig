@@ -148,7 +148,7 @@ config KERNEL_UIMAGE_BASE
 endmenu
 
 menu "Device simulation"
-config BRAM
+menuconfig BRAM
   bool "Block RAM (1 MB)"
 
 config BRAM_BASE
@@ -157,7 +157,7 @@ config BRAM_BASE
   depends on BRAM=y
   default 0x1fc00000
 
-config DDR
+menuconfig DDR
   bool "DDR (128 MB, main memory)"
 
 config DDR_BASE
@@ -166,7 +166,7 @@ config DDR_BASE
   depends on DDR=y
   default 0x00000000
 
-config GPIO
+menuconfig GPIO
   bool "General purpose IO (nemu_trap)"
 
 config GPIO_BASE
@@ -175,7 +175,7 @@ config GPIO_BASE
   depends on GPIO=y
   default 0x10000000
 
-config KEYBOARD
+menuconfig KEYBOARD
   bool "PS/2 Keyboard"
 
 config KEYBOARD_BASE
@@ -184,8 +184,12 @@ config KEYBOARD_BASE
   depends on KEYBOARD=y
   default 0x1fe94000
 
+menuconfig NETWORK
+  bool "network simulation"
+
 config ETHERLITE
   bool "Xilinx Etherlite"
+  depends on NETWORK
 
 config ETHERLITE_BASE
   hex "address of Xilinx Etherlite"
@@ -193,7 +197,7 @@ config ETHERLITE_BASE
   depends on ETHERLITE=y
   default 0x1ff00000
 
-config PERF_COUNTER
+menuconfig PERF_COUNTER
   bool "Performance counter (for compatibility)"
 
 config PERF_COUNTER_BASE
@@ -202,7 +206,7 @@ config PERF_COUNTER_BASE
   depends on PERF_COUNTER=y
   default 0x1fe95000
 
-config RTC
+menuconfig RTC
   bool "Real Time Clock (ns)"
 
 config RTC_BASE
@@ -211,26 +215,27 @@ config RTC_BASE
   depends on RTC=y
   default 0x10002000
 
-config VGA
+menuconfig VGA
   bool "VGA"
   select VGA_CONTROLLER
 
 config VGA_BASE
   hex "address of VMEM"
   range 0x00000000 0x20000000
-  depends on VGA_CONTROLLER=y
+  depends on VGA=y
   default 0x10400000
 
 config VGA_CONTROLLER
   bool "VGA controller"
+  depends on VGA=y
 
 config VGA_CONTROLLER_BASE
-  hex "address of RTC"
+  hex "address of VGA controller"
   range 0x00000000 0x20000000
   depends on VGA_CONTROLLER=y
   default 0x10003000
 
-config UARTLITE
+menuconfig UARTLITE
   bool "Xilinx Uartlite device"
 
 config UARTLITE_BASE
@@ -239,7 +244,7 @@ config UARTLITE_BASE
   depends on UARTLITE=y
   default 0x1fe50000
 
-config XILINX_SPI
+menuconfig XILINX_SPI
   bool "Xilinx spi device"
 
 config XILINX_SPI_BASE
