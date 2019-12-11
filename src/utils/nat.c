@@ -41,7 +41,7 @@ static uint8_t eth_mac_addr[ETHER_ADDR_LEN];
 /* /usr/include/netinet/udphdr.h */
 // struct udphdr
 
-struct nat_data_t {
+struct nat_conn_t {
   uint16_t inner_port;
   uint16_t outer_port;
   uint32_t protocol; // TCP, UDP
@@ -49,7 +49,19 @@ struct nat_data_t {
   int conn;
 };
 
-static void ip_packet_modify_checksum(uint8_t *data, const int len) {
+static struct nat_conn_t nats[16];
+static const int nr_nats = sizeof(nats) / sizeof(*nats);
+
+struct nat_conn_t *nat_get_conn_with_inner_port(int proto, int port) {
+  for (int i = 0; i < nr_nats; i++) { ; }
+  return NULL;
+}
+
+struct nat_conn_t *nat_find_conn_with_outer_port(int proto, int port) {
+  return NULL;
+}
+
+static void ip_packet_fix_checksum(uint8_t *data, const int len) {
   uint32_t checksum = 0;
   *(uint16_t *)&data[24] = 0;
   for (int i = 14; i < 34; i += 2) checksum += *(uint16_t *)&data[i];
@@ -116,15 +128,36 @@ static void recver_modify_packet(uint8_t *data, const int len) {
   int protocol = ntohs(*(uint16_t *)&data[12]);
   switch (protocol) {
   case ETH_P_IP: {
-    break;
     memcpy(&data[0x1e], &eth_ip_addr, 4);
-    ip_packet_modify_checksum(data, len);
+    ip_packet_fix_checksum(data, len);
   } break;
   case ETH_P_ARP:
     memcpy(&data[0x20], &eth_mac_addr, ETHER_ADDR_LEN);
     memcpy(&data[0x26], &eth_ip_addr, 4);
     break;
   }
+}
+
+void nat_ip_send_data(uint8_t *data, const int len) {
+
+  struct iphdr *iphdr = (void *)data + sizeof(struct ether_header);
+  memcpy(&data[0x1a], &iface_ip_addr, 4);
+  switch (iphdr->protocol) {
+  case IPPROTO_TCP: {
+  } break;
+  case IPPROTO_UDP: {
+    struct udphdr *udphdr = (void *)iphdr + sizeof(*iphdr);
+    for (int i = 0; i < nr_nats; i++) {
+      if (udphdr->uh_sport == nats[i].inner_port) {
+        udphdr->uh_sport = nats[i].outer_port;
+        goto end;
+      }
+    }
+  } break;
+  }
+
+end:
+  ip_packet_fix_checksum(data, len);
 }
 
 void nat_send_data(const uint8_t *_data, const int len) {
@@ -141,8 +174,7 @@ void nat_send_data(const uint8_t *_data, const int len) {
   int protocol = ntohs(ehdr->ether_type);
   switch (protocol) {
   case ETH_P_IP: {
-    memcpy(&data[0x1a], &iface_ip_addr, 4);
-    ip_packet_modify_checksum(data, len);
+    nat_ip_send_data(data, len);
   } break;
   case ETH_P_ARP: {
     struct ether_arp *ahdr = (void *)data + sizeof(struct ether_header);
@@ -165,6 +197,8 @@ int nat_recv_data(uint8_t *to, const int maxlen) {
   // printf("try receive data\n");
   int nbytes = recvfrom(iface_socket, to, maxlen, 0, NULL, NULL);
 
+  pcap_write(pcap, to, nbytes);
+  pcap_flush(pcap);
   recver_modify_packet(to, nbytes);
   pcap_write(pcap, to, nbytes);
   pcap_flush(pcap);
