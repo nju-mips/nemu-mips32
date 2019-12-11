@@ -87,7 +87,7 @@ initramfs:
 linux:
 	make -C $(KERNEL_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32 uImage
 
-uImage: busybox initramfs linux
+# uImage: busybox initramfs linux
 
 run-linux:
 	build/nemu -b -e $(UBOOT_HOME)/u-boot

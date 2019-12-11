@@ -80,6 +80,7 @@ static void device_update(int signum) {
   update_timer();
 }
 
+#if 0
 static void ctrl_code_handler(int no) {
   if (no == SIGINT) {
     /* https://en.wikipedia.org/wiki/Control-C */
@@ -91,6 +92,7 @@ static void ctrl_code_handler(int no) {
     notify_event(EVENT_CTRL_Z, &data, 1);
   }
 }
+#endif
 
 void init_timer() {
   struct sigaction s;
@@ -118,10 +120,12 @@ void init_sdl() {
 }
 
 void init_events() {
+#if CONFIG_VGA
   init_sdl();
+#endif
   init_console();
   init_timer();
 
-  signal(SIGINT, ctrl_code_handler);
-  signal(SIGTSTP, ctrl_code_handler);
+  // signal(SIGINT, ctrl_code_handler);
+  // signal(SIGTSTP, ctrl_code_handler);
 }

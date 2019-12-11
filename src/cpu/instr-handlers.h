@@ -39,6 +39,7 @@ typedef union {
     uint32_t lo, hi;
   };
   uint64_t val;
+  int64_t sval;
 } L64_t;
 
 /* clang-format off */
@@ -63,8 +64,8 @@ static const void *special_table[64] = {
 };
 
 static const void *special2_table[64] = {
-    /* 0x00 */ &&inv, &&inv, &&mul, &&inv,
-    /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x00 */ &&madd, &&maddu, &&mul, &&inv,
+    /* 0x04 */ &&msub, &&msubu, &&inv, &&inv,
     /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
     /* 0x10 */ &&inv, &&inv, &&inv, &&inv,
@@ -283,9 +284,9 @@ Handler:
 #else
 make_entry() {
   cpu.gpr[0] = 0;
-#if CONFIG_INSTR_LOG
+#  if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
-#endif
+#  endif
   goto *opcode_table[inst.op];
 }
 #endif
@@ -685,6 +686,48 @@ make_exec_handler(clz) {
   } else {
     cpu.gpr[operands->rd] = __builtin_clz(cpu.gpr[operands->rs]);
   }
+}
+
+make_exec_handler(madd) {
+  InstAssert(operands->rd == 0 && operands->shamt == 0);
+  L64_t hilo;
+  hilo.hi = cpu.hi;
+  hilo.lo = cpu.lo;
+  hilo.sval += (int64_t)(int32_t)cpu.gpr[operands->rs] *
+               (int64_t)(int32_t)cpu.gpr[operands->rt];
+  cpu.hi = hilo.hi;
+  cpu.lo = hilo.lo;
+}
+
+make_exec_handler(maddu) {
+  InstAssert(operands->rd == 0 && operands->shamt == 0);
+  L64_t hilo;
+  hilo.hi = cpu.hi;
+  hilo.lo = cpu.lo;
+  hilo.val += (uint64_t)cpu.gpr[operands->rs] * (uint64_t)cpu.gpr[operands->rt];
+  cpu.hi = hilo.hi;
+  cpu.lo = hilo.lo;
+}
+
+make_exec_handler(msub) {
+  InstAssert(operands->rd == 0 && operands->shamt == 0);
+  L64_t hilo;
+  hilo.hi = cpu.hi;
+  hilo.lo = cpu.lo;
+  hilo.sval -= (int64_t)(int32_t)cpu.gpr[operands->rs] *
+               (int64_t)(int32_t)cpu.gpr[operands->rt];
+  cpu.hi = hilo.hi;
+  cpu.lo = hilo.lo;
+}
+
+make_exec_handler(msubu) {
+  InstAssert(operands->rd == 0 && operands->shamt == 0);
+  L64_t hilo;
+  hilo.hi = cpu.hi;
+  hilo.lo = cpu.lo;
+  hilo.val -= (uint64_t)cpu.gpr[operands->rs] * (uint64_t)cpu.gpr[operands->rt];
+  cpu.hi = hilo.hi;
+  cpu.lo = hilo.lo;
 }
 
 make_exec_handler(mult) {
@@ -1146,8 +1189,7 @@ make_exec_handler(jr) {
   InstAssert(operands->rt == 0 && operands->rd == 0);
   cpu.br_target = cpu.gpr[operands->rs];
 #if CONFIG_FRAMES_LOG
-  if (operands->rs == R_ra)
-    frames_enqueue_ret(cpu.pc, cpu.br_target);
+  if (operands->rs == R_ra) frames_enqueue_ret(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
 }

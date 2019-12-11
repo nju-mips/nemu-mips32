@@ -261,6 +261,9 @@ void signal_exception(uint32_t exception) {
   int extra = exception >> 16;
 
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
+  if (code == EXC_RI && (cpu.pc & 0xFF000000) != 0x77000000) {
+    printf("RI@%08x\n", cpu.pc);
+  }
 
 #if CONFIG_CAE_CHECK
   save_usual_registers();

@@ -1,4 +1,4 @@
-#if NETWORK
+#if CONFIG_NETWORK
 #  include <arpa/inet.h>
 #  include <net/if.h>
 #  include <netinet/ether.h>
