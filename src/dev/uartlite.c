@@ -164,7 +164,7 @@ void prepare_ulite_contents() {
   /* send command to uboot */
 #if CONFIG_PRELOAD_LINUX
   char cmd[512], *p = cmd;
-#if 1
+#if 0
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
 #else
   p += sprintf(p, "set serverip 192.168.3.1\n");

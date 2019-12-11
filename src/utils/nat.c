@@ -12,12 +12,14 @@
 #  include "debug.h"
 #  include "utils.h"
 
-static char *eth_iface;
+char *eth_iface;
 static pcap_handler pcap;
 
 static int iface_socket;
 static uint32_t iface_ip_addr;
 static uint32_t iface_mac_addr[ETHER_ADDR_LEN];
+static uint32_t eth_ip_addr;
+static uint8_t eth_mac_addr[ETHER_ADDR_LEN];
 static struct sockaddr_ll eth_sll;
 
 /* https://doc.dpdk.org/api-2.2/rte__ip_8h_source.html */
@@ -57,6 +59,26 @@ struct udp_hdr {
 
 // static uint32_t tcp_conns[256];
 
+static void ip_packet_modify_checksum(uint8_t *data, const int len) {
+  uint32_t checksum = 0;
+  *(uint16_t *)&data[24] = 0;
+  for (int i = 14; i < 34; i += 2) checksum += *(uint16_t *)&data[i];
+  checksum = (checksum >> 16) + (checksum & 0xFFFF);
+  // printf("check sum is %04x\n", checksum);
+  *(uint16_t *)&data[24] = ~checksum;
+}
+
+const char *ip_ntoa(uint32_t ip) {
+  static char s[128];
+  uint8_t *p = (uint8_t *)&ip;
+  sprintf(s, "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
+  return s;
+}
+
+void nat_bind_mac_addr(uint8_t mac_addr[ETHER_ADDR_LEN]) {
+  memcpy(eth_mac_addr, mac_addr, ETHER_ADDR_LEN);
+}
+
 void init_nat() {
   pcap = pcap_open("build/packets.pcap");
 
@@ -94,13 +116,13 @@ void init_nat() {
   }
 }
 
-static void sender_modify_packet(u8 *data, const int len) {
+static void sender_modify_packet(uint8_t *data, const int len) {
   /* copy the destination addr */
-  memcpy(&eth_sll.sll_addr, &data[0], ENET_ADDR_LENGTH);
+  memcpy(&eth_sll.sll_addr, &data[0], ETHER_ADDR_LEN);
   /* override the source addr */
-  memcpy(&data[ENET_ADDR_LENGTH], iface_mac_addr, ENET_ADDR_LENGTH);
+  memcpy(&data[ETHER_ADDR_LEN], iface_mac_addr, ETHER_ADDR_LEN);
 
-  int protocol = ntohs(*(u16 *)&data[12]);
+  int protocol = ntohs(*(uint16_t *)&data[12]);
   switch (protocol) {
   case ETH_P_IP: {
     break;
@@ -108,7 +130,7 @@ static void sender_modify_packet(u8 *data, const int len) {
     ip_packet_modify_checksum(data, len);
   } break;
   case ETH_P_ARP:
-    memcpy(&data[0x16], &iface_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&data[0x16], &iface_mac_addr, ETHER_ADDR_LEN);
     memcpy(&eth_ip_addr, &data[0x1c], 4);
     printf("set eth_ip_addr to %s\n", ip_ntoa(eth_ip_addr));
     memcpy(&data[0x1c], &iface_ip_addr, 4);
@@ -117,14 +139,14 @@ static void sender_modify_packet(u8 *data, const int len) {
   // eth_packet_modify_crc(data, len);
 }
 
-static void recver_modify_packet(u8 *data, const int len) {
+static void recver_modify_packet(uint8_t *data, const int len) {
   /* copy the eth addr */
-  memcpy(data, eth_mac_addr, ENET_ADDR_LENGTH);
+  memcpy(data, eth_mac_addr, ETHER_ADDR_LEN);
   /* 0x1a .. 0x1d is ip.src.ip, 0x1e .. 0x21 is ip.dst.ip */
   /* 0x16 .. 0x1b is arp.src.mac, 0x1c .. 0x1f is arp.src.ip */
   /* 0x20 .. 0x25 is arp.dst.mac, 0x26 .. 0x29 is arp.dst.ip */
 
-  int protocol = ntohs(*(u16 *)&data[12]);
+  int protocol = ntohs(*(uint16_t *)&data[12]);
   switch (protocol) {
   case ETH_P_IP: {
     break;
@@ -132,15 +154,15 @@ static void recver_modify_packet(u8 *data, const int len) {
     ip_packet_modify_checksum(data, len);
   } break;
   case ETH_P_ARP:
-    memcpy(&data[0x20], &eth_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&data[0x20], &eth_mac_addr, ETHER_ADDR_LEN);
     memcpy(&data[0x26], &eth_ip_addr, 4);
     break;
   }
   // eth_packet_modify_crc(data, len);
 }
 
-void nat_send_data(const u8 *data, const int len) {
-  static u8 eth_frame[2048];
+void nat_send_data(const uint8_t *data, const int len) {
+  static uint8_t eth_frame[2048];
   assert(len < sizeof(eth_frame));
   memcpy(eth_frame, data, len);
 
@@ -149,16 +171,16 @@ void nat_send_data(const u8 *data, const int len) {
 
   sender_modify_packet(eth_frame, len);
 
-  eth_sll.sll_protocol = *(u16 *)&eth_frame[12];
+  eth_sll.sll_protocol = *(uint16_t *)&eth_frame[12];
 
   /* send the eth_frame */
-  sendto(mac_socket, &eth_frame[0], len, 0, (struct sockaddr *)&eth_sll,
+  sendto(iface_socket, &eth_frame[0], len, 0, (struct sockaddr *)&eth_sll,
       sizeof(eth_sll));
 }
 
-int nat_recv_data(u8 *to, const int maxlen) {
+int nat_recv_data(uint8_t *to, const int maxlen) {
   // printf("try receive data\n");
-  int nbytes = recvfrom(mac_socket, to, maxlen, 0, NULL, NULL);
+  int nbytes = recvfrom(iface_socket, to, maxlen, 0, NULL, NULL);
 
   recver_modify_packet(to, nbytes);
   pcap_write(pcap, to, nbytes);

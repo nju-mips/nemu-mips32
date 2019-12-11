@@ -120,6 +120,9 @@ void init_sdl() {
 }
 
 void init_events() {
+#if CONFIG_NETWORK
+  init_nat();
+#endif
 #if CONFIG_VGA
   init_sdl();
 #endif

@@ -45,6 +45,8 @@ uint32_t find_addr_of_symbol(const char *symbol);
 const char *find_symbol_by_addr(uint32_t addr);
 
 /* nat */
+void init_nat();
+void nat_bind_mac_addr(uint8_t mac_addr[6]);
 void nat_send_data(const uint8_t *data, const int len);
 int nat_recv_data(uint8_t *to, const int maxlen);
 

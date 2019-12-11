@@ -231,11 +231,6 @@
 #  define FLOW_CTRL_RX 0x02
 
 static u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E, 0x00, 0xFA, 0xCE};
-static u32 eth_ip_addr = 0;
-
-static struct sockaddr_ll eth_sll;
-static u8 iface_mac_addr[ENET_ADDR_LENGTH];
-static u32 iface_ip_addr = 0;
 
 typedef struct {
   u32 regnum : 5;  /* phy register address */
@@ -335,50 +330,6 @@ static u16 phy_regs[32][32]; /* phy_regs[phy][reg] */
 
 #  define ACTIVE_PHY 1
 
-static u32 reverse_table[256];
-
-// static u8 elite_Tx_frame[2048];
-
-u64 Reflect(u64 ref, u8 ch) {
-  int i;
-  u64 value = 0;
-  for (i = 1; i < (ch + 1); i++) {
-    if (ref & 1) value |= 1 << (ch - i);
-    ref >>= 1;
-  }
-  return value;
-}
-
-static void gen_normal_table(u32 *table) {
-  u32 gx = 0x04c11db7;
-  u32 temp = 0;
-  // u32 crc = 0;
-  for (int i = 0; i <= 0xFF; i++) {
-    temp = Reflect(i, 8);
-    table[i] = temp << 24;
-    for (int j = 0; j < 8; j++) {
-      unsigned long int t1, t2;
-      unsigned long int flag = table[i] & 0x80000000;
-      t1 = (table[i] << 1);
-      if (flag == 0)
-        t2 = 0;
-      else
-        t2 = gx;
-      table[i] = t1 ^ t2;
-    }
-    // crc = table[i];
-    table[i] = Reflect(table[i], 32);
-  }
-}
-
-u32 reverse_table_crc(const u8 *data, u32 len, u32 *table) {
-  u32 crc = 0xffffffff;
-  const u8 *p = data;
-  int i;
-  for (i = 0; i < len; i++) crc = table[(crc ^ (*(p + i))) & 0xff] ^ (crc >> 8);
-  return ~crc;
-}
-
 void hexdump(const u8 *data, const int len) {
   for (int i = 0; i < len; i += 16) {
     printf("%02x: ", i);
@@ -400,22 +351,6 @@ static void eth_packet_modify_crc(u8 *data, const int len) {
   *(u32 *)&data[len - 4] = crc;
 }
 #  endif
-
-static void ip_packet_modify_checksum(u8 *data, const int len) {
-  u32 checksum = 0;
-  *(u16 *)&data[24] = 0;
-  for (int i = 14; i < 34; i += 2) checksum += *(u16 *)&data[i];
-  checksum = (checksum >> 16) + (checksum & 0xFFFF);
-  // printf("check sum is %04x\n", checksum);
-  *(u16 *)&data[24] = ~checksum;
-}
-
-const char *ip_ntoa(u32 ip) {
-  static char s[128];
-  u8 *p = (u8 *)&ip;
-  sprintf(s, "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
-  return s;
-}
 
 static void elite_init() {
   /* init phy regs */
@@ -491,6 +426,7 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_ping_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_ping_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_ping, regs.tx_ping_tplr);
+        nat_bind_mac_addr(eth_mac_addr);
         regs.tx_ping_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send ping packet */
@@ -504,6 +440,7 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_pong_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_pong_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_pong, regs.tx_pong_tplr);
+        nat_bind_mac_addr(eth_mac_addr);
         regs.tx_pong_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send pong packet */
