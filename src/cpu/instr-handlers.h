@@ -548,6 +548,13 @@ make_exec_handler(mtc0) {
     // nemu_needs_commit = !nemu_needs_commit;
 #endif
   } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_HIT_TRAP): {
+    if (cpu.gpr[operands->rt] == 0)
+      printf("\e[1;32mHIT GOOD TRAP\e[0m\n");
+    else
+      printf("\e[1;31mHIT BAD TRAP %d\e[0m\n", cpu.gpr[operands->rt]);
+    nemu_exit(0);
+  } break;
   default:
     printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[operands->rt],
         operands->rd, operands->sel);
