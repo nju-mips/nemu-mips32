@@ -10,8 +10,10 @@
 #  include <sys/types.h>
 
 #  include "debug.h"
+#  include "utils.h"
 
-char *eth_iface;
+static char *eth_iface;
+static pcap_handler pcap;
 
 static int iface_socket;
 static uint32_t iface_ip_addr;
@@ -56,6 +58,8 @@ struct udp_hdr {
 // static uint32_t tcp_conns[256];
 
 void init_nat() {
+  pcap = pcap_open("build/packets.pcap");
+
   /* init the socket */
   iface_socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   Assert(iface_socket > 0, "init raw socket failed, please run me with sudo");
@@ -90,13 +94,76 @@ void init_nat() {
   }
 }
 
-void nat_send_data(uint8_t *data, const int len) {
-  int protocol = ntohs(*(uint16_t *)&data[12]);
+static void sender_modify_packet(u8 *data, const int len) {
+  /* copy the destination addr */
+  memcpy(&eth_sll.sll_addr, &data[0], ENET_ADDR_LENGTH);
+  /* override the source addr */
+  memcpy(&data[ENET_ADDR_LENGTH], iface_mac_addr, ENET_ADDR_LENGTH);
+
+  int protocol = ntohs(*(u16 *)&data[12]);
   switch (protocol) {
-  case ETH_P_IP:
-    /* TCP, UDP, ICMP */
+  case ETH_P_IP: {
     break;
-  case ETH_P_ARP: break;
+    memcpy(&data[0x1a], &iface_ip_addr, 4);
+    ip_packet_modify_checksum(data, len);
+  } break;
+  case ETH_P_ARP:
+    memcpy(&data[0x16], &iface_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&eth_ip_addr, &data[0x1c], 4);
+    printf("set eth_ip_addr to %s\n", ip_ntoa(eth_ip_addr));
+    memcpy(&data[0x1c], &iface_ip_addr, 4);
+    break;
   }
+  // eth_packet_modify_crc(data, len);
 }
+
+static void recver_modify_packet(u8 *data, const int len) {
+  /* copy the eth addr */
+  memcpy(data, eth_mac_addr, ENET_ADDR_LENGTH);
+  /* 0x1a .. 0x1d is ip.src.ip, 0x1e .. 0x21 is ip.dst.ip */
+  /* 0x16 .. 0x1b is arp.src.mac, 0x1c .. 0x1f is arp.src.ip */
+  /* 0x20 .. 0x25 is arp.dst.mac, 0x26 .. 0x29 is arp.dst.ip */
+
+  int protocol = ntohs(*(u16 *)&data[12]);
+  switch (protocol) {
+  case ETH_P_IP: {
+    break;
+    memcpy(&data[0x1e], &eth_ip_addr, 4);
+    ip_packet_modify_checksum(data, len);
+  } break;
+  case ETH_P_ARP:
+    memcpy(&data[0x20], &eth_mac_addr, ENET_ADDR_LENGTH);
+    memcpy(&data[0x26], &eth_ip_addr, 4);
+    break;
+  }
+  // eth_packet_modify_crc(data, len);
+}
+
+void nat_send_data(const u8 *data, const int len) {
+  static u8 eth_frame[2048];
+  assert(len < sizeof(eth_frame));
+  memcpy(eth_frame, data, len);
+
+  pcap_write(pcap, data, len);
+  pcap_flush(pcap);
+
+  sender_modify_packet(eth_frame, len);
+
+  eth_sll.sll_protocol = *(u16 *)&eth_frame[12];
+
+  /* send the eth_frame */
+  sendto(mac_socket, &eth_frame[0], len, 0, (struct sockaddr *)&eth_sll,
+      sizeof(eth_sll));
+}
+
+int nat_recv_data(u8 *to, const int maxlen) {
+  // printf("try receive data\n");
+  int nbytes = recvfrom(mac_socket, to, maxlen, 0, NULL, NULL);
+
+  recver_modify_packet(to, nbytes);
+  pcap_write(pcap, to, nbytes);
+  pcap_flush(pcap);
+  return nbytes;
+}
+
 #endif

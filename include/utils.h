@@ -44,6 +44,10 @@ void elf_symbols_release_memory();
 uint32_t find_addr_of_symbol(const char *symbol);
 const char *find_symbol_by_addr(uint32_t addr);
 
+/* nat */
+void nat_send_data(const uint8_t *data, const int len);
+int nat_recv_data(uint8_t *to, const int maxlen);
+
 /* console control */
 void init_console();
 void disable_buffer();

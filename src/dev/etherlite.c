@@ -11,8 +11,6 @@
 #  include "device.h"
 #  include "utils.h"
 
-static pcap_handler pcap;
-
 // emaclite
 #  define MAC_ADDR CONFIG_ETHERLITE_BASE
 #  define MAC_SIZE 0x10000
@@ -232,8 +230,6 @@ static pcap_handler pcap;
 #  define FLOW_CTRL_TX 0x01
 #  define FLOW_CTRL_RX 0x02
 
-extern char *eth_iface;
-
 static u8 eth_mac_addr[ENET_ADDR_LENGTH] = {0x00, 0x00, 0x5E, 0x00, 0xFA, 0xCE};
 static u32 eth_ip_addr = 0;
 
@@ -336,13 +332,12 @@ struct emaclite_regs {
 
 static struct emaclite_regs regs;
 static u16 phy_regs[32][32]; /* phy_regs[phy][reg] */
-static int mac_socket = -1;
 
 #  define ACTIVE_PHY 1
 
 static u32 reverse_table[256];
 
-// static u8 mac_Tx_frame[2048];
+// static u8 elite_Tx_frame[2048];
 
 u64 Reflect(u64 ref, u8 ch) {
   int i;
@@ -422,132 +417,7 @@ const char *ip_ntoa(u32 ip) {
   return s;
 }
 
-static void sender_modify_packet(u8 *data, const int len) {
-  /* copy the destination addr */
-  memcpy(&eth_sll.sll_addr, &data[0], ENET_ADDR_LENGTH);
-  /* override the source addr */
-  memcpy(&data[ENET_ADDR_LENGTH], iface_mac_addr, ENET_ADDR_LENGTH);
-
-  int protocol = ntohs(*(u16 *)&data[12]);
-  switch (protocol) {
-  case ETH_P_IP: {
-    break;
-    memcpy(&data[0x1a], &iface_ip_addr, 4);
-    ip_packet_modify_checksum(data, len);
-  } break;
-  case ETH_P_ARP:
-    memcpy(&data[0x16], &iface_mac_addr, ENET_ADDR_LENGTH);
-    memcpy(&eth_ip_addr, &data[0x1c], 4);
-    printf("set eth_ip_addr to %s\n", ip_ntoa(eth_ip_addr));
-    memcpy(&data[0x1c], &iface_ip_addr, 4);
-    break;
-  }
-  // eth_packet_modify_crc(data, len);
-}
-
-static void recver_modify_packet(u8 *data, const int len) {
-  /* copy the eth addr */
-  memcpy(data, eth_mac_addr, ENET_ADDR_LENGTH);
-  /* 0x1a .. 0x1d is ip.src.ip, 0x1e .. 0x21 is ip.dst.ip */
-  /* 0x16 .. 0x1b is arp.src.mac, 0x1c .. 0x1f is arp.src.ip */
-  /* 0x20 .. 0x25 is arp.dst.mac, 0x26 .. 0x29 is arp.dst.ip */
-
-  int protocol = ntohs(*(u16 *)&data[12]);
-  switch (protocol) {
-  case ETH_P_IP: {
-    break;
-    memcpy(&data[0x1e], &eth_ip_addr, 4);
-    ip_packet_modify_checksum(data, len);
-  } break;
-  case ETH_P_ARP:
-    memcpy(&data[0x20], &eth_mac_addr, ENET_ADDR_LENGTH);
-    memcpy(&data[0x26], &eth_ip_addr, 4);
-    break;
-  }
-  // eth_packet_modify_crc(data, len);
-}
-
-static void send_data(const u8 *data, const int len) {
-  static u8 eth_frame[2048];
-  assert(len < sizeof(eth_frame));
-  memcpy(eth_frame, data, len);
-
-  pcap_write(pcap, data, len);
-  pcap_flush(pcap);
-
-  sender_modify_packet(eth_frame, len);
-
-  eth_sll.sll_protocol = *(u16 *)&eth_frame[12];
-
-  // printf("ssl_protocol: %x\n", eth_sll.sll_protocol);
-  //  printf("type is %x %x\n", htons(ETH_P_ARP), htons(ETH_P_IP));
-
-  /* send the eth_frame */
-  sendto(mac_socket, &eth_frame[0], len, 0, (struct sockaddr *)&eth_sll,
-      sizeof(eth_sll));
-  // printf("send.nbytes is %d\n", nbytes);
-  // hexdump(&eth_frame[0], len);
-}
-
-static int recv_data(u8 *to, const int maxlen) {
-  // printf("try receive data\n");
-  int nbytes = recvfrom(mac_socket, to, maxlen, 0, NULL, NULL);
-
-  recver_modify_packet(to, nbytes);
-  pcap_write(pcap, to, nbytes);
-  pcap_flush(pcap);
-#  if 0
-  printf("recv.nbytes is %d\n", nbytes);
-  hexdump(to, nbytes);
-#  endif
-  return nbytes;
-}
-
-static void mac_init_socket() {
-  /* table to accerate the crc calculation */
-  gen_normal_table(reverse_table);
-
-  /* init the socket */
-  mac_socket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-  Assert(mac_socket > 0, "init raw socket failed, please run me with sudo");
-
-  struct ifreq eth_req;
-  Assert(eth_iface, "please specify net card with --iface");
-  strncpy(eth_req.ifr_name, eth_iface, IFNAMSIZ);
-  if (ioctl(mac_socket, SIOCGIFINDEX, &eth_req) == -1) {
-    perror("ioctl");
-    exit(0);
-  }
-
-  eth_sll.sll_ifindex = eth_req.ifr_ifindex;
-  eth_sll.sll_family = AF_PACKET;
-  eth_sll.sll_halen = ETHER_ADDR_LEN;
-
-  /* get mac address */
-  if (ioctl(mac_socket, SIOCGIFHWADDR, &eth_req) == -1) {
-    perror("ioctl");
-    abort();
-  } else {
-    memcpy(iface_mac_addr, eth_req.ifr_hwaddr.sa_data, ENET_ADDR_LENGTH);
-  }
-
-  /* get ip address */
-  if (ioctl(mac_socket, SIOCGIFADDR, &eth_req) == -1) {
-    perror("ioctl");
-    abort();
-  } else {
-    struct sockaddr_in *iface_ip = (void *)&eth_req.ifr_addr;
-    iface_ip_addr = iface_ip->sin_addr.s_addr;
-  }
-
-#  if 0
-  printf("mac addr of %s:", eth_iface);
-  for (int i = 0; i < 6; i++) { printf(" %02x", iface_mac_addr[i]); }
-  printf("\n");
-#  endif
-}
-
-static void mac_init_phy_regs() {
+static void elite_init() {
   /* init phy regs */
   phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
   phy_regs[ACTIVE_PHY][MII_PHYSID2] = 0xb8a0;
@@ -564,12 +434,6 @@ static void mac_init_phy_regs() {
   phy_regs[ACTIVE_PHY][MII_LPA] = LPA_LPACK | LPA_PAUSE_ASYM | LPA_PAUSE_CAP |
                                   LPA_1000XPAUSE_ASYM | LPA_100HALF |
                                   LPA_10FULL | LPA_10HALF | 0x1;
-}
-
-static void mac_init() {
-  pcap = pcap_open("build/packets.pcap");
-  mac_init_socket();
-  mac_init_phy_regs();
 }
 
 static void mii_transaction() {
@@ -596,7 +460,7 @@ static void mii_transaction() {
   }
 }
 
-static uint32_t mac_read(paddr_t addr, int len) {
+static uint32_t elite_read(paddr_t addr, int len) {
   int recvlen = 0;
   switch (addr) {
   case TX_PING_TSR: return regs.tx_ping_tsr;
@@ -604,11 +468,11 @@ static uint32_t mac_read(paddr_t addr, int len) {
   case RX_PING ... RX_PING_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PONG ... RX_PONG_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PING_RSR:
-    recvlen = recv_data((u8 *)&regs.rx_ping, 0x500);
+    recvlen = nat_recv_data((u8 *)&regs.rx_ping, 0x500);
     if (recvlen > 0) { regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK; }
     return regs.rx_ping_rsr;
   case RX_PONG_RSR:
-    recvlen = recv_data((u8 *)&regs.rx_pong, 0x500);
+    recvlen = nat_recv_data((u8 *)&regs.rx_pong, 0x500);
     if (recvlen > 0) { regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK; }
     return regs.rx_pong_rsr;
   case MDIO_RD: return regs.mdiord;
@@ -620,7 +484,7 @@ static uint32_t mac_read(paddr_t addr, int len) {
   return 0;
 }
 
-static void mac_write(paddr_t addr, int len, uint32_t data) {
+static void elite_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
   case TX_PING_TSR:
     regs.tx_ping_tsr = data;
@@ -630,7 +494,7 @@ static void mac_write(paddr_t addr, int len, uint32_t data) {
         regs.tx_ping_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send ping packet */
-        send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
+        nat_send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
         regs.tx_ping_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }
@@ -643,7 +507,7 @@ static void mac_write(paddr_t addr, int len, uint32_t data) {
         regs.tx_pong_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send pong packet */
-        send_data((u8 *)&regs.tx_pong, regs.tx_pong_tplr);
+        nat_send_data((u8 *)&regs.tx_pong, regs.tx_pong_tplr);
         regs.tx_pong_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }
@@ -669,14 +533,14 @@ static void mac_write(paddr_t addr, int len, uint32_t data) {
   }
 }
 
-DEF_DEV(mac_dev) = {
+DEF_DEV(elite_dev) = {
     .name = "MAC",
     .start = MAC_ADDR,
     .end = MAC_ADDR + MAC_SIZE,
-    .init = mac_init,
-    .read = mac_read,
-    .peek = mac_read,
-    .write = mac_write,
+    .init = elite_init,
+    .read = elite_read,
+    .peek = elite_read,
+    .write = elite_write,
     .map = NULL,
 };
 #endif
