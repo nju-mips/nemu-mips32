@@ -167,8 +167,8 @@ void prepare_ulite_contents() {
 #if 0
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
 #else
-  p += sprintf(p, "set serverip 192.168.3.1\n");
-  p += sprintf(p, "set ipaddr 114.212.81.241\n");
+  p += sprintf(p, "set serverip 172.26.99.122\n");
+  p += sprintf(p, "set ipaddr 192.168.2.1\n");
   p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
   p += sprintf(p, "ping 127.0.0.1\n");
 #endif

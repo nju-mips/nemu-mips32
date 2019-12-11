@@ -413,7 +413,7 @@ static uint32_t elite_read(paddr_t addr, int len) {
   case MDIO_RD: return regs.mdiord;
   case MDIO_CTRL: return regs.mdioctrl;
   default:
-    CPUAssert(false, "mac: address(0x%08x) is not readable", addr);
+    CPUAssert(false, "elite: address(0x%08x) is not readable", addr);
     break;
   }
   return 0;
@@ -465,7 +465,7 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
   case MDIO_ADDR: regs.mdioaddr = data; break;
   case MDIO_WR: regs.mdiowr = data; break;
   default:
-    CPUAssert(false, "mac: address(0x%08x) is not writable", addr);
+    CPUAssert(false, "elite: address(0x%08x) is not writable", addr);
     break;
   }
 }

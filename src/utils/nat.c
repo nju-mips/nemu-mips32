@@ -2,6 +2,9 @@
 #  include <arpa/inet.h>
 #  include <net/if.h>
 #  include <netinet/ether.h>
+#  include <netinet/ip.h>
+#  include <netinet/tcp.h>
+#  include <netinet/udp.h>
 #  include <netpacket/packet.h>
 #  include <stdlib.h>
 #  include <string.h>
@@ -17,47 +20,34 @@ static pcap_handler pcap;
 
 static int iface_socket;
 static uint32_t iface_ip_addr;
-static uint32_t iface_mac_addr[ETHER_ADDR_LEN];
 static uint32_t eth_ip_addr;
-static uint8_t eth_mac_addr[ETHER_ADDR_LEN];
 static struct sockaddr_ll eth_sll;
 
-/* https://doc.dpdk.org/api-2.2/rte__ip_8h_source.html */
-struct ipv4_hdr {
-  uint8_t version_ihl;
-  uint8_t type_of_service;
-  uint16_t total_length;
-  uint16_t packet_id;
-  uint16_t fragment_offset;
-  uint8_t time_to_live;
-  uint8_t next_proto_id;
-  uint16_t hdr_checksum;
-  uint32_t src_addr;
-  uint32_t dst_addr;
+/* https://doc.dpdk.org/api-2.2/rte__ether_8h_source.html */
+struct ether_addr_t {
+  uint8_t addr_bytes[ETHER_ADDR_LEN];
 } __attribute__((__packed__));
 
-/* https://doc.dpdk.org/api-2.2/rte__tcp_8h_source.html */
-struct tcp_hdr {
-  uint16_t src_port;
-  uint16_t dst_port;
-  uint32_t sent_seq;
-  uint32_t recv_ack;
-  uint8_t data_off;
-  uint8_t tcp_flags;
-  uint16_t rx_win;
-  uint16_t cksum;
-  uint16_t tcp_urp;
-} __attribute__((__packed__));
+static uint8_t iface_mac_addr[ETHER_ADDR_LEN];
+static uint8_t eth_mac_addr[ETHER_ADDR_LEN];
 
-/* https://doc.dpdk.org/api-2.2/rte__udp_8h_source.html */
-struct udp_hdr {
-  uint16_t src_port;
-  uint16_t dst_port;
-  uint16_t dgram_len;
-  uint16_t dgram_cksum;
-} __attribute__((__packed__));
+/* /usr/include/netinet/ether.h */
+// struct ether_header;
+// struct ether_arp;
+/* /usr/include/netinet/ip.h */
+// struct iphdr
+/* /usr/include/netinet/tcp.h */
+// struct tcphdr
+/* /usr/include/netinet/udphdr.h */
+// struct udphdr
 
-// static uint32_t tcp_conns[256];
+struct nat_data_t {
+  uint16_t inner_port;
+  uint16_t outer_port;
+  uint32_t protocol; // TCP, UDP
+  int socket;
+  int conn;
+};
 
 static void ip_packet_modify_checksum(uint8_t *data, const int len) {
   uint32_t checksum = 0;
@@ -76,7 +66,7 @@ const char *ip_ntoa(uint32_t ip) {
 }
 
 void nat_bind_mac_addr(uint8_t mac_addr[ETHER_ADDR_LEN]) {
-  memcpy(eth_mac_addr, mac_addr, ETHER_ADDR_LEN);
+  memcpy(&eth_mac_addr, mac_addr, ETHER_ADDR_LEN);
 }
 
 void init_nat() {
@@ -116,32 +106,9 @@ void init_nat() {
   }
 }
 
-static void sender_modify_packet(uint8_t *data, const int len) {
-  /* copy the destination addr */
-  memcpy(&eth_sll.sll_addr, &data[0], ETHER_ADDR_LEN);
-  /* override the source addr */
-  memcpy(&data[ETHER_ADDR_LEN], iface_mac_addr, ETHER_ADDR_LEN);
-
-  int protocol = ntohs(*(uint16_t *)&data[12]);
-  switch (protocol) {
-  case ETH_P_IP: {
-    break;
-    memcpy(&data[0x1a], &iface_ip_addr, 4);
-    ip_packet_modify_checksum(data, len);
-  } break;
-  case ETH_P_ARP:
-    memcpy(&data[0x16], &iface_mac_addr, ETHER_ADDR_LEN);
-    memcpy(&eth_ip_addr, &data[0x1c], 4);
-    printf("set eth_ip_addr to %s\n", ip_ntoa(eth_ip_addr));
-    memcpy(&data[0x1c], &iface_ip_addr, 4);
-    break;
-  }
-  // eth_packet_modify_crc(data, len);
-}
-
 static void recver_modify_packet(uint8_t *data, const int len) {
   /* copy the eth addr */
-  memcpy(data, eth_mac_addr, ETHER_ADDR_LEN);
+  memcpy(data, &eth_mac_addr, ETHER_ADDR_LEN);
   /* 0x1a .. 0x1d is ip.src.ip, 0x1e .. 0x21 is ip.dst.ip */
   /* 0x16 .. 0x1b is arp.src.mac, 0x1c .. 0x1f is arp.src.ip */
   /* 0x20 .. 0x25 is arp.dst.mac, 0x26 .. 0x29 is arp.dst.ip */
@@ -158,24 +125,40 @@ static void recver_modify_packet(uint8_t *data, const int len) {
     memcpy(&data[0x26], &eth_ip_addr, 4);
     break;
   }
-  // eth_packet_modify_crc(data, len);
 }
 
-void nat_send_data(const uint8_t *data, const int len) {
-  static uint8_t eth_frame[2048];
-  assert(len < sizeof(eth_frame));
-  memcpy(eth_frame, data, len);
+void nat_send_data(const uint8_t *_data, const int len) {
+  static uint8_t data[2048];
+  assert(len < sizeof(data));
+  memcpy(data, _data, len);
 
   pcap_write(pcap, data, len);
   pcap_flush(pcap);
 
-  sender_modify_packet(eth_frame, len);
+  struct ether_header *ehdr = (void *)data;
+  memcpy(ehdr->ether_shost, iface_mac_addr, ETHER_ADDR_LEN);
 
-  eth_sll.sll_protocol = *(uint16_t *)&eth_frame[12];
-
-  /* send the eth_frame */
-  sendto(iface_socket, &eth_frame[0], len, 0, (struct sockaddr *)&eth_sll,
-      sizeof(eth_sll));
+  int protocol = ntohs(ehdr->ether_type);
+  switch (protocol) {
+  case ETH_P_IP: {
+    memcpy(&data[0x1a], &iface_ip_addr, 4);
+    ip_packet_modify_checksum(data, len);
+  } break;
+  case ETH_P_ARP: {
+    struct ether_arp *ahdr = (void *)data + sizeof(struct ether_header);
+    memcpy(&eth_sll.sll_addr, ehdr->ether_dhost, ETHER_ADDR_LEN);
+    memcpy(ahdr->arp_sha, &iface_mac_addr, ETHER_ADDR_LEN);
+    memcpy(&eth_ip_addr, ahdr->arp_sha, sizeof(eth_ip_addr));
+    memcpy(ahdr->arp_spa, &iface_ip_addr, sizeof(iface_ip_addr));
+    eth_sll.sll_protocol = protocol;
+    pcap_write(pcap, data, len);
+    pcap_flush(pcap);
+    /* send the data */
+    sendto(iface_socket, &data[0], len, 0, (struct sockaddr *)&eth_sll,
+        sizeof(eth_sll));
+  } break;
+  default: printf("unsupported protocol %d\n", protocol); break;
+  }
 }
 
 int nat_recv_data(uint8_t *to, const int maxlen) {
