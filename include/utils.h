@@ -37,6 +37,7 @@ typedef FILE *pcap_handler;
 pcap_handler pcap_open(const char *filename);
 int pcap_write(pcap_handler h, const void *data, const int len);
 void pcap_flush(pcap_handler h);
+int pcap_write_and_flush(pcap_handler h, const void *data, const int len);
 void pcap_close(pcap_handler h);
 
 void load_elf_symtab(const char *elf_file);
@@ -46,9 +47,9 @@ const char *find_symbol_by_addr(uint32_t addr);
 
 /* nat */
 void init_nat();
-void nat_bind_mac_addr(uint8_t mac_addr[6]);
-void nat_send_data(const uint8_t *data, const int len);
-int nat_recv_data(uint8_t *to, const int maxlen);
+void net_bind_mac_addr(uint8_t mac_addr[6]);
+void net_send_data(const uint8_t *data, const int len);
+int net_recv_data(uint8_t *to, const int maxlen);
 
 /* console control */
 void init_console();

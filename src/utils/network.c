@@ -77,7 +77,7 @@ const char *ip_ntoa(uint32_t ip) {
   return s;
 }
 
-void nat_bind_mac_addr(uint8_t mac_addr[ETHER_ADDR_LEN]) {
+void net_bind_mac_addr(uint8_t mac_addr[ETHER_ADDR_LEN]) {
   memcpy(&eth_mac_addr, mac_addr, ETHER_ADDR_LEN);
 }
 
@@ -138,7 +138,7 @@ static void recver_modify_packet(uint8_t *data, const int len) {
   }
 }
 
-void nat_ip_send_data(uint8_t *data, const int len) {
+void net_ip_send_data(uint8_t *data, const int len) {
 
   struct iphdr *iphdr = (void *)data + sizeof(struct ether_header);
   memcpy(&data[0x1a], &iface_ip_addr, 4);
@@ -160,13 +160,12 @@ end:
   ip_packet_fix_checksum(data, len);
 }
 
-void nat_send_data(const uint8_t *_data, const int len) {
+void net_send_data(const uint8_t *_data, const int len) {
   static uint8_t data[2048];
   assert(len < sizeof(data));
   memcpy(data, _data, len);
 
-  pcap_write(pcap, data, len);
-  pcap_flush(pcap);
+  pcap_write_and_flush(pcap, data, len);
 
   struct ether_header *ehdr = (void *)data;
   memcpy(ehdr->ether_shost, iface_mac_addr, ETHER_ADDR_LEN);
@@ -174,7 +173,7 @@ void nat_send_data(const uint8_t *_data, const int len) {
   int protocol = ntohs(ehdr->ether_type);
   switch (protocol) {
   case ETH_P_IP: {
-    nat_ip_send_data(data, len);
+    net_ip_send_data(data, len);
   } break;
   case ETH_P_ARP: {
     struct ether_arp *ahdr = (void *)data + sizeof(struct ether_header);
@@ -183,8 +182,7 @@ void nat_send_data(const uint8_t *_data, const int len) {
     memcpy(&eth_ip_addr, ahdr->arp_sha, sizeof(eth_ip_addr));
     memcpy(ahdr->arp_spa, &iface_ip_addr, sizeof(iface_ip_addr));
     eth_sll.sll_protocol = protocol;
-    pcap_write(pcap, data, len);
-    pcap_flush(pcap);
+    pcap_write_and_flush(pcap, data, len);
     /* send the data */
     sendto(iface_socket, &data[0], len, 0, (struct sockaddr *)&eth_sll,
         sizeof(eth_sll));
@@ -193,15 +191,13 @@ void nat_send_data(const uint8_t *_data, const int len) {
   }
 }
 
-int nat_recv_data(uint8_t *to, const int maxlen) {
+int net_recv_data(uint8_t *to, const int maxlen) {
   // printf("try receive data\n");
   int nbytes = recvfrom(iface_socket, to, maxlen, 0, NULL, NULL);
 
-  pcap_write(pcap, to, nbytes);
-  pcap_flush(pcap);
+  pcap_write_and_flush(pcap, to, nbytes);
   recver_modify_packet(to, nbytes);
-  pcap_write(pcap, to, nbytes);
-  pcap_flush(pcap);
+  pcap_write_and_flush(pcap, to, nbytes);
   return nbytes;
 }
 

@@ -403,11 +403,11 @@ static uint32_t elite_read(paddr_t addr, int len) {
   case RX_PING ... RX_PING_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PONG ... RX_PONG_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PING_RSR:
-    recvlen = nat_recv_data((u8 *)&regs.rx_ping, 0x500);
+    recvlen = net_recv_data((u8 *)&regs.rx_ping, 0x500);
     if (recvlen > 0) { regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK; }
     return regs.rx_ping_rsr;
   case RX_PONG_RSR:
-    recvlen = nat_recv_data((u8 *)&regs.rx_pong, 0x500);
+    recvlen = net_recv_data((u8 *)&regs.rx_pong, 0x500);
     if (recvlen > 0) { regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK; }
     return regs.rx_pong_rsr;
   case MDIO_RD: return regs.mdiord;
@@ -426,11 +426,11 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_ping_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_ping_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_ping, regs.tx_ping_tplr);
-        nat_bind_mac_addr(eth_mac_addr);
+        net_bind_mac_addr(eth_mac_addr);
         regs.tx_ping_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send ping packet */
-        nat_send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
+        net_send_data((u8 *)&regs.tx_ping, regs.tx_ping_tplr);
         regs.tx_ping_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }
@@ -440,11 +440,11 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_pong_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_pong_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_pong, regs.tx_pong_tplr);
-        nat_bind_mac_addr(eth_mac_addr);
+        net_bind_mac_addr(eth_mac_addr);
         regs.tx_pong_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send pong packet */
-        nat_send_data((u8 *)&regs.tx_pong, regs.tx_pong_tplr);
+        net_send_data((u8 *)&regs.tx_pong, regs.tx_pong_tplr);
         regs.tx_pong_tsr &= ~XEL_TSR_XMIT_BUSY_MASK;
       }
     }

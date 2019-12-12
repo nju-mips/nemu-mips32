@@ -14,6 +14,12 @@ pcap_handler pcap_open(const char *filename) {
   return fp;
 }
 
+int pcap_write_and_flush(pcap_handler h, const void *data, const int len) {
+  int ret = pcap_write(h, data, len);
+  pcap_flush(h);
+  return ret;
+}
+
 int pcap_write(pcap_handler h, const void *data, const int len) {
   static const int zeros[2] = {0, 0};
 
