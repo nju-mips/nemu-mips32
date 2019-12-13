@@ -1,13 +1,28 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdio.h>
-#include <stdint.h>
 #include <SDL/SDL.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#include <net/if.h>
+#include <netinet/ether.h>
 
 /* file */
 size_t get_file_size(const char *img_file);
 void *read_file(const char *filename);
+
+/* tap */
+int tap_create(char dev[IFNAMSIZ]);
+int tap_set_hwaddr(
+    int sockfd, const char *dev, const uint8_t ether_addr[ETHER_ADDR_LEN]);
+int tap_set_netmask(int sockfd, const char *dev, const uint32_t netmask);
+int tap_set_ipaddr(int sockfd, const char *dev, const uint32_t ipaddr);
+int tap_set_mtu(int sockfd, const char *dev, int mtu);
+int tap_set_up(int sockfd, const char *dev);
+int tap_set_down(int sockfd, const char *dev);
+int tap_set_attribute(const char *dev, const uint32_t ipaddr,
+    const uint8_t ether_addr[ETHER_ADDR_LEN], int mtu);
 
 /* pcap */
 #define PCAP_HEADER_MAGIC 0xa1b2cd34
@@ -16,12 +31,12 @@ void *read_file(const char *filename);
 #define PCAP_HEADER_LINKK_TYPE_ETH 0x1
 
 typedef struct {
-  uint32_t magic; /* 0x34cdb2a1 */
-  uint16_t major; /* 0x0200 */
-  uint16_t minor; /* 0x0400 */
-  uint32_t zone;  /* 00000 */
-  uint32_t sig_figs; /* 00000 */
-  uint32_t snap_len; /* 65535 */
+  uint32_t magic;     /* 0x34cdb2a1 */
+  uint16_t major;     /* 0x0200 */
+  uint16_t minor;     /* 0x0400 */
+  uint32_t zone;      /* 00000 */
+  uint32_t sig_figs;  /* 00000 */
+  uint32_t snap_len;  /* 65535 */
   uint32_t link_type; /* 1 for ethernet */
 } pcap_header_t;
 
@@ -46,8 +61,8 @@ uint32_t find_addr_of_symbol(const char *symbol);
 const char *find_symbol_by_addr(uint32_t addr);
 
 /* nat */
-void init_nat();
-void net_bind_mac_addr(uint8_t mac_addr[6]);
+void init_network();
+void net_bind_mac_addr(const uint8_t mac_addr[ETHER_ADDR_LEN]);
 void net_send_data(const uint8_t *data, const int len);
 int net_recv_data(uint8_t *to, const int maxlen);
 

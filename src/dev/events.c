@@ -121,7 +121,7 @@ void init_sdl() {
 
 void init_events() {
 #if CONFIG_NETWORK
-  init_nat();
+  init_network();
 #endif
 #if CONFIG_VGA
   init_sdl();

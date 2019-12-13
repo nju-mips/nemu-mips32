@@ -167,10 +167,12 @@ void prepare_ulite_contents() {
 #if 0
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
 #else
-  p += sprintf(p, "set serverip 172.26.99.122\n");
-  p += sprintf(p, "set ipaddr 192.168.2.1\n");
-  p += sprintf(p, "tftpboot litenes-mips32-npc.elf\n");
-  p += sprintf(p, "ping 127.0.0.1\n");
+  extern const char *iface_ipaddr, *iface_gw;
+  p += sprintf(p, "set serverip 114.212.81.121\n");
+  p += sprintf(p, "set gateway %s\n", iface_gw);
+  p += sprintf(p, "set ipaddr %s\n", iface_ipaddr);
+  p += sprintf(p, "tftpboot vmlinux\n");
+  p += sprintf(p, "ping 114.212.81.121\n");
 #endif
   assert (p < &cmd[sizeof(cmd)]);
   for (p = cmd; *p; p++) ulite_enqueue(*p);

@@ -133,13 +133,6 @@ void parse_args(int argc, char *argv[]) {
       else
         img_file = optarg;
       break;
-#if CONFIG_ETHERLITE
-    case 'I': {
-      extern char *eth_iface;
-      eth_iface = optarg;
-      printf("set eth_iface to %s\n", eth_iface);
-    } break;
-#endif
     case 'h':
     default: print_help(argv[0]); exit(0);
     }
