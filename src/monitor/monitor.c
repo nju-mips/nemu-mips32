@@ -8,8 +8,8 @@
 #include "monitor.h"
 #include "utils.h"
 
-char *elf_file = NULL;
-char *symbol_file = NULL;
+const char *elf_file = NULL;
+const char *symbol_file = NULL;
 static char *img_file = NULL;
 // static char *kernel_img = NULL;
 
@@ -29,7 +29,6 @@ void load_elf() {
   Assert(elf_file, "Need an elf file");
 
   /* set symbol file to elf_file */
-  symbol_file = elf_file;
   const uint32_t elf_magic = 0x464c457f;
 
   void *buf = read_file(elf_file);
@@ -76,8 +75,6 @@ static inline void assume_elf_file() {
   }
 }
 
-static void sigint_handler(int no) { nemu_state = NEMU_STOP; }
-
 const struct option long_options[] = {
     {"symbol", 1, NULL, 'S'},
     {"linux", 1, NULL, 'l'},
@@ -98,7 +95,7 @@ static void print_help(const char *file) {
   printf("\n");
   printf(
       "  -S, --symbol=FILE     use this file to produce "
-      "symbols\n");
+      "symbols, default to be same with elf\n");
   printf("  -u, --uImage=FILE     specify uImage file\n");
   printf("  -D, --diff-with-qemu  run diff tests with qemu\n");
   printf("  -b, --batch           run on batch mode\n");
@@ -137,7 +134,13 @@ void parse_args(int argc, char *argv[]) {
     default: print_help(argv[0]); exit(0);
     }
   }
+
+  if (!symbol_file) symbol_file = elf_file;
 }
+
+static void gdb_sigint_handler(int sig) { nemu_state = NEMU_STOP; }
+
+static void batch_sigint_handler(int sig) { nemu_exit(); }
 
 work_mode_t init_monitor(void) {
   /* Load the image to memory. */
@@ -147,7 +150,10 @@ work_mode_t init_monitor(void) {
     load_image(img_file, CPU_INIT_PC);
   }
 
-  if (!(work_mode & MODE_BATCH)) signal(SIGINT, sigint_handler);
+  if (!(work_mode & MODE_BATCH))
+    signal(SIGINT, gdb_sigint_handler);
+  else
+    signal(SIGINT, batch_sigint_handler);
 
 #if CONFIG_PRELOAD_LINUX
   load_image(CONFIG_KERNEL_UIMAGE_PATH, CONFIG_KERNEL_UIMAGE_BASE);

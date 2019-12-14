@@ -383,6 +383,7 @@ void nemu_exit() {
 #endif
 
   /* print_instr_queue(); */
+  print_frames();
 
   exit(0);
 }
