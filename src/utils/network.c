@@ -112,7 +112,7 @@ static void init_tap() {
   int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   tap_set_down(sockfd, iface_dev);
   tap_set_ipaddr(sockfd, iface_dev, inet_addr(iface_gw));
-  tap_set_mtu(sockfd, iface_dev, 510);
+  // tap_set_mtu(sockfd, iface_dev, 500 * 4); // for etherlite, 2000
   tap_set_up(sockfd, iface_dev);
   close(sockfd);
   // iptables_add_route(iface_ipaddr);
@@ -144,26 +144,20 @@ void net_send_data(const uint8_t *data, const int len) {
 }
 
 int net_recv_data(uint8_t *to, const int maxlen) {
-  uint32_t ip = inet_addr(iface_ipaddr);
-  while (1) {
-    int nbytes = read(iface_fd, to, maxlen);
-    if (nbytes < 0) continue;
+  uint64_t get_current_time();
+  // ioctl(iface_fd, FIONREAD, &nbytes);
+  int nbytes = read(iface_fd, to, maxlen);
+  pcap_write_and_flush(pcap, to, nbytes);
+  return nbytes;
 
+#  if 0
+    uint32_t ip = inet_addr(iface_ipaddr);
     struct ether_header *ehdr = (void *)to;
     if (ntohs(ehdr->ether_type) == ETH_P_IP) {
       struct iphdr *iphdr = (void *)to + sizeof(struct ether_header);
-      // printf("%08x, %08x, %08x\n", iphdr->daddr, ntohl(iphdr->daddr), ip);
-      if (iphdr->daddr != ip) {
-        // pcap_write_and_flush(pcap, to, nbytes);
-        // continue;
-      }
+      if (iphdr->daddr != ip) { continue; }
     }
-
-    pcap_write_and_flush(pcap, to, nbytes);
-    perror("read");
-    return nbytes;
-  }
-  return -1;
+#  endif
 }
 
 #endif

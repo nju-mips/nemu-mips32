@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <sys/time.h>
 
 #include "utils.h"
 
@@ -23,9 +24,12 @@ int pcap_write_and_flush(pcap_handler h, const void *data, const int len) {
 int pcap_write(pcap_handler h, const void *data, const int len) {
   static const int zeros[2] = {0, 0};
 
+  struct timeval t;
+  gettimeofday(&t, NULL);
+
   pcap_packet_header_t header = {0};
-  header.timestamp_hi = 0;
-  header.timestamp_lo = 0;
+  header.timestamp_hi = t.tv_sec;
+  header.timestamp_lo = t.tv_usec;
   header.caplen = len;
   header.len = len;
 
