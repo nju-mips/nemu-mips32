@@ -164,7 +164,7 @@ void prepare_ulite_contents() {
   /* send command to uboot */
 #if CONFIG_PRELOAD_LINUX
   char cmd[512], *p = cmd;
-#if 0
+#if 1
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
 #else
   extern const char *iface_ipaddr, *iface_gw;

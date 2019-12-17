@@ -126,5 +126,5 @@ const char *find_symbol_by_addr(uint32_t addr) {
     assert(st_name < elf_strtab_size);
     return elf_strtab + st_name;
   }
-  return "";
+  return "?";
 }

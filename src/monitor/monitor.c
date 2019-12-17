@@ -16,6 +16,8 @@ static char *img_file = NULL;
 vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
 
+void load_elf_symtab(const char *elf_file);
+
 void load_rom(uint32_t entry) {
   uint32_t *p = vaddr_map(CPU_INIT_PC, 16);
   assert(p);
@@ -149,6 +151,8 @@ work_mode_t init_monitor(void) {
   } else {
     load_image(img_file, CPU_INIT_PC);
   }
+
+  if (symbol_file) load_elf_symtab(symbol_file);
 
   if (!(work_mode & MODE_BATCH))
     signal(SIGINT, gdb_sigint_handler);

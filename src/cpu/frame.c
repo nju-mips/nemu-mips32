@@ -30,17 +30,7 @@ void frames_enqueue_ret(vaddr_t pc, vaddr_t target) {
   pc_ptr = (pc_ptr + 1) % NR_FRAMES;
 }
 
-static void prepare_symbols() {
-  static bool prepared = false;
-  if (!prepared) {
-    extern const char *symbol_file;
-    load_elf_symtab(symbol_file);
-  }
-}
-
 void print_frames(void) {
-  prepare_symbols();
-
   eprintf("last collected %ld frames:\n", NR_FRAMES);
   int i = pc_ptr;
   do {
@@ -61,8 +51,6 @@ void print_frames(void) {
 }
 
 void print_backtrace() {
-  prepare_symbols();
-
 #define NR_BACKTRACE 100
   static uint32_t backtraces[NR_BACKTRACE];
   uint32_t top = 0;
