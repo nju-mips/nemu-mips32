@@ -10,7 +10,7 @@ struct frame_t {
 };
 
 static int pc_ptr = 0;
-static struct frame_t frames[4000000];
+static struct frame_t frames[400];
 
 #define NR_FRAMES (sizeof(frames) / sizeof(frames[0]))
 
