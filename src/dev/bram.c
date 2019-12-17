@@ -21,7 +21,7 @@ static void bram_write(paddr_t addr, int len, uint32_t data) {
 }
 
 DEF_DEV(bram_dev) = {
-    .name = "BRAM",
+    .name = "block-ram",
     .start = CONFIG_BRAM_BASE,
     .end = CONFIG_BRAM_BASE + BRAM_SIZE,
     .read = bram_read,

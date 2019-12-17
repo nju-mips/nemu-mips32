@@ -6,12 +6,12 @@ choice
 
 config MARCH_BENCH
   bool "optimized for microbench"
-  select GPIO
-  select UARTLITE
-  select RTC
+  select NEMU_TRAP
+  select XLNX_ULITE
+  select NEMU_CLOCK
   select BRAM
   select DDR
-  select VGA_CONTROLLER
+  select NEMU_VGA_CTRL
   select MMU_CACHE
   select DECODE_CACHE
 
@@ -21,8 +21,8 @@ config MARCH_MIPS32_R1
   select EXCEPTION
   select PAGING
   select INTR
-  select GPIO
-  select UARTLITE
+  select NEMU_TRAP
+  select XLNX_ULITE
   select BRAM
   select DDR
 
@@ -31,8 +31,8 @@ config MARCH_LOONGSON
   select DELAYSLOT
   select EXCEPTION
   select PAGING
-  select GPIO
-  select UARTLITE
+  select NEMU_TRAP
+  select XLNX_ULITE
   select BRAM
   select DDR
 
@@ -41,15 +41,15 @@ config MARCH_NOOP
   select DELAYSLOT
   select EXCEPTION
   select PAGING
-  select GPIO
-  select RTC
-  select UARTLITE
+  select NEMU_TRAP
+  select NEMU_CLOCK
+  select XLNX_ULITE
   select BRAM
   select DDR
-  select VGA
-  select VGA_CONTROLLER
-  select PERF_COUNTER
-  select KEYBOARD
+  select NEMU_VGA
+  select NEMU_VGA_CTRL
+  select NEMU_PMU
+  select NEMU_KEYBOARD
 
 endchoice
 
@@ -166,91 +166,92 @@ config DDR_BASE
   depends on DDR=y
   default 0x00000000
 
-menuconfig GPIO
-  bool "General purpose IO (nemu_trap)"
+menuconfig NEMU_TRAP
+  bool "nemu trap"
 
-config GPIO_BASE
-  hex "address of GPIO"
+config NEMU_TRAP_BASE
+  hex "address of nemu trap"
   range 0x00000000 0x20000000
-  depends on GPIO=y
+  depends on NEMU_TRAP=y
   default 0x10000000
 
-menuconfig KEYBOARD
-  bool "PS/2 Keyboard"
+menuconfig NEMU_KEYBOARD
+  bool "nemu keyboard"
 
-config KEYBOARD_BASE
-  hex "address of keyboard"
+config NEMU_KEYBOARD_BASE
+  hex "address of nemu keyboard"
   range 0x00000000 0x20000000
-  depends on KEYBOARD=y
+  depends on NEMU_KEYBOARD=y
   default 0x1fe94000
+
+menuconfig NEMU_PMU
+  bool "nemu pmu (for compatibility)"
+
+config NEMU_PMU_BASE
+  hex "address of nemu pmu"
+  range 0x00000000 0x20000000
+  depends on NEMU_PMU=y
+  default 0x1fe95000
+
+menuconfig NEMU_CLOCK
+  bool "nemu clock"
+
+config NEMU_CLOCK_BASE
+  hex "address of nemu clock"
+  range 0x00000000 0x20000000
+  depends on NEMU_CLOCK=y
+  default 0x10002000
+
+menuconfig NEMU_VGA
+  bool "nemu vga"
+  select NEMU_VGA_CTRL
+
+config NEMU_VGA_BASE
+  hex "address of nemu vga"
+  range 0x00000000 0x20000000
+  depends on NEMU_VGA=y
+  default 0x10400000
+
+config NEMU_VGA_CTRL
+  bool "nemu vga controller"
+  depends on NEMU_VGA=y
+
+config NEMU_VGA_CTRL_BASE
+  hex "address of nemu vga controller"
+  range 0x00000000 0x20000000
+  depends on NEMU_VGA_CTRL=y
+  default 0x10003000
+
+menuconfig XLNX_ULITE
+  bool "Xilinx Uartlite device"
+
+config XLNX_ULITE_BASE
+  hex "address of uartlite"
+  range 0x00000000 0x20000000
+  depends on XLNX_ULITE=y
+  default 0x1fe50000
+
+menuconfig XLNX_SPI
+  bool "Xilinx spi device"
+
+config XLNX_SPI_BASE
+  hex "address of spi"
+  range 0x00000000 0x20000000
+  depends on XLNX_SPI=y
+  default 0x1fe80000
 
 menuconfig NETWORK
   bool "network simulation"
 
-config ETHERLITE
-  bool "Xilinx Etherlite"
+config XLNX_ELITE
+  bool "xilinx etherlite"
   depends on NETWORK
 
-config ETHERLITE_BASE
-  hex "address of Xilinx Etherlite"
+config XLNX_ELITE_BASE
+  hex "address of xilinx etherlite"
   range 0x00000000 0x20000000
-  depends on ETHERLITE=y
+  depends on XLNX_ELITE=y
   default 0x1ff00000
 
-menuconfig PERF_COUNTER
-  bool "Performance counter (for compatibility)"
-
-config PERF_COUNTER_BASE
-  hex "address of Performance Counter"
-  range 0x00000000 0x20000000
-  depends on PERF_COUNTER=y
-  default 0x1fe95000
-
-menuconfig RTC
-  bool "Real Time Clock (ns)"
-
-config RTC_BASE
-  hex "address of RTC"
-  range 0x00000000 0x20000000
-  depends on RTC=y
-  default 0x10002000
-
-menuconfig VGA
-  bool "VGA"
-  select VGA_CONTROLLER
-
-config VGA_BASE
-  hex "address of VMEM"
-  range 0x00000000 0x20000000
-  depends on VGA=y
-  default 0x10400000
-
-config VGA_CONTROLLER
-  bool "VGA controller"
-  depends on VGA=y
-
-config VGA_CONTROLLER_BASE
-  hex "address of VGA controller"
-  range 0x00000000 0x20000000
-  depends on VGA_CONTROLLER=y
-  default 0x10003000
-
-menuconfig UARTLITE
-  bool "Xilinx Uartlite device"
-
-config UARTLITE_BASE
-  hex "address of uartlite"
-  range 0x00000000 0x20000000
-  depends on UARTLITE=y
-  default 0x1fe50000
-
-menuconfig XILINX_SPI
-  bool "Xilinx spi device"
-
-config XILINX_SPI_BASE
-  hex "address of spi"
-  range 0x00000000 0x20000000
-  depends on XILINX_SPI=y
-  default 0x1fe80000
 
 endmenu

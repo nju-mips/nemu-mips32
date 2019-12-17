@@ -11,8 +11,7 @@
 #include "utils.h"
 
 // emaclite
-#define MAC_ADDR CONFIG_ETHERLITE_BASE
-#define MAC_SIZE 0x10000
+#define XLNX_ELITE_SIZE 0x10000
 
 /* emaclite protocol */
 #define ENET_ADDR_LENGTH 6
@@ -350,7 +349,7 @@ static void eth_packet_modify_crc(u8 *data, const int len) {
 }
 #endif
 
-static void elite_init() {
+static void xlnx_elite_init() {
   /* init phy regs */
   phy_regs[ACTIVE_PHY][MII_PHYSID1] = 0x181;
   phy_regs[ACTIVE_PHY][MII_PHYSID2] = 0xb8a0;
@@ -393,7 +392,7 @@ static void mii_transaction() {
   }
 }
 
-static uint32_t elite_read(paddr_t addr, int len) {
+static uint32_t xlnx_elite_read(paddr_t addr, int len) {
   int recvlen = 0;
   switch (addr) {
   case TX_PING_TSR: return regs.tx_ping_tsr;
@@ -417,7 +416,7 @@ static uint32_t elite_read(paddr_t addr, int len) {
   return 0;
 }
 
-static void elite_write(paddr_t addr, int len, uint32_t data) {
+static void xlnx_elite_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
   case TX_PING_TSR:
     regs.tx_ping_tsr = data;
@@ -468,13 +467,13 @@ static void elite_write(paddr_t addr, int len, uint32_t data) {
   }
 }
 
-DEF_DEV(elite_dev) = {
-    .name = "MAC",
-    .start = MAC_ADDR,
-    .end = MAC_ADDR + MAC_SIZE,
-    .init = elite_init,
-    .read = elite_read,
-    .peek = elite_read,
-    .write = elite_write,
+DEF_DEV(xlnx_elite_dev) = {
+    .name = "xilinx-etherlite",
+    .start = CONFIG_XLNX_ELITE_BASE,
+    .end = CONFIG_XLNX_ELITE_BASE + XLNX_ELITE_SIZE,
+    .init = xlnx_elite_init,
+    .read = xlnx_elite_read,
+    .peek = xlnx_elite_read,
+    .write = xlnx_elite_write,
     .map = NULL,
 };

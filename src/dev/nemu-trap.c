@@ -3,9 +3,9 @@
 #include "device.h"
 #include "monitor.h"
 
-#define GPIO_SIZE 0x1000
+#define NEMU_TRAP_SIZE 0x1000
 
-static void gpio_write(paddr_t addr, int len, uint32_t data) {
+static void nemu_trap_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, len, 4, "GPIO.write");
   if (data == 0) {
     eprintf(ANSI_WIDTHOR_GREEN "HIT GOOD TRAP\n" ANSI_WIDTHOR_RESET);
@@ -20,9 +20,9 @@ static void gpio_write(paddr_t addr, int len, uint32_t data) {
   if (work_mode & MODE_BATCH) nemu_exit();
 }
 
-DEF_DEV(gpio_dev) = {
-    .name = "GPIO",
-    .start = CONFIG_GPIO_BASE,
-    .end = CONFIG_GPIO_BASE + GPIO_SIZE,
-    .write = gpio_write,
+DEF_DEV(nemu_trap_dev) = {
+    .name = "nemu-trap",
+    .start = CONFIG_NEMU_TRAP_BASE,
+    .end = CONFIG_NEMU_TRAP_BASE + NEMU_TRAP_SIZE,
+    .write = nemu_trap_write,
 };

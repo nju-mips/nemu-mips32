@@ -33,20 +33,20 @@ cfiles-y += src/dev/register.c
 cfiles-y += src/dev/black_hole.c
 cfiles-$(CONFIG_BRAM) += src/dev/bram.c
 cfiles-$(CONFIG_DDR) += src/dev/ddr.c
-cfiles-$(CONFIG_GPIO) += src/dev/gpio.c
-cfiles-$(CONFIG_KEYBOARD) += src/dev/keyboard.c
-cfiles-$(CONFIG_RTC) += src/dev/rtc.c
-cfiles-$(CONFIG_PERF_COUNTER) += src/dev/perf.c
-cfiles-$(CONFIG_VGA_CONTROLLER) += src/dev/screen.c
-cfiles-$(CONFIG_VGA) += src/dev/vga.c
-cfiles-$(CONFIG_UARTLITE) += src/dev/uartlite.c
-cfiles-$(CONFIG_ETHERLITE) += src/dev/etherlite.c
-cfiles-$(CONFIG_XILINX_SPI) += src/dev/xilinx-spi.c
+cfiles-$(CONFIG_NEMU_TRAP) += src/dev/nemu-trap.c
+cfiles-$(CONFIG_NEMU_KEYBOARD) += src/dev/nemu-keyboard.c
+cfiles-$(CONFIG_NEMU_CLOCK) += src/dev/nemu-clock.c
+cfiles-$(CONFIG_NEMU_PMU) += src/dev/nemu-pmu.c
+cfiles-$(CONFIG_NEMU_VGA_CTRL) += src/dev/nemu-vga-ctrl.c
+cfiles-$(CONFIG_NEMU_VGA) += src/dev/nemu-vga.c
+cfiles-$(CONFIG_XLNX_ULITE) += src/dev/xlnx-ulite.c
+cfiles-$(CONFIG_XLNX_ELITE) += src/dev/xlnx-elite.c
+cfiles-$(CONFIG_XLNX_SPI) += src/dev/xlnx-spi.c
 
 OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 
 # Compilation patterns
-$(OBJ_DIR)/%.o: src/%.c Makefile prepare
+$(OBJ_DIR)/%.o: src/%.c Makefile $(config-dep)
 	@echo + CC $<
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c -o $@ $<

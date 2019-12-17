@@ -92,36 +92,36 @@ struct xilinx_spi_regs {
   u32 spirfor; /* SPI Receive FIFO Occupancy Register (SPIRFOR) */
 };
 
-static struct xilinx_spi_regs spi_regs;
+static struct xilinx_spi_regs xlnx_spi_regs;
 
-static void spi_init(const char *filename) {
+static void xlnx_spi_init(const char *filename) {
 #if 0
   int fd = open(filename, O_RDONLY);
 
-  spi_regs.spicr = 0x180;
-  spi_regs.spisr = 0x25;
+  xlnx_spi_regs.spicr = 0x180;
+  xlnx_spi_regs.spisr = 0x25;
 #endif
 }
 
-static uint32_t spi_read(paddr_t addr, int len) {
+static uint32_t xlnx_spi_read(paddr_t addr, int len) {
   check_ioaddr(addr, len, SPI_SIZE, "spi.read");
   return 0;
 }
 
-static void spi_write(paddr_t addr, int len, uint32_t data) {
+static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
   switch (addr) {
-  case SRR: spi_regs.srr = data; break;
-  case SPICR: spi_regs.spicr = data; break;
-  case SPIDTR: spi_regs.spidtr = data; break; // data transfer
-  case SPISSR: spi_regs.spissr = data; break;
+  case SRR: xlnx_spi_regs.srr = data; break;
+  case SPICR: xlnx_spi_regs.spicr = data; break;
+  case SPIDTR: xlnx_spi_regs.spidtr = data; break; // data transfer
+  case SPISSR: xlnx_spi_regs.spissr = data; break;
   }
 }
 
-DEF_DEV(spi_dev) = {
+DEF_DEV(xlnx_spi_dev) = {
     .name = "xilinx-spi",
-    .start = CONFIG_XILINX_SPI_BASE,
-    .end = CONFIG_XILINX_SPI_BASE + SPI_SIZE,
-    .init = spi_init,
-    .read = spi_read,
-    .write = spi_write,
+    .start = CONFIG_XLNX_SPI_BASE,
+    .end = CONFIG_XLNX_SPI_BASE + SPI_SIZE,
+    .init = xlnx_spi_init,
+    .read = xlnx_spi_read,
+    .write = xlnx_spi_write,
 };

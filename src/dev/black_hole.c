@@ -9,7 +9,7 @@ static uint32_t blackhole_read(paddr_t addr, int len) { return 0; }
 static void blackhole_write(paddr_t addr, int len, uint32_t data) { return; }
 
 DEF_DEV(blackhole_dev) = {
-    .name = "<BAD>",
+    .name = "<nemu-tlb-hole>",
     .start = BLACKHOLE_ADDR,
     .end = BLACKHOLE_ADDR + BLACKHOLE_SIZE,
     .read = blackhole_read,

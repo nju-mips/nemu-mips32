@@ -22,7 +22,7 @@ static void ddr_write(paddr_t addr, int len, uint32_t data) {
 }
 
 DEF_DEV(ddr_dev) = {
-    .name = "DDR",
+    .name = "ddr",
     .start = CONFIG_DDR_BASE,
     .end = CONFIG_DDR_BASE + DDR_SIZE,
     .read = ddr_read,

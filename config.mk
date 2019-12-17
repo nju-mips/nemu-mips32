@@ -1,26 +1,27 @@
-.PHONY: app clean prepare
+.PHONY: app clean prepare menuconfig
 
 AUTO_CONF := include/config/auto.conf
 AUTOCONF_H := include/generated/autoconf.h
+_CONFIG := .config
 -include $(AUTO_CONF)
 
-CONF := menuconfig/conf
-MCONF := menuconfig/mconf
+CONF := kconfig/conf
+MCONF := kconfig/mconf
 $(CONF) $(MCONF):
 	@cd $(@D) && make -s $(@F)
 
 ifeq ($(wildcard $(AUTO_CONF)),)
+config-dep := prepare
 prepare: $(AUTO_CONF)
 	@make $(MAKEGOALS)
 else
-prepare: $(AUTO_CONF) $(AUTOCONF_H)
-	@echo + .config
+config-dep := $(AUTO_CONF) $(AUTOCONF_H)
 endif
 
-$(AUTO_CONF): $(CONF)
+$(AUTO_CONF) $(AUTOCONF_H): $(_CONFIG) $(CONF)
 	@$(CONF) --syncconfig ./Kconfig
 
-menuconfig:
+menuconfig: $(MCONF)
 	@$(MCONF) ./Kconfig
 
 %_defconfig:
