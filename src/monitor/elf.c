@@ -113,7 +113,7 @@ const char *find_symbol_by_addr(uint32_t addr) {
   extern const char *symbol_file;
   bool is_uboot = strstr(symbol_file, "u-boot");
   if (is_uboot && addr < 0xbfc00000)
-    addr = addr - 0x87f80000 + 0xbfc00000;
+    addr = addr - 0x87f70000 + 0xbfc00000;
 #endif
   for (int i = 0; i < nr_symtab_entry; i++) {
     bool addr_in_range = elf_symtab[i].st_value <= addr &&
