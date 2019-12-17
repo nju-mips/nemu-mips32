@@ -1,7 +1,6 @@
-#if CONFIG_VGA_CONTROLLER
-#  include <SDL/SDL.h>
+#include <SDL/SDL.h>
 
-#  include "device.h"
+#include "device.h"
 
 extern SDL_Surface *screen;
 
@@ -25,4 +24,3 @@ DEF_DEV(screen_dev) = {
     .read = screen_read,
     .write = screen_write,
 };
-#endif

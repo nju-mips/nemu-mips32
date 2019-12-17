@@ -1,33 +1,32 @@
-#if CONFIG_UARTLITE
-#  include <SDL/SDL.h>
-#  include <stdbool.h>
+#include <SDL/SDL.h>
+#include <stdbool.h>
 
-#  include "device.h"
-#  include "events.h"
+#include "device.h"
+#include "events.h"
 
 // UART
-#  define Rx 0x0
-#  define Tx 0x4
-#  define STAT 0x8
-#  define CTRL 0xC
-#  define ULITE_SIZE 0x10
+#define Rx 0x0
+#define Tx 0x4
+#define STAT 0x8
+#define CTRL 0xC
+#define ULITE_SIZE 0x10
 
-#  define ULITE_IRQ_NO 4
+#define ULITE_IRQ_NO 4
 
-#  define SR_CTRL_INTR_BIT (1 << 4)
+#define SR_CTRL_INTR_BIT (1 << 4)
 
 /* status */
-#  define SR_TX_FIFO_FULL (1 << 3)       /* transmit FIFO full */
-#  define SR_TX_FIFO_EMPTY (1 << 2)      /* transmit FIFO empty  */
-#  define SR_RX_FIFO_VALID_DATA (1 << 0) /* data in receive FIFO */
-#  define SR_RX_FIFO_FULL (1 << 1)       /* receive FIFO full */
+#define SR_TX_FIFO_FULL (1 << 3)       /* transmit FIFO full */
+#define SR_TX_FIFO_EMPTY (1 << 2)      /* transmit FIFO empty  */
+#define SR_RX_FIFO_VALID_DATA (1 << 0) /* data in receive FIFO */
+#define SR_RX_FIFO_FULL (1 << 1)       /* receive FIFO full */
 
 /* ctrl */
-#  define ULITE_CONTROL_RST_TX 0x01
-#  define ULITE_CONTROL_RST_RX 0x02
+#define ULITE_CONTROL_RST_TX 0x01
+#define ULITE_CONTROL_RST_RX 0x02
 
 /* ulite queue */
-#  define ULITE_QUEUE_LEN 1024
+#define ULITE_QUEUE_LEN 1024
 static int ulite_queue[ULITE_QUEUE_LEN];
 static int ulite_f = 0, ulite_r = 0;
 
@@ -63,9 +62,9 @@ static const char *ulite_stop_string = NULL;
 static const char *ulite_stop_string_ptr = NULL;
 
 void ulite_set_irq() {
-#  if CONFIG_INTR
+#if CONFIG_INTR
   if (ulite_intr_enabled) { set_irq(ULITE_IRQ_NO); }
-#  endif
+#endif
 }
 
 void stop_cpu_when_ulite_send(const char *string) {
@@ -164,17 +163,17 @@ void prepare_ulite_contents() {
   /* send command to uboot */
 #if CONFIG_PRELOAD_LINUX
   char cmd[512], *p = cmd;
-#if 1
+#  if 1
   p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
-#else
+#  else
   extern const char *iface_ipaddr, *iface_gw;
   p += sprintf(p, "set serverip 114.212.81.121\n");
   p += sprintf(p, "set gateway %s\n", iface_gw);
   p += sprintf(p, "set ipaddr %s\n", iface_ipaddr);
   p += sprintf(p, "tftpboot vmlinux\n");
   p += sprintf(p, "ping 114.212.81.121\n");
-#endif
-  assert (p < &cmd[sizeof(cmd)]);
+#  endif
+  assert(p < &cmd[sizeof(cmd)]);
   for (p = cmd; *p; p++) ulite_enqueue(*p);
 #endif
 }
@@ -185,5 +184,3 @@ static void ulite_init() {
   event_add_handler(EVENT_STDIN_DATA, ulite_on_data);
   prepare_ulite_contents();
 }
-
-#endif

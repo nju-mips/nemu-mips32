@@ -7,43 +7,46 @@ SHARED ?= $(BUILD_DIR)/$(NAME).a
 
 .DEFAULT_GOAL = app
 
+-include config.mk
+-include linux.mk
+
 # Compilation flags
 CC = gcc
 LD = gcc
 AR = ar
-MCONF := menuconfig/mconf
-CONF := menuconfig/conf
-CONFIG := ./.config
-AUTOCONF_H := include/generated/autoconf.h
 INCLUDES  = $(addprefix -I, $(INC_DIR))
 CFLAGS   += -O2 -MMD -Wall -Werror -ggdb -fno-strict-aliasing $(INCLUDES)
-CFLAGS   += -include $(AUTOCONF_H)
-
-UBOOT_HOME := $(abspath ../uboot)
-BUSYBOX_HOME := $(shell echo ~)/busybox-1.20.1
-export KERNEL_HOME := $(shell echo ~)/linux-noop-4.11.4
+CFLAGS   += -include include/generated/autoconf.h
 # CFLAGS   += -fsanitize=undefined
 
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
-OBJS = $(SRCS:src/%.c=$(OBJ_DIR)/%.o)
 
-$(MCONF):
-	@cd $(@D) && make -s mconf
+libs-y += src/cpu/
+libs-y += src/monitor/
+libs-y += src/utils/
 
-$(CONF):
-	@cd $(@D) && make -s conf
+cfiles-y += $(shell find $(libs-y) -name "*.c")
+cfiles-y += src/main.c
+cfiles-y += src/dev/events.c
+cfiles-y += src/dev/register.c
+cfiles-y += src/dev/black_hole.c
+cfiles-$(CONFIG_BRAM) += src/dev/bram.c
+cfiles-$(CONFIG_DDR) += src/dev/ddr.c
+cfiles-$(CONFIG_GPIO) += src/dev/gpio.c
+cfiles-$(CONFIG_KEYBOARD) += src/dev/keyboard.c
+cfiles-$(CONFIG_RTC) += src/dev/rtc.c
+cfiles-$(CONFIG_PERF_COUNTER) += src/dev/perf.c
+cfiles-$(CONFIG_VGA_CONTROLLER) += src/dev/screen.c
+cfiles-$(CONFIG_VGA) += src/dev/vga.c
+cfiles-$(CONFIG_UARTLITE) += src/dev/uartlite.c
+cfiles-$(CONFIG_ETHERLITE) += src/dev/etherlite.c
+cfiles-$(CONFIG_XILINX_SPI) += src/dev/xilinx-spi.c
 
-$(CONFIG): $(CONF) Kconfig
-	@echo + GEN $@
-	@$(CONF) --syncconfig ./Kconfig
-
-$(AUTOCONF_H): $(CONFIG)
-	@echo + GEN $@
-	@$(CONF) --syncconfig ./Kconfig
+OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 
 # Compilation patterns
-$(OBJ_DIR)/%.o: src/%.c Makefile $(AUTOCONF_H)
+$(OBJ_DIR)/%.o: src/%.c Makefile prepare
 	@echo + CC $<
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c -o $@ $<
@@ -53,7 +56,7 @@ $(OBJ_DIR)/%.o: src/%.c Makefile $(AUTOCONF_H)
 
 # Some convinient rules
 
-.PHONY: app clean menuconfig
+.PHONY: app clean
 app: $(BINARY) $(SHARED)
 
 $(BINARY): $(OBJS)
@@ -67,27 +70,3 @@ $(SHARED): $(OBJS)
 clean: 
 	rm -rf $(BUILD_DIR) perf.*
 	rm -rf include/generated include/config
-
-menuconfig: $(MCONF)
-	@$(MCONF) ./Kconfig
-
-%_defconfig:
-	@cp configs/$@ ./.config
-
-
-.PHONY: busybox linux initramfs uImage run-linux
-
-busybox:
-	make -s -C $(BUSYBOX_HOME) ARCH=mips CROSS_COMPILE=mipsel-linux-gnu- -j32
-	cp $(BUSYBOX_HOME)/busybox ../initramfs/root/bin/busybox
-
-initramfs:
-	make -s -C ../initramfs
-
-linux:
-	make -C $(KERNEL_HOME) ARCH=mips CROSS_COMPILE=mips-linux-gnu- -j32 uImage
-
-# uImage: busybox initramfs linux
-
-run-linux:
-	build/nemu -b -e $(UBOOT_HOME)/u-boot

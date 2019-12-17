@@ -1,8 +1,7 @@
-#ifdef CONFIG_BRAM
-#  include "device.h"
+#include "device.h"
 
 // block ram
-#  define BRAM_SIZE (1024 * 1024)
+#define BRAM_SIZE (1024 * 1024)
 
 static uint8_t bram[BRAM_SIZE];
 
@@ -30,4 +29,3 @@ DEF_DEV(bram_dev) = {
     .map = bram_map,
     .peek = bram_read,
 };
-#endif

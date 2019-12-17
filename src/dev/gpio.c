@@ -1,10 +1,9 @@
-#if CONFIG_GPIO
-#  include <stdlib.h>
+#include <stdlib.h>
 
-#  include "device.h"
-#  include "monitor.h"
+#include "device.h"
+#include "monitor.h"
 
-#  define GPIO_SIZE 0x1000
+#define GPIO_SIZE 0x1000
 
 static void gpio_write(paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, len, 4, "GPIO.write");
@@ -27,4 +26,3 @@ DEF_DEV(gpio_dev) = {
     .end = CONFIG_GPIO_BASE + GPIO_SIZE,
     .write = gpio_write,
 };
-#endif

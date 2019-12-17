@@ -1,21 +1,20 @@
-#if CONFIG_KEYBOARD
-#  include <SDL/SDL.h>
-#  include <stdbool.h>
+#include <SDL/SDL.h>
+#include <stdbool.h>
 
-#  include "device.h"
-#  include "events.h"
-#  include "utils.h"
+#include "device.h"
+#include "events.h"
+#include "utils.h"
 
-#  define KB_ADDR 0x1fe94000
-#  define KB_CODE 0x0
-#  define KB_STAT 0x4
-#  define KB_SIZE 0x10
+#define KB_ADDR 0x1fe94000
+#define KB_CODE 0x0
+#define KB_STAT 0x4
+#define KB_SIZE 0x10
 
 /////////////////////////////////////////////////////////////////
 //                     kb simulation //
 /////////////////////////////////////////////////////////////////
 
-#  define KEYBOARD_QUEUE_LEN 1024
+#define KEYBOARD_QUEUE_LEN 1024
 static int kb_queue[KEYBOARD_QUEUE_LEN];
 static int kb_f = 0, kb_r = 0;
 
@@ -61,4 +60,3 @@ static void kb_init() {
   event_add_handler(EVENT_SDL_KEY_DOWN, kb_on_data);
   event_add_handler(EVENT_SDL_KEY_UP, kb_on_data);
 }
-#endif

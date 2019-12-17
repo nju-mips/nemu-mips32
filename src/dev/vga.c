@@ -1,11 +1,10 @@
-#if CONFIG_VGA
-#  include <SDL/SDL.h>
-#  include <stdio.h>
+#include <SDL/SDL.h>
+#include <stdio.h>
 
-#  include "device.h"
+#include "device.h"
 
-#  define VGA_SIZE 0x100000
-#  define VMEM_SIZE (WINDOW_H * WINDOW_W)
+#define VGA_SIZE 0x100000
+#define VMEM_SIZE (WINDOW_H * WINDOW_W)
 
 extern SDL_Surface *screen;
 
@@ -48,4 +47,3 @@ DEF_DEV(vga_dev) = {
     .read = vga_read,
     .write = vga_write,
 };
-#endif

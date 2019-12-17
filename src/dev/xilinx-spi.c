@@ -1,75 +1,74 @@
-#if CONFIG_XILINX_SPI
-#  include <SDL/SDL.h>
-#  include <fcntl.h>
-#  include <stdbool.h>
-#  include <sys/stat.h>
-#  include <sys/types.h>
+#include <SDL/SDL.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#  include "common.h"
-#  include "device.h"
+#include "common.h"
+#include "device.h"
 
-#  define SPI_SIZE 0x1000
+#define SPI_SIZE 0x1000
 
 /* SPI Control Register (spicr), [1] p9, [2] p8 */
-#  define SPICR_LSB_FIRST (1 << 9)
-#  define SPICR_MASTER_INHIBIT (1 << 8)
-#  define SPICR_MANUAL_SS (1 << 7)
-#  define SPICR_RXFIFO_RESEST (1 << 6)
-#  define SPICR_TXFIFO_RESEST (1 << 5)
-#  define SPICR_CPHA (1 << 4)
-#  define SPICR_CPOL (1 << 3)
-#  define SPICR_MASTER_MODE (1 << 2)
-#  define SPICR_SPE (1 << 1)
-#  define SPICR_LOOP (1 << 0)
+#define SPICR_LSB_FIRST (1 << 9)
+#define SPICR_MASTER_INHIBIT (1 << 8)
+#define SPICR_MANUAL_SS (1 << 7)
+#define SPICR_RXFIFO_RESEST (1 << 6)
+#define SPICR_TXFIFO_RESEST (1 << 5)
+#define SPICR_CPHA (1 << 4)
+#define SPICR_CPOL (1 << 3)
+#define SPICR_MASTER_MODE (1 << 2)
+#define SPICR_SPE (1 << 1)
+#define SPICR_LOOP (1 << 0)
 
 /* SPI Status Register (spisr), [1] p11, [2] p10 */
-#  define SPISR_SLAVE_MODE_SELECT (1 << 5)
-#  define SPISR_MODF (1 << 4)
-#  define SPISR_TX_FULL (1 << 3)
-#  define SPISR_TX_EMPTY (1 << 2)
-#  define SPISR_RX_FULL (1 << 1)
-#  define SPISR_RX_EMPTY (1 << 0)
+#define SPISR_SLAVE_MODE_SELECT (1 << 5)
+#define SPISR_MODF (1 << 4)
+#define SPISR_TX_FULL (1 << 3)
+#define SPISR_TX_EMPTY (1 << 2)
+#define SPISR_RX_FULL (1 << 1)
+#define SPISR_RX_EMPTY (1 << 0)
 
 /* SPI Data Transmit Register (spidtr), [1] p12, [2] p12 */
-#  define SPIDTR_8BIT_MASK GENMASK(7, 0)
-#  define SPIDTR_16BIT_MASK GENMASK(15, 0)
-#  define SPIDTR_32BIT_MASK GENMASK(31, 0)
+#define SPIDTR_8BIT_MASK GENMASK(7, 0)
+#define SPIDTR_16BIT_MASK GENMASK(15, 0)
+#define SPIDTR_32BIT_MASK GENMASK(31, 0)
 
 /* SPI Data Receive Register (spidrr), [1] p12, [2] p12 */
-#  define SPIDRR_8BIT_MASK GENMASK(7, 0)
-#  define SPIDRR_16BIT_MASK GENMASK(15, 0)
-#  define SPIDRR_32BIT_MASK GENMASK(31, 0)
+#define SPIDRR_8BIT_MASK GENMASK(7, 0)
+#define SPIDRR_16BIT_MASK GENMASK(15, 0)
+#define SPIDRR_32BIT_MASK GENMASK(31, 0)
 
 /* SPI Slave Select Register (spissr), [1] p13, [2] p13 */
-#  define SPISSR_MASK(cs) (1 << (cs))
-#  define SPISSR_ACT(cs) ~SPISSR_MASK(cs)
-#  define SPISSR_OFF ~0UL
+#define SPISSR_MASK(cs) (1 << (cs))
+#define SPISSR_ACT(cs) ~SPISSR_MASK(cs)
+#define SPISSR_OFF ~0UL
 
 /* SPI Software Reset Register (ssr) */
-#  define SPISSR_RESET_VALUE 0x0a
+#define SPISSR_RESET_VALUE 0x0a
 
-#  define XILSPI_MAX_XFER_BITS 8
-#  define XILSPI_SPICR_DFLT_ON \
-    (SPICR_MANUAL_SS | SPICR_MASTER_MODE | SPICR_SPE | SPICR_MASTER_INHIBIT)
-#  define XILSPI_SPICR_DFLT_OFF (SPICR_MASTER_INHIBIT | SPICR_MANUAL_SS)
+#define XILSPI_MAX_XFER_BITS 8
+#define XILSPI_SPICR_DFLT_ON \
+  (SPICR_MANUAL_SS | SPICR_MASTER_MODE | SPICR_SPE | SPICR_MASTER_INHIBIT)
+#define XILSPI_SPICR_DFLT_OFF (SPICR_MASTER_INHIBIT | SPICR_MANUAL_SS)
 
-#  ifndef CONFIG_XILINX_SPI_IDLE_VAL
-#    define CONFIG_XILINX_SPI_IDLE_VAL GENMASK(7, 0)
-#  endif
+#ifndef CONFIG_XILINX_SPI_IDLE_VAL
+#  define CONFIG_XILINX_SPI_IDLE_VAL GENMASK(7, 0)
+#endif
 
-#  define XILINX_SPI_QUAD_MODE 2
+#define XILINX_SPI_QUAD_MODE 2
 
-#  define XILINX_SPI_QUAD_EXTRA_DUMMY 3
-#  define SPI_QUAD_OUT_FAST_READ 0x6B
+#define XILINX_SPI_QUAD_EXTRA_DUMMY 3
+#define SPI_QUAD_OUT_FAST_READ 0x6B
 
-#  define SRR 0x40     // write
-#  define SPICR 0x60   // rw,  0x180
-#  define SPISR 0x64   // r,   0x25
-#  define SPIDTR 0x68  // w
-#  define SPIDRR 0x6c  // r
-#  define SPISSR 0x70  // rw
-#  define SPITFOR 0x74 // r
-#  define SPIRFOR 0x78 // r
+#define SRR 0x40     // write
+#define SPICR 0x60   // rw,  0x180
+#define SPISR 0x64   // r,   0x25
+#define SPIDTR 0x68  // w
+#define SPIDRR 0x6c  // r
+#define SPISSR 0x70  // rw
+#define SPITFOR 0x74 // r
+#define SPIRFOR 0x78 // r
 
 struct xilinx_spi_regs {
   u32 __space0__[7];
@@ -96,22 +95,20 @@ struct xilinx_spi_regs {
 static struct xilinx_spi_regs spi_regs;
 
 static void spi_init(const char *filename) {
-#  if 0
+#if 0
   int fd = open(filename, O_RDONLY);
 
   spi_regs.spicr = 0x180;
   spi_regs.spisr = 0x25;
-#  endif
+#endif
 }
 
 static uint32_t spi_read(paddr_t addr, int len) {
-  assert(0);
   check_ioaddr(addr, len, SPI_SIZE, "spi.read");
   return 0;
 }
 
 static void spi_write(paddr_t addr, int len, uint32_t data) {
-  assert(0);
   switch (addr) {
   case SRR: spi_regs.srr = data; break;
   case SPICR: spi_regs.spicr = data; break;
@@ -128,4 +125,3 @@ DEF_DEV(spi_dev) = {
     .read = spi_read,
     .write = spi_write,
 };
-#endif

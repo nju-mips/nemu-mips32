@@ -1,9 +1,8 @@
-#if CONFIG_RTC
-#  include <stdlib.h>
+#include <stdlib.h>
 
-#  include "device.h"
+#include "device.h"
 
-#  define RTC_SIZE 0x4
+#define RTC_SIZE 0x4
 
 uint64_t get_current_time(); // us
 
@@ -19,4 +18,3 @@ DEF_DEV(rtc_dev) = {
     .read = rtc_read,
     .peek = rtc_read,
 };
-#endif
