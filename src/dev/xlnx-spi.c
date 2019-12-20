@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "device.h"
+#include "utils.h"
 
 #define SPI_SIZE 0x1000
 
@@ -13,8 +14,8 @@
 #define SPICR_LSB_FIRST (1 << 9)
 #define SPICR_MASTER_INHIBIT (1 << 8)
 #define SPICR_MANUAL_SS (1 << 7)
-#define SPICR_RXFIFO_RESEST (1 << 6)
-#define SPICR_TXFIFO_RESEST (1 << 5)
+#define SPICR_RXFIFO_RESET (1 << 6)
+#define SPICR_TXFIFO_RESET (1 << 5)
 #define SPICR_CPHA (1 << 4)
 #define SPICR_CPOL (1 << 3)
 #define SPICR_MASTER_MODE (1 << 2)
@@ -92,28 +93,73 @@ struct xilinx_spi_regs {
   u32 spirfor; /* SPI Receive FIFO Occupancy Register (SPIRFOR) */
 };
 
+#define SPI_QUEUE_LEN
+
+
 static struct xilinx_spi_regs xlnx_spi_regs;
 
 static void xlnx_spi_init(const char *filename) {
-#if 0
-  int fd = open(filename, O_RDONLY);
+  // int fd = open(filename, O_RDONLY);
 
   xlnx_spi_regs.spicr = 0x180;
   xlnx_spi_regs.spisr = 0x25;
-#endif
+  xlnx_spi_regs.spissr = 0xFFFFFFFF;
 }
 
+static int counter = 0;
+
 static uint32_t xlnx_spi_read(paddr_t addr, int len) {
-  check_ioaddr(addr, len, SPI_SIZE, "spi.read");
+  printf("[NEMU] spi read %08x, %d, %08x@%s\n", addr, len, cpu.pc,
+      find_symbol_by_addr(cpu.pc));
+
+  check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
+
+  if (counter++ > 10) exit(0);
+
+  switch (addr) {
+  case SRR: return xlnx_spi_regs.srr;
+  case SPICR: return xlnx_spi_regs.spicr;
+  case SPISR: return xlnx_spi_regs.spisr;
+  case SPIDTR: return xlnx_spi_regs.spidtr;
+  case SPIDRR: return xlnx_spi_regs.spidrr;
+  case SPISSR: return xlnx_spi_regs.spissr;
+  case SPITFOR: return xlnx_spi_regs.spitfor;
+  case SPIRFOR: return xlnx_spi_regs.spirfor;
+  default:
+    CPUAssert(false, "spi: address(0x%08x) is not readable", addr);
+    break;
+  }
   return 0;
 }
 
 static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
+  printf("[NEMU] spi write %08x, %08x, len %d, %08x@%s\n", addr, data, len,
+      cpu.pc, find_symbol_by_addr(cpu.pc));
+  check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
   switch (addr) {
-  case SRR: xlnx_spi_regs.srr = data; break;
-  case SPICR: xlnx_spi_regs.spicr = data; break;
-  case SPIDTR: xlnx_spi_regs.spidtr = data; break; // data transfer
-  case SPISSR: xlnx_spi_regs.spissr = data; break;
+  case SRR:
+    /* software reset register */
+    /* xlnx_spi_regs.srr = data; */
+    break;
+  case SPICR:
+    if (data & SPICR_RXFIFO_RESET) { /* clear recv buffer */ }
+    if (data & SPICR_TXFIFO_RESET) { /* clear send buffer */ }
+    if (data & SPICR_MASTER_INHIBIT) {
+      xlnx_spi_regs.spisr |= SPISR_SLAVE_MODE_SELECT;
+    }
+    xlnx_spi_regs.spicr = data;
+    break;
+  case SPISR:
+    /* xlnx_spi_regs.spisr = data; */
+    break;
+  case SPIDTR: xlnx_spi_regs.spidtr = data; break;
+  case SPIDRR: xlnx_spi_regs.spidrr = data; break;
+  case SPISSR: xlnx_spi_regs.spissr = data & 1; break;
+  case SPITFOR: xlnx_spi_regs.spitfor = data; break;
+  case SPIRFOR: xlnx_spi_regs.spirfor = data; break;
+  default:
+    CPUAssert(false, "spi: address(0x%08x) is not writable", addr);
+    break;
   }
 }
 

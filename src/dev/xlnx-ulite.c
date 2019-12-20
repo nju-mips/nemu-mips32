@@ -3,6 +3,7 @@
 
 #include "device.h"
 #include "events.h"
+#include "queue.h"
 
 // UART
 #define Rx 0x0
@@ -26,33 +27,13 @@
 #define ULITE_CONTROL_RST_RX 0x02
 
 /* ulite queue */
-#define ULITE_QUEUE_LEN 1024
-static int xlnx_ulite_queue[ULITE_QUEUE_LEN];
-static int xlnx_ulite_f = 0, xlnx_ulite_r = 0;
+static queue_type(int, 1024) ulite_q;
 
-void xlnx_ulite_enqueue(int ch) {
-  int next = (xlnx_ulite_r + 1) % ULITE_QUEUE_LEN;
-  if (next != xlnx_ulite_f) { // if not full
-    xlnx_ulite_queue[xlnx_ulite_r] = ch;
-    xlnx_ulite_r = next;
-  }
-}
-
-int xlnx_ulite_dequeue() {
-  int data = xlnx_ulite_queue[xlnx_ulite_f];
-  if (xlnx_ulite_f != xlnx_ulite_r)
-    xlnx_ulite_f = (xlnx_ulite_f + 1) % ULITE_QUEUE_LEN;
-  return data;
-}
-
-int xlnx_ulite_queue_top() { return xlnx_ulite_queue[xlnx_ulite_f]; }
-
-bool xlnx_ulite_queue_is_full() {
-  int next = (xlnx_ulite_r + 1) % ULITE_QUEUE_LEN;
-  return next != xlnx_ulite_f;
-}
-
-bool xlnx_ulite_queue_is_empty() { return xlnx_ulite_f == xlnx_ulite_r; }
+void xlnx_ulite_enqueue(int ch) { queue_add(ulite_q, ch); }
+int xlnx_ulite_dequeue() { return queue_pop(ulite_q); }
+int xlnx_ulite_queue_top() { return queue_top(ulite_q); }
+bool xlnx_ulite_queue_is_full() { return queue_is_full(ulite_q); }
+bool xlnx_ulite_queue_is_empty() { return queue_is_empty(ulite_q); }
 
 /* ulite queue end */
 
