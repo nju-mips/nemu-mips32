@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "device.h"
+#include "queue.h"
 #include "utils.h"
 
 #define SPI_SIZE 0x1000
@@ -93,8 +94,8 @@ struct xilinx_spi_regs {
   u32 spirfor; /* SPI Receive FIFO Occupancy Register (SPIRFOR) */
 };
 
-#define SPI_QUEUE_LEN
-
+static queue_type(int, 1024) spi_tx_q;
+static queue_type(int, 1024) spi_rx_q;
 
 static struct xilinx_spi_regs xlnx_spi_regs;
 
@@ -106,22 +107,24 @@ static void xlnx_spi_init(const char *filename) {
   xlnx_spi_regs.spissr = 0xFFFFFFFF;
 }
 
-static int counter = 0;
+// static int counter = 0;
 
 static uint32_t xlnx_spi_read(paddr_t addr, int len) {
-  printf("[NEMU] spi read %08x, %d, %08x@%s\n", addr, len, cpu.pc,
-      find_symbol_by_addr(cpu.pc));
-
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
-
-  if (counter++ > 10) exit(0);
 
   switch (addr) {
   case SRR: return xlnx_spi_regs.srr;
   case SPICR: return xlnx_spi_regs.spicr;
-  case SPISR: return xlnx_spi_regs.spisr;
+  case SPISR: {
+    uint32_t spisr = xlnx_spi_regs.spisr;
+    if (queue_is_empty(spi_rx_q)) spisr |= SPISR_RX_EMPTY;
+    if (queue_is_full(spi_rx_q)) spisr |= SPISR_RX_FULL;
+    if (queue_is_empty(spi_tx_q)) spisr |= SPISR_TX_EMPTY;
+    if (queue_is_full(spi_tx_q)) spisr |= SPISR_TX_FULL;
+    return xlnx_spi_regs.spisr;
+  } break;
   case SPIDTR: return xlnx_spi_regs.spidtr;
-  case SPIDRR: return xlnx_spi_regs.spidrr;
+  case SPIDRR: return queue_pop(spi_rx_q);
   case SPISSR: return xlnx_spi_regs.spissr;
   case SPITFOR: return xlnx_spi_regs.spitfor;
   case SPIRFOR: return xlnx_spi_regs.spirfor;
@@ -133,8 +136,6 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
 }
 
 static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
-  printf("[NEMU] spi write %08x, %08x, len %d, %08x@%s\n", addr, data, len,
-      cpu.pc, find_symbol_by_addr(cpu.pc));
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
   switch (addr) {
   case SRR:
@@ -142,18 +143,32 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
     /* xlnx_spi_regs.srr = data; */
     break;
   case SPICR:
-    if (data & SPICR_RXFIFO_RESET) { /* clear recv buffer */ }
-    if (data & SPICR_TXFIFO_RESET) { /* clear send buffer */ }
+    if (data & SPICR_RXFIFO_RESET) { /* clear recv buffer */
+    }
+    if (data & SPICR_TXFIFO_RESET) { /* clear send buffer */
+    }
     if (data & SPICR_MASTER_INHIBIT) {
       xlnx_spi_regs.spisr |= SPISR_SLAVE_MODE_SELECT;
+    }
+    if (data & SPICR_SPE) {
+      int *p;
+      printf("send:%d:%d: ", spi_tx_q.f, spi_tx_q.r);
+      queue_for_each(spi_tx_q, p) { printf("%02x ", *p); }
+      printf("\n");
+
+      printf("recv:%d:%d: ", spi_rx_q.f, spi_rx_q.r);
+      queue_for_each(spi_rx_q, p) { printf("%02x ", *p); }
+      printf("\n");
     }
     xlnx_spi_regs.spicr = data;
     break;
   case SPISR:
     /* xlnx_spi_regs.spisr = data; */
     break;
-  case SPIDTR: xlnx_spi_regs.spidtr = data; break;
-  case SPIDRR: xlnx_spi_regs.spidrr = data; break;
+  case SPIDTR:
+    queue_add(spi_tx_q, data);
+    break;
+  case SPIDRR: break;
   case SPISSR: xlnx_spi_regs.spissr = data & 1; break;
   case SPITFOR: xlnx_spi_regs.spitfor = data; break;
   case SPIRFOR: xlnx_spi_regs.spirfor = data; break;

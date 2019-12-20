@@ -25,6 +25,10 @@
     data;                                            \
   })
 
+#define queue_for_each(q, ptr)                   \
+  for (int i = (ptr = &q.e[q.f], q.f); i != q.r; \
+       i = (i + 1) % queue_size(q), ptr = &q.e[i])
+
 #define queue_top(q) (q.e[q.f]);
 
 #define queue_is_full(q) (q.f != (q.r + 1) % queue_size(q))
