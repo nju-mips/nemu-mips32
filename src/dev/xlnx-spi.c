@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "m25p80.c"
+#include "flash-m25p80.c"
 
 #include "common.h"
 #include "device.h"
@@ -107,9 +107,9 @@ void xlnx_spi_flush_txfifo() {
   while (!queue_is_empty(spi_tx_q)) {
     int data = queue_pop(spi_tx_q);
     int r = 0;
+    /* there is only one slave */
     if ((xlnx_spi_regs.spissr & 1) == 0)
       r = m25p80_transfer8(&flash, data);
-    // printf("[NEMU] send %02x, recv %02x\n", data, r);
     queue_push(spi_rx_q, r);
   }
 }
@@ -121,8 +121,6 @@ static void xlnx_spi_init(const char *filename) {
   xlnx_spi_regs.spisr = 0x25;
   xlnx_spi_regs.spissr = ~0;
 }
-
-// static int counter = 0;
 
 static uint32_t xlnx_spi_read(paddr_t addr, int len) {
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
@@ -138,7 +136,6 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
     return spisr;
   } break;
   case SPIDRR:
-    // printf("[NEMU] recv %02x\n", queue_top(spi_rx_q));
     if (queue_is_empty(spi_rx_q)) return 0xdeadbeef;
     return queue_pop(spi_rx_q);
   default:

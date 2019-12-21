@@ -31,3 +31,13 @@ void *read_file(const char *filename) {
   close(fd);
   return buf;
 }
+
+ssize_t write_s(int fd, const void *buf, size_t count) {
+  size_t off = 0;
+  while (off < count) {
+    int ret = write(fd, buf + off, count - off);
+    if (ret < 0) return -1;
+    off += ret;
+  }
+  return count;
+}

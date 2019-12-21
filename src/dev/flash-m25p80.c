@@ -28,22 +28,16 @@
 #include <string.h>
 #include <unistd.h>
 
-#define M25P80_ERR_DEBUG 1
-#ifndef M25P80_ERR_DEBUG
-#  define M25P80_ERR_DEBUG 0
-#endif
+#include "debug.h"
+#include "utils.h"
 
-#define BDRV_SECTOR_BITS 9
-#define BDRV_SECTOR_SIZE (1ULL << BDRV_SECTOR_BITS)
+#define M25P80_ERR_DEBUG 0
 
-#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
-
-#define DB_PRINT_L(level, ...)             \
-  do {                                     \
-    if (M25P80_ERR_DEBUG > (level)) {      \
-      fprintf(stderr, ": %s: ", __func__); \
-      fprintf(stderr, ##__VA_ARGS__);      \
-    }                                      \
+#define DB_PRINT_L(level, fmt, ...)                   \
+  do {                                                \
+    if (M25P80_ERR_DEBUG > (level)) {                 \
+      eprintf(": %s: " fmt, __func__, ##__VA_ARGS__); \
+    }                                                 \
   } while (0);
 
 /* Fields for FlashPartInfo->flags */
@@ -83,7 +77,7 @@ typedef struct FlashPartInfo {
 #define JEDEC_WINBOND 0xEF
 #define JEDEC_SPANSION 0x01
 
-const FlashPartInfo known_devices[] = {
+static const FlashPartInfo known_devices[] = {
     /* Atmel -- some are (confusingly) marketed as "DataFlash" */
     {INFO("at25fs010", 0x1f6601, 0, 32 << 10, 4, ER_4K)},
     {INFO("at25fs040", 0x1f6604, 0, 64 << 10, 8, ER_4K)},
@@ -270,22 +264,8 @@ typedef struct Flash {
 
 extern const char *flash_file;
 
-ssize_t write_s(int fd, const void *buf, size_t count) {
-  size_t off = 0;
-  while (off < count) {
-    int ret = write(fd, buf + off, count - off);
-    if (ret < 0) return -1;
-    off += ret;
-  }
-  return count;
-}
-
 static void flash_sync_page(Flash *s, int page) {
   if (!flash_file) return;
-  printf("[NEMU] sync page %p:%d: ", s->storage, page);
-  for (int i = 0; i < 50; i++)
-    printf("%02x ", s->storage[page * s->pi->page_size + i]);
-  printf("\n");
   int fd = open(flash_file, O_RDWR | O_CREAT, 0644);
   lseek(fd, page * s->pi->page_size, SEEK_SET);
   write_s(fd, s->storage, s->pi->page_size);
@@ -320,14 +300,14 @@ static void flash_erase(Flash *s, int offset, FlashCMD cmd) {
 
   DB_PRINT_L(0, "offset = %#x, len = %d\n", offset, len);
   if ((s->pi->flags & capa_to_assert) != capa_to_assert) {
-    fprintf(stderr,
+    eprintf(
         "M25P80: %d erase size not supported by"
         " device\n",
         len);
   }
 
   if (!s->write_enable) {
-    fprintf(stderr, "M25P80: erase with write protect!\n");
+    eprintf("M25P80: erase with write protect!\n");
     return;
   }
   memset(s->storage + offset, 0xff, len);
@@ -343,17 +323,12 @@ static inline void flash_sync_dirty(Flash *s, int64_t newpage) {
 
 static inline void flash_write8(Flash *s, uint64_t addr, uint8_t data) {
   int64_t page = addr / s->pi->page_size;
-  // uint8_t prev = s->storage[s->cur_addr];
 
-  if (!s->write_enable) {
-    fprintf(stderr, "M25P80: write with write protect!\n");
-  }
+  if (!s->write_enable) { eprintf("M25P80: write with write protect!\n"); }
 
   if (s->pi->flags & WR_1) {
-    printf("0.storage@%p[%08lx] = %08x\n", s->storage, s->cur_addr, data);
     s->storage[s->cur_addr] = data;
   } else {
-    printf("1.storage@%p[%08lx] = %08x\n", s->storage, s->cur_addr, data);
     s->storage[s->cur_addr] &= data;
   }
 
@@ -461,7 +436,6 @@ static void decode_new_cmd(Flash *s, uint32_t value) {
 
   case JEDEC_READ:
     DB_PRINT_L(0, "populated jedec code\n");
-    printf("JEDEC: %08x\n", s->pi->jedec);
     s->data[0] = (s->pi->jedec >> 16) & 0xff;
     s->data[1] = (s->pi->jedec >> 8) & 0xff;
     s->data[2] = s->pi->jedec & 0xff;
@@ -481,13 +455,13 @@ static void decode_new_cmd(Flash *s, uint32_t value) {
       DB_PRINT_L(0, "chip erase\n");
       flash_erase(s, 0, BULK_ERASE);
     } else {
-      fprintf(stderr,
+      eprintf(
           "M25P80: chip erase with write "
           "protect!\n");
     }
     break;
   case NOP: break;
-  default: fprintf(stderr, "M25P80: Unknown cmd %x\n", value); break;
+  default: eprintf("M25P80: Unknown cmd %x\n", value); break;
   }
 }
 
@@ -543,6 +517,9 @@ uint32_t m25p80_transfer8(Flash *s, uint32_t tx) {
 }
 
 int m25p80_init(Flash *s) {
+  /* FIXME:
+   *   drivers/spi/xilinx_spi.c: xilinx_spi_startup_block
+   * */
   s->pi = &known_devices[16];
 
   s->size = s->pi->sector_size * s->pi->n_sectors;
@@ -550,12 +527,10 @@ int m25p80_init(Flash *s) {
 
   s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
-  printf("storage@%p\n", s->storage);
   if (flash_file) {
     int fd = open(flash_file, O_RDONLY);
     int len = read(fd, s->storage, s->size);
-    if (len) { /* shit */
-    }
+    (void)len;
   }
   return 0;
 }

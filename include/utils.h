@@ -4,6 +4,7 @@
 #include <SDL/SDL.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <net/if.h>
 #include <netinet/ether.h>
@@ -11,6 +12,7 @@
 /* file */
 size_t get_file_size(const char *img_file);
 void *read_file(const char *filename);
+ssize_t write_s(int fd, const void *buf, size_t count);
 
 /* tap */
 int tap_create(char dev[IFNAMSIZ]);
