@@ -121,7 +121,7 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
     if (queue_is_full(spi_rx_q)) spisr |= SPISR_RX_FULL;
     if (queue_is_empty(spi_tx_q)) spisr |= SPISR_TX_EMPTY;
     if (queue_is_full(spi_tx_q)) spisr |= SPISR_TX_FULL;
-    return xlnx_spi_regs.spisr;
+    return spisr;
   } break;
   case SPIDTR: return xlnx_spi_regs.spidtr;
   case SPIDRR: return queue_pop(spi_rx_q);
@@ -152,11 +152,11 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
     }
     if (data & SPICR_SPE) {
       int *p;
-      printf("send:%d:%d: ", spi_tx_q.f, spi_tx_q.r);
+      printf("[NEMU] send:%d:%d: ", spi_tx_q.f, spi_tx_q.r);
       queue_for_each(spi_tx_q, p) { printf("%02x ", *p); }
       printf("\n");
 
-      printf("recv:%d:%d: ", spi_rx_q.f, spi_rx_q.r);
+      printf("[NEMU] recv:%d:%d: ", spi_rx_q.f, spi_rx_q.r);
       queue_for_each(spi_rx_q, p) { printf("%02x ", *p); }
       printf("\n");
     }
@@ -166,7 +166,7 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
     /* xlnx_spi_regs.spisr = data; */
     break;
   case SPIDTR:
-    queue_add(spi_tx_q, data);
+    queue_push(spi_tx_q, data);
     break;
   case SPIDRR: break;
   case SPISSR: xlnx_spi_regs.spissr = data & 1; break;

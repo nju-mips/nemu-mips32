@@ -9,7 +9,7 @@
 
 #define queue_size(q) (sizeof(q.e) / sizeof(*q.e))
 
-#define queue_add(q, ch)                  \
+#define queue_push(q, ch)                 \
   do {                                    \
     int next = (q.r + 1) % queue_size(q); \
     if (next != q.f) {                    \
@@ -31,7 +31,7 @@
 
 #define queue_top(q) (q.e[q.f]);
 
-#define queue_is_full(q) (q.f != (q.r + 1) % queue_size(q))
+#define queue_is_full(q) (q.f == (q.r + 1) % queue_size(q))
 
 #define queue_is_empty(q) (q.f == q.r)
 

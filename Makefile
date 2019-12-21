@@ -42,6 +42,7 @@ cfiles-$(CONFIG_NEMU_VGA) += src/dev/nemu-vga.c
 cfiles-$(CONFIG_XLNX_ULITE) += src/dev/xlnx-ulite.c
 cfiles-$(CONFIG_XLNX_ELITE) += src/dev/xlnx-elite.c
 cfiles-$(CONFIG_XLNX_SPI) += src/dev/xlnx-spi.c
+cfiles-$(CONFIG_XLNX_SPI) += src/dev/m25p80.c
 
 OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 
