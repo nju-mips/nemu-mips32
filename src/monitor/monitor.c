@@ -8,6 +8,7 @@
 #include "monitor.h"
 #include "utils.h"
 
+const char *flash_file = NULL;
 const char *elf_file = NULL;
 const char *symbol_file = NULL;
 static char *img_file = NULL;
@@ -86,9 +87,7 @@ const struct option long_options[] = {
     {"image", 1, NULL, 'i'},
     {"elf", 1, NULL, 'e'},
     {"help", 0, NULL, 'h'},
-#if CONFIG_ETHERLITE
-    {"iface", 1, NULL, 'I'},
-#endif
+    {"flash", 1, NULL, 'f'},
     {NULL, 0, NULL, 0},
 };
 
@@ -133,6 +132,9 @@ void parse_args(int argc, char *argv[]) {
         img_file = optarg;
       break;
     case 'h':
+    case 'f':
+      flash_file = optarg;
+      break;
     default: print_help(argv[0]); exit(0);
     }
   }

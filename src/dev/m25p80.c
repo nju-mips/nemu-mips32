@@ -26,15 +26,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-// #include "hw/hw.h"
-// #include "hw/ssi.h"
-// #include "sysemu/block-backend.h"
-// #include "sysemu/blockdev.h"
-
+#define M25P80_ERR_DEBUG 1
 #ifndef M25P80_ERR_DEBUG
 #  define M25P80_ERR_DEBUG 0
 #endif
+
+#define BDRV_SECTOR_BITS 9
+#define BDRV_SECTOR_SIZE (1ULL << BDRV_SECTOR_BITS)
+
+#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
 #define DB_PRINT_L(level, ...)             \
   do {                                     \
@@ -247,8 +249,6 @@ typedef enum {
 typedef struct Flash {
   uint32_t r;
 
-  // BlockBackend *blk;
-
   uint8_t *storage;
   uint32_t size;
   int page_size;
@@ -268,50 +268,36 @@ typedef struct Flash {
 
 } Flash;
 
-typedef struct M25P80Class {
-  FlashPartInfo *pi;
-} M25P80Class;
+extern const char *flash_file;
 
-#if 0
-static void blk_sync_complete(void *opaque, int ret) {
-  /* do nothing. Masters do not directly interact with the backing store,
-   * only the working copy so no mutexing required.
-   */
+ssize_t write_s(int fd, const void *buf, size_t count) {
+  size_t off = 0;
+  while (off < count) {
+    int ret = write(fd, buf + off, count - off);
+    if (ret < 0) return -1;
+    off += ret;
+  }
+  return count;
 }
-#endif
 
 static void flash_sync_page(Flash *s, int page) {
-#if 0
-  int blk_sector, nb_sectors;
-  QEMUIOVector iov;
-
-  if (!s->blk || blk_is_read_only(s->blk)) { return; }
-
-  blk_sector = (page * s->pi->page_size) / BDRV_SECTOR_SIZE;
-  nb_sectors = DIV_ROUND_UP(s->pi->page_size, BDRV_SECTOR_SIZE);
-  qemu_iovec_init(&iov, 1);
-  qemu_iovec_add(&iov, s->storage + blk_sector * BDRV_SECTOR_SIZE,
-      nb_sectors * BDRV_SECTOR_SIZE);
-  blk_aio_writev(s->blk, blk_sector, &iov, nb_sectors, blk_sync_complete, NULL);
-#endif
+  if (!flash_file) return;
+  printf("[NEMU] sync page %p:%d: ", s->storage, page);
+  for (int i = 0; i < 50; i++)
+    printf("%02x ", s->storage[page * s->pi->page_size + i]);
+  printf("\n");
+  int fd = open(flash_file, O_RDWR | O_CREAT, 0644);
+  lseek(fd, page * s->pi->page_size, SEEK_SET);
+  write_s(fd, s->storage, s->pi->page_size);
+  close(fd);
 }
 
 static inline void flash_sync_area(Flash *s, int64_t off, int64_t len) {
-#if 0
-  int64_t start, end, nb_sectors;
-  QEMUIOVector iov;
-
-  if (!s->blk || blk_is_read_only(s->blk)) { return; }
-
-  assert(!(len % BDRV_SECTOR_SIZE));
-  start = off / BDRV_SECTOR_SIZE;
-  end = (off + len) / BDRV_SECTOR_SIZE;
-  nb_sectors = end - start;
-  qemu_iovec_init(&iov, 1);
-  qemu_iovec_add(&iov, s->storage + (start * BDRV_SECTOR_SIZE),
-      nb_sectors * BDRV_SECTOR_SIZE);
-  blk_aio_writev(s->blk, start, &iov, nb_sectors, blk_sync_complete, NULL);
-#endif
+  if (!flash_file) return;
+  int fd = open(flash_file, O_RDWR | O_CREAT, 0644);
+  lseek(fd, off, SEEK_SET);
+  write_s(fd, s->storage, len);
+  close(fd);
 }
 
 static void flash_erase(Flash *s, int offset, FlashCMD cmd) {
@@ -364,8 +350,10 @@ static inline void flash_write8(Flash *s, uint64_t addr, uint8_t data) {
   }
 
   if (s->pi->flags & WR_1) {
+    printf("0.storage@%p[%08lx] = %08x\n", s->storage, s->cur_addr, data);
     s->storage[s->cur_addr] = data;
   } else {
+    printf("1.storage@%p[%08lx] = %08x\n", s->storage, s->cur_addr, data);
     s->storage[s->cur_addr] &= data;
   }
 
@@ -473,6 +461,7 @@ static void decode_new_cmd(Flash *s, uint32_t value) {
 
   case JEDEC_READ:
     DB_PRINT_L(0, "populated jedec code\n");
+    printf("JEDEC: %08x\n", s->pi->jedec);
     s->data[0] = (s->pi->jedec >> 16) & 0xff;
     s->data[1] = (s->pi->jedec >> 8) & 0xff;
     s->data[2] = s->pi->jedec & 0xff;
@@ -554,19 +543,19 @@ uint32_t m25p80_transfer8(Flash *s, uint32_t tx) {
 }
 
 int m25p80_init(Flash *s) {
-
-  // s->pi = mc->pi;
+  s->pi = &known_devices[16];
 
   s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;
 
-  /* FIXME use a qdev drive property instead of drive_get_next() */
-
-  DB_PRINT_L(0, "No BDRV - binding to RAM\n");
-  // s->storage = blk_blockalign(NULL, s->size);
+  s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
-
+  printf("storage@%p\n", s->storage);
+  if (flash_file) {
+    int fd = open(flash_file, O_RDONLY);
+    int len = read(fd, s->storage, s->size);
+    if (len) { /* shit */
+    }
+  }
   return 0;
 }
-
-void m25p80_pre_save(void *opaque) { flash_sync_dirty((Flash *)opaque, -1); }

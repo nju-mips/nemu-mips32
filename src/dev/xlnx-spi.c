@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "m25p80.c"
+
 #include "common.h"
 #include "device.h"
 #include "queue.h"
@@ -99,12 +101,25 @@ static queue_type(int, 1024) spi_rx_q;
 
 static struct xilinx_spi_regs xlnx_spi_regs;
 
+static Flash flash;
+
+void xlnx_spi_flush_txfifo() {
+  while (!queue_is_empty(spi_tx_q)) {
+    int data = queue_pop(spi_tx_q);
+    int r = 0;
+    if ((xlnx_spi_regs.spissr & 1) == 0)
+      r = m25p80_transfer8(&flash, data);
+    // printf("[NEMU] send %02x, recv %02x\n", data, r);
+    queue_push(spi_rx_q, r);
+  }
+}
+
 static void xlnx_spi_init(const char *filename) {
-  // int fd = open(filename, O_RDONLY);
+  m25p80_init(&flash);
 
   xlnx_spi_regs.spicr = 0x180;
   xlnx_spi_regs.spisr = 0x25;
-  xlnx_spi_regs.spissr = 0xFFFFFFFF;
+  xlnx_spi_regs.spissr = ~0;
 }
 
 // static int counter = 0;
@@ -113,23 +128,27 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
 
   switch (addr) {
-  case SRR: return xlnx_spi_regs.srr;
-  case SPICR: return xlnx_spi_regs.spicr;
   case SPISR: {
-    uint32_t spisr = xlnx_spi_regs.spisr;
+    uint32_t spisr = xlnx_spi_regs.spisr & ~(SPISR_RX_EMPTY | SPISR_RX_FULL |
+                                               SPISR_TX_EMPTY | SPISR_TX_FULL);
     if (queue_is_empty(spi_rx_q)) spisr |= SPISR_RX_EMPTY;
     if (queue_is_full(spi_rx_q)) spisr |= SPISR_RX_FULL;
     if (queue_is_empty(spi_tx_q)) spisr |= SPISR_TX_EMPTY;
     if (queue_is_full(spi_tx_q)) spisr |= SPISR_TX_FULL;
     return spisr;
   } break;
-  case SPIDTR: return xlnx_spi_regs.spidtr;
-  case SPIDRR: return queue_pop(spi_rx_q);
-  case SPISSR: return xlnx_spi_regs.spissr;
-  case SPITFOR: return xlnx_spi_regs.spitfor;
-  case SPIRFOR: return xlnx_spi_regs.spirfor;
+  case SPIDRR:
+    // printf("[NEMU] recv %02x\n", queue_top(spi_rx_q));
+    if (queue_is_empty(spi_rx_q)) return 0xdeadbeef;
+    return queue_pop(spi_rx_q);
   default:
-    CPUAssert(false, "spi: address(0x%08x) is not readable", addr);
+    if (addr + 4 <= sizeof(xlnx_spi_regs)) {
+      uint32_t data = 0;
+      void *regs_ptr = (void *)&xlnx_spi_regs;
+      memcpy(&data, regs_ptr + addr, sizeof(data));
+      return data;
+    } else
+      CPUAssert(false, "spi: address(0x%08x) is not readable", addr);
     break;
   }
   return 0;
@@ -139,35 +158,26 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
   switch (addr) {
   case SRR:
-    /* software reset register */
-    /* xlnx_spi_regs.srr = data; */
+    if (data == 0xa) {
+      queue_reset(spi_rx_q);
+      queue_reset(spi_tx_q);
+      xlnx_spi_regs.spissr = ~0;
+    }
     break;
   case SPICR:
-    if (data & SPICR_RXFIFO_RESET) { /* clear recv buffer */
-    }
-    if (data & SPICR_TXFIFO_RESET) { /* clear send buffer */
-    }
-    if (data & SPICR_MASTER_INHIBIT) {
-      xlnx_spi_regs.spisr |= SPISR_SLAVE_MODE_SELECT;
-    }
-    if (data & SPICR_SPE) {
-      int *p;
-      printf("[NEMU] send:%d:%d: ", spi_tx_q.f, spi_tx_q.r);
-      queue_for_each(spi_tx_q, p) { printf("%02x ", *p); }
-      printf("\n");
+    if (data & SPICR_RXFIFO_RESET) queue_reset(spi_rx_q);
+    if (data & SPICR_TXFIFO_RESET) queue_reset(spi_tx_q);
 
-      printf("[NEMU] recv:%d:%d: ", spi_rx_q.f, spi_rx_q.r);
-      queue_for_each(spi_rx_q, p) { printf("%02x ", *p); }
-      printf("\n");
-    }
-    xlnx_spi_regs.spicr = data;
+    xlnx_spi_regs.spicr = data & ~(SPICR_RXFIFO_RESET | SPICR_TXFIFO_RESET);
+    if (!(data & SPICR_MASTER_INHIBIT)) { xlnx_spi_flush_txfifo(); }
     break;
   case SPISR:
     /* xlnx_spi_regs.spisr = data; */
     break;
-  case SPIDTR:
+  case SPIDTR: {
     queue_push(spi_tx_q, data);
-    break;
+    if (xlnx_spi_regs.spicr & SPICR_MASTER_INHIBIT) xlnx_spi_flush_txfifo();
+  } break;
   case SPIDRR: break;
   case SPISSR: xlnx_spi_regs.spissr = data & 1; break;
   case SPITFOR: xlnx_spi_regs.spitfor = data; break;

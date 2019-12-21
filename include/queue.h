@@ -7,6 +7,9 @@
     type e[len];              \
   }
 
+#define queue_reset(q) \
+  do { q.f = q.r = 0; } while (0)
+
 #define queue_size(q) (sizeof(q.e) / sizeof(*q.e))
 
 #define queue_push(q, ch)                 \
@@ -29,7 +32,7 @@
   for (int i = (ptr = &q.e[q.f], q.f); i != q.r; \
        i = (i + 1) % queue_size(q), ptr = &q.e[i])
 
-#define queue_top(q) (q.e[q.f]);
+#define queue_top(q) (q.e[q.f])
 
 #define queue_is_full(q) (q.f == (q.r + 1) % queue_size(q))
 
