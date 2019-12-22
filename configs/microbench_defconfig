@@ -18,8 +18,6 @@ CONFIG_DECODE_CACHE=y
 # Kernel debug options
 #
 # CONFIG_CAE_CHECK is not set
-CONFIG_KERNEL_ELF_PATH="/home/wierton/linux-noop-4.11.4/vmlinux"
-CONFIG_KERNEL_UIMAGE_PATH="/home/wierton/linux-noop-4.11.4/arch/mips/boot/uImage.bin"
 # CONFIG_KERNEL_DEBUG_SERIAL is not set
 # CONFIG_CHECK_IMAGE is not set
 # CONFIG_WARN_PC_EQUALS_ZERO is not set

@@ -109,14 +109,6 @@ menu "Kernel debug options"
 config CAE_CHECK
   bool "Check general registers after eret"
 
-config KERNEL_ELF_PATH
-  string "The path of kernel executable"
-  default "$(KERNEL_HOME)/vmlinux"
-
-config KERNEL_UIMAGE_PATH
-  string "The path of uImage.bin"
-  default "$(KERNEL_HOME)/arch/mips/boot/uImage.bin"
-
 config KERNEL_DEBUG_SERIAL
   bool "Kernel debug serial (cpr $7, 1)"
   depends on KERNEL_ELF_PATH != ""

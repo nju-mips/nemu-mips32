@@ -382,8 +382,13 @@ void nemu_exit() {
       decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
 #endif
 
-  /* print_instr_queue(); */
+#if CONFIG_INSTR_LOG
+  print_instr_queue();
+#endif
+
+#if CONFIG_FRAMES_LOG
   print_frames();
+#endif
 
   exit(0);
 }
