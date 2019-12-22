@@ -43,7 +43,7 @@ static void nemu_vga_write(paddr_t addr, int len, uint32_t data) {
 DEF_DEV(nemu_vga_dev) = {
     .name = "nemu-vga",
     .start = CONFIG_NEMU_VGA_BASE,
-    .end = CONFIG_NEMU_VGA_BASE + NEMU_VGA_SIZE,
+    .size = NEMU_VGA_SIZE,
     .read = nemu_vga_read,
     .write = nemu_vga_write,
 };

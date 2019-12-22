@@ -13,7 +13,7 @@ void realize_device(device_t *dev) {
   // assert((dev->end & 0xFFF) == 0);
 
   uint32_t _4KB = 4 * 1024;
-  for (uint32_t i = dev->start; i < dev->end; i += _4KB) {
+  for (uint32_t i = dev->start; i < dev->start + dev->size; i += _4KB) {
     assert(memory_regions[mr_index(i)] == NULL);
     memory_regions[mr_index(i)] = dev;
   }

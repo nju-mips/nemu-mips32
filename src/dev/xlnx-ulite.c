@@ -123,42 +123,29 @@ static void xlnx_ulite_on_data(void *data, int len) {
   xlnx_ulite_set_irq();
 }
 
+void xlnx_ulite_set_fifo_data(const void *data, int len) {
+  /* send command to uboot */
+  const char *buf = data;
+  for (int i = 0; i < len; i++) xlnx_ulite_enqueue(buf[i]);
+}
+
 static void xlnx_ulite_init();
 
 DEF_DEV(xlnx_ulite_dev) = {
     .name = "xilinx-uartlite",
     .init = xlnx_ulite_init,
     .start = CONFIG_XLNX_ULITE_BASE,
-    .end = CONFIG_XLNX_ULITE_BASE + XLNX_ULITE_SIZE,
+    .size = XLNX_ULITE_SIZE,
     .peek = xlnx_ulite_peek,
     .read = xlnx_ulite_read,
     .write = xlnx_ulite_write,
     .on_data = xlnx_ulite_on_data,
+    .set_fifo_data = xlnx_ulite_set_fifo_data,
     .map = NULL,
 };
-
-void prepare_ulite_contents() {
-  /* send command to uboot */
-#if CONFIG_PRELOAD_LINUX
-  char cmd[512], *p = cmd;
-#  if 1
-  p += sprintf(p, "bootm 0x%08x\n", CONFIG_KERNEL_UIMAGE_BASE);
-#  else
-  extern const char *iface_ipaddr, *iface_gw;
-  p += sprintf(p, "set serverip 114.212.81.121\n");
-  p += sprintf(p, "set gateway %s\n", iface_gw);
-  p += sprintf(p, "set ipaddr %s\n", iface_ipaddr);
-  p += sprintf(p, "tftpboot vmlinux\n");
-  p += sprintf(p, "ping 114.212.81.121\n");
-#  endif
-  assert(p < &cmd[sizeof(cmd)]);
-  for (p = cmd; *p; p++) xlnx_ulite_enqueue(*p);
-#endif
-}
 
 static void xlnx_ulite_init() {
   event_add_handler(EVENT_CTRL_C, xlnx_ulite_on_data);
   event_add_handler(EVENT_CTRL_Z, xlnx_ulite_on_data);
   event_add_handler(EVENT_STDIN_DATA, xlnx_ulite_on_data);
-  prepare_ulite_contents();
 }

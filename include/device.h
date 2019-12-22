@@ -25,14 +25,21 @@ void *vaddr_map(vaddr_t vaddr, uint32_t size);
 void load_rom(uint32_t entry);
 
 typedef struct device_t {
+  const int type;
   const char *name;
-  uint32_t start, end;
+  uint32_t start;
+  uint32_t size;
   void (*init)();
   uint32_t (*read)(paddr_t addr, int len);
   void (*write)(paddr_t addr, int len, uint32_t data);
   void *(*map)(uint32_t vaddr, uint32_t size);
   uint32_t (*peek)(paddr_t addr, int len);
   struct device_t *next;
+
+  /* for fifo */
+  void (*set_fifo_data)(const void *data, int len);
+  /* for block */
+  void (*set_block_data)(uint32_t addr, const void *data, int len);
 
   /* interrupt related */
   void (*on_data)(void *buf, int len);

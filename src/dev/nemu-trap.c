@@ -23,6 +23,6 @@ static void nemu_trap_write(paddr_t addr, int len, uint32_t data) {
 DEF_DEV(nemu_trap_dev) = {
     .name = "nemu-trap",
     .start = CONFIG_NEMU_TRAP_BASE,
-    .end = CONFIG_NEMU_TRAP_BASE + NEMU_TRAP_SIZE,
+    .size = NEMU_TRAP_SIZE,
     .write = nemu_trap_write,
 };

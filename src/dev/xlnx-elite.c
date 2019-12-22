@@ -470,7 +470,7 @@ static void xlnx_elite_write(paddr_t addr, int len, uint32_t data) {
 DEF_DEV(xlnx_elite_dev) = {
     .name = "xilinx-etherlite",
     .start = CONFIG_XLNX_ELITE_BASE,
-    .end = CONFIG_XLNX_ELITE_BASE + XLNX_ELITE_SIZE,
+    .size = XLNX_ELITE_SIZE,
     .init = xlnx_elite_init,
     .read = xlnx_elite_read,
     .peek = xlnx_elite_read,

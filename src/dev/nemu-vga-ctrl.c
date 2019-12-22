@@ -19,7 +19,7 @@ static void screen_write(paddr_t addr, int len, uint32_t data) {
 DEF_DEV(screen_dev) = {
     .name = "nemu-vga-controller",
     .start = CONFIG_NEMU_VGA_CTRL_BASE,
-    .end = CONFIG_NEMU_VGA_CTRL_BASE + 4,
+    .size = 4,
     .peek = screen_read,
     .read = screen_read,
     .write = screen_write,

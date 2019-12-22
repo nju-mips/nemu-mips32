@@ -132,21 +132,6 @@ config DUMP_SYSCALL
 
 endmenu
 
-menu "Preload kernel image"
-config PRELOAD_LINUX
-  bool "Preload linux kernel into memory (bootm)"
-  depends on MARCH_MIPS32_R1
-  depends on KERNEL_ELF_PATH != ""
-  depends on KERNEL_UIMAGE_PATH != ""
-
-config KERNEL_UIMAGE_BASE
-  hex "Address to load kernel image"
-  depends on PRELOAD_LINUX=y
-  range 0x80000000 0xA0000000
-  default 0x84000000
-
-endmenu
-
 menu "Device simulation"
 menuconfig BRAM
   bool "Block RAM (1 MB)"

@@ -44,13 +44,6 @@ CONFIG_WARN_PC_EQUALS_ZERO=y
 # end of Kernel debug options
 
 #
-# Preload kernel image
-#
-CONFIG_PRELOAD_LINUX=y
-CONFIG_KERNEL_UIMAGE_BASE=0x84000000
-# end of Preload kernel image
-
-#
 # Device simulation
 #
 CONFIG_BRAM=y

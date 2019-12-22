@@ -78,45 +78,115 @@ static inline void assume_elf_file() {
   }
 }
 
+enum {
+  OPT_BEG = 128,
+  OPT_FLASH,
+  OPT_BLOCK_DATA,
+  OPT_FIFO_DATA,
+};
+
 const struct option long_options[] = {
-    {"symbol", 1, NULL, 'S'},
-    {"linux", 1, NULL, 'l'},
-    // {"diff-with-qemu", 0, NULL, 'D'},
     {"batch", 0, NULL, 'b'},
     {"commit", 0, NULL, 'c'},
-    {"image", 1, NULL, 'i'},
+    // {"diff-with-qemu", 0, NULL, 'D'},
     {"elf", 1, NULL, 'e'},
+    {"image", 1, NULL, 'i'},
+    {"symbol", 1, NULL, 'S'},
     {"help", 0, NULL, 'h'},
-    {"flash", 1, NULL, 'f'},
+    /* ------------------ */
+    {"flash", 1, NULL, OPT_FLASH},
+    {"block-data", 1, NULL, OPT_BLOCK_DATA},
+    {"fifo-data", 1, NULL, OPT_FIFO_DATA},
     {NULL, 0, NULL, 0},
 };
 
 static void print_help(const char *file) {
   printf("Usage: %s [OPTION...]\n", file);
-  printf("\n");
   printf(
-      "  -S, --symbol=FILE     use this file to produce "
-      "symbols, default to be same with elf\n");
-  printf("  -u, --uImage=FILE     specify uImage file\n");
-  printf("  -D, --diff-with-qemu  run diff tests with qemu\n");
-  printf("  -b, --batch           run on batch mode\n");
-  printf(
-      "  -c, --commit          commit all executed "
-      "instructions\n");
-  printf("  -i, --image=FILE      run with this image file\n");
-  printf("  -e, --elf=FILE        run with this elf file\n");
-  printf("  -h, --help            print program help info\n");
-  printf("\n");
-  printf("Report bugs to 141242068@smail.nju.edu.cn.\n");
+      "\n\
+  -b, --batch                run with batch mode\n\
+  -c, --commit               commit all executed instructions\n\
+  -d, --diff                 diff with qemu\n\
+  -e, --elf=FILE             run with this elf file\n\
+  -i, --image=FILE           run with this image file\n\
+  -s, --symbol=FILE          file to provide symbols, default elf\n\
+  --fifo-data dev:FILE       initialize fifo dev data with FILE\n\
+  --block-data dev:addr:FILE initialize block dev data with FILE\n\
+  \n\
+  -h, --help                 print program help info\n\
+\n\
+Report bugs to ouxianfei@smail.nju.edu.cn.\n");
+}
+
+void parse_fifo_data_option(const char *optarg) {
+  for (device_t *head = get_device_list_head(); head; head = head->next) {
+    int len = strlen(head->name);
+    if (memcmp(head->name, optarg, len) != 0) continue;
+    if (optarg[len] != ':' || !head->set_fifo_data) continue;
+
+    const char *file = &optarg[len + 1];
+    int filesz = get_file_size(file);
+    void *buf = read_file(file);
+    head->set_fifo_data(buf, filesz);
+    free(buf);
+    return;
+  }
+
+  char *dup_s = strdup(optarg);
+  char *delim = strchr(dup_s, ':');
+  if (delim) *delim = '\0';
+  panic("device '%s' not found\n", dup_s);
+  free(dup_s);
+}
+
+void parse_block_data_option(const char *optarg) {
+  for (device_t *head = get_device_list_head(); head; head = head->next) {
+    int len = strlen(head->name);
+    if (memcmp(head->name, optarg, len) != 0) continue;
+    if (optarg[len] != ':' || !head->set_block_data) continue;
+
+    const char *addr_s = &optarg[len + 1];
+    char *file_s = NULL;
+
+    uint32_t addr = 0;
+    if (addr_s[0] == '0') {
+      if (addr_s[1] == 'x' || addr_s[1] == 'X')
+        addr = strtol(addr_s, &file_s, 16);
+      else
+        addr = strtol(addr_s, &file_s, 8);
+    } else {
+      addr = strtol(addr_s, &file_s, 10);
+    }
+
+    if (file_s[0] == ':') {
+      const char *file = &file_s[1];
+      int filesz = get_file_size(file);
+      void *buf = read_file(file);
+      if (!buf) panic("file %s not found\n", file);
+      if (head->size <= addr || head->size <= addr + filesz)
+        panic("addr %08x in option %s is out of device bound\n", addr, optarg);
+      head->set_block_data(addr, buf, filesz);
+      free(buf);
+    } else {
+      panic("file not specified in %s\n", optarg);
+    }
+    return;
+  }
+
+  char *dup_s = strdup(optarg);
+  char *delim = strchr(dup_s, ':');
+  if (delim) *delim = '\0';
+  panic("device '%s' not found\n", dup_s);
+  free(dup_s);
 }
 
 void parse_args(int argc, char *argv[]) {
   int o;
   while (
-      (o = getopt_long(argc, argv, "-bcDe:i:S:h", long_options, NULL)) != -1) {
+      (o = getopt_long(argc, argv, "-bcde:i:s:h", long_options, NULL)) != -1) {
     switch (o) {
-    case 'S': symbol_file = optarg; break;
-    case 'D': work_mode |= MODE_DIFF; break;
+    case 's': symbol_file = optarg; break;
+    case 'd': work_mode |= MODE_DIFF; break;
     case 'b': work_mode |= MODE_BATCH; break;
     case 'c': work_mode |= MODE_LOG; break;
     case 'e':
@@ -131,10 +201,10 @@ void parse_args(int argc, char *argv[]) {
       else
         img_file = optarg;
       break;
+    case OPT_FLASH: flash_file = optarg; break;
+    case OPT_BLOCK_DATA: parse_block_data_option(optarg); break;
+    case OPT_FIFO_DATA: parse_fifo_data_option(optarg); break;
     case 'h':
-    case 'f':
-      flash_file = optarg;
-      break;
     default: print_help(argv[0]); exit(0);
     }
   }
@@ -160,10 +230,6 @@ work_mode_t init_monitor(void) {
     signal(SIGINT, gdb_sigint_handler);
   else
     signal(SIGINT, batch_sigint_handler);
-
-#if CONFIG_PRELOAD_LINUX
-  load_image(CONFIG_KERNEL_UIMAGE_PATH, CONFIG_KERNEL_UIMAGE_BASE);
-#endif
 
   /* Initialize this virtual computer system. */
   init_cpu(CPU_INIT_PC);

@@ -50,7 +50,7 @@ DEF_DEV(nemu_keyboard_dev) = {
     .name = "nemu-keyboard",
     .init = nemu_keyboard_init,
     .start = CONFIG_NEMU_KEYBOARD_BASE,
-    .end = CONFIG_NEMU_KEYBOARD_BASE + NEMU_KEYBOARD_SIZE,
+    .size = NEMU_KEYBOARD_SIZE,
     .read = nemu_keyboard_read,
     .on_data = nemu_keyboard_on_data,
 };

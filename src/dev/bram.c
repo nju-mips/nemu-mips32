@@ -20,12 +20,18 @@ static void bram_write(paddr_t addr, int len, uint32_t data) {
   memcpy((void *)bram + addr, &data, len);
 }
 
+static void bram_set_block_data(paddr_t addr, const void *data, int len) {
+  check_ioaddr(addr, len, BRAM_SIZE, "bram.write");
+  memcpy((void *)bram + addr, data, len);
+}
+
 DEF_DEV(bram_dev) = {
     .name = "block-ram",
     .start = CONFIG_BRAM_BASE,
-    .end = CONFIG_BRAM_BASE + BRAM_SIZE,
+    .size = BRAM_SIZE,
     .read = bram_read,
     .write = bram_write,
     .map = bram_map,
     .peek = bram_read,
+    .set_block_data = bram_set_block_data,
 };

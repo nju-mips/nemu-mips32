@@ -14,7 +14,7 @@ static uint32_t nemu_clock_read(paddr_t addr, int len) {
 DEF_DEV(nemu_clock_dev) = {
     .name = "nemu-clock",
     .start = CONFIG_NEMU_CLOCK_BASE,
-    .end = CONFIG_NEMU_CLOCK_BASE + NEMU_CLOCK_SIZE,
+    .size = NEMU_CLOCK_SIZE,
     .read = nemu_clock_read,
     .peek = nemu_clock_read,
 };

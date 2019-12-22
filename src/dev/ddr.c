@@ -21,12 +21,18 @@ static void ddr_write(paddr_t addr, int len, uint32_t data) {
   memcpy((uint8_t *)ddr + addr, &data, len);
 }
 
+static void ddr_set_block_data(paddr_t addr, const void *data, int len) {
+  check_ioaddr(addr, len, DDR_SIZE, "ddr.write");
+  memcpy((void *)ddr + addr, data, len);
+}
+
 DEF_DEV(ddr_dev) = {
     .name = "ddr",
     .start = CONFIG_DDR_BASE,
-    .end = CONFIG_DDR_BASE + DDR_SIZE,
+    .size = DDR_SIZE,
     .read = ddr_read,
     .write = ddr_write,
     .map = ddr_map,
     .peek = ddr_read,
+    .set_block_data = ddr_set_block_data,
 };

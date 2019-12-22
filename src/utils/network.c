@@ -1,18 +1,17 @@
-#if CONFIG_NETWORK
-#  include <arpa/inet.h>
-#  include <linux/if_tun.h>
-#  include <net/if.h>
-#  include <netinet/ether.h>
-#  include <netinet/ip.h>
-#  include <netinet/tcp.h>
-#  include <netinet/udp.h>
-#  include <netpacket/packet.h>
-#  include <stdlib.h>
-#  include <string.h>
-#  include <sys/ioctl.h>
-#  include <sys/socket.h>
-#  include <sys/types.h>
-#  include <unistd.h>
+#include <arpa/inet.h>
+#include <linux/if_tun.h>
+#include <net/if.h>
+#include <netinet/ether.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netpacket/packet.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 /* /usr/include/netinet/ether.h */
 // struct ether_header;
@@ -24,8 +23,8 @@
 /* /usr/include/netinet/udphdr.h */
 // struct udphdr
 
-#  include "debug.h"
-#  include "utils.h"
+#include "debug.h"
+#include "utils.h"
 
 static pcap_handler pcap;
 
@@ -73,7 +72,7 @@ void iptables_add_route(const char *ip) {
   const char *gw = "192.168.12.0";
   route("del %s dev %s", gw, iface_dev);
   route("add %s dev %s", gw, iface_dev);
-#  if 0
+#if 0
   iptables("-t nat -D POSTROUTING -s %s/24 -d 224.0.0.0/24 -j RETURN", ip);
   iptables(
       "-t nat -D POSTROUTING -s %s/24 -d 255.255.255.255/32 -j RETURN", ip);
@@ -86,9 +85,9 @@ void iptables_add_route(const char *ip) {
       "--to-ports 1024-65535",
       ip, ip);
   iptables("-t nat -D POSTROUTING -s %s/24 ! -d %s/24 -j MASQUERADE", ip, ip);
-#  endif
+#endif
 
-#  if 0
+#if 0
   iptables("-t nat -A POSTROUTING -s %s/24 -d 224.0.0.0/24 -j RETURN", ip);
   iptables(
       "-t nat -A POSTROUTING -s %s/24 -d 255.255.255.255/32 -j RETURN", ip);
@@ -101,7 +100,7 @@ void iptables_add_route(const char *ip) {
       "--to-ports 1024-65535",
       ip, ip);
   iptables("-t nat -A POSTROUTING -s %s/24 ! -d %s/24 -j MASQUERADE", ip, ip);
-#  endif
+#endif
 }
 
 static void init_tap() {
@@ -150,14 +149,12 @@ int net_recv_data(uint8_t *to, const int maxlen) {
   pcap_write_and_flush(pcap, to, nbytes);
   return nbytes;
 
-#  if 0
+#if 0
     uint32_t ip = inet_addr(iface_ipaddr);
     struct ether_header *ehdr = (void *)to;
     if (ntohs(ehdr->ether_type) == ETH_P_IP) {
       struct iphdr *iphdr = (void *)to + sizeof(struct ether_header);
       if (iphdr->daddr != ip) { continue; }
     }
-#  endif
-}
-
 #endif
+}

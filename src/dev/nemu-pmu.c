@@ -5,5 +5,5 @@
 DEF_DEV(nemu_pmu_dev) = {
     .name = "nemu-pmu",
     .start = CONFIG_NEMU_PMU_BASE,
-    .end = CONFIG_NEMU_PMU_BASE + NEMU_PMU_SIZE,
+    .size = NEMU_PMU_SIZE,
 };

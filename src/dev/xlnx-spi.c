@@ -4,12 +4,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "flash-m25p80.c"
-
 #include "common.h"
 #include "device.h"
 #include "queue.h"
 #include "utils.h"
+
+#include "flash-m25p80.c"
 
 #define SPI_SIZE 0x1000
 
@@ -188,7 +188,7 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
 DEF_DEV(xlnx_spi_dev) = {
     .name = "xilinx-spi",
     .start = CONFIG_XLNX_SPI_BASE,
-    .end = CONFIG_XLNX_SPI_BASE + SPI_SIZE,
+    .size = SPI_SIZE,
     .init = xlnx_spi_init,
     .read = xlnx_spi_read,
     .write = xlnx_spi_write,
