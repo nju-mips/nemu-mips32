@@ -37,6 +37,9 @@ make
 
 ## linux
 
+* create debian image
+  * https://people.debian.org/~aurel32/qemu/
+  * qemu-system-mipsel -cpu 4Kc -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=ttyS0" -nographic
 * important files:
   * linux/arch/mips/boot/dts/noop/noop.dts
 * commands:
