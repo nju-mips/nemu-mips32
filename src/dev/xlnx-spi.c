@@ -115,6 +115,8 @@ void xlnx_spi_flush_txfifo() {
 static void xlnx_spi_update_irq() {
   uint32_t pending;
 
+  clear_irq(XLNX_SPI_IRQ_NO);
+
   xlnx_spi_regs.ipisr |= (!queue_is_empty(spi_rx_q) ? IRQ_DRR_NOT_EMPTY : 0) |
                          (queue_is_full(spi_rx_q) ? IRQ_DRR_FULL : 0);
 
@@ -145,6 +147,8 @@ static void xlnx_spi_init(const char *filename) {
 static uint32_t xlnx_spi_read(paddr_t addr, int len) {
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
   // printf("[NEMU] read %08x\n", addr);
+
+  clear_irq(XLNX_SPI_IRQ_NO);
 
   switch (addr) {
   case SPISR: {
@@ -197,7 +201,11 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
     if (!(xlnx_spi_regs.spicr & SPICR_MASTER_INHIBIT)) xlnx_spi_flush_txfifo();
   } break;
   case SPIDRR: break;
-  case SPISSR: xlnx_spi_regs.spissr = data & 1; break;
+  case SPISSR:
+    xlnx_spi_regs.spissr = (~0u << 1) | (data & 1);
+    m25p80_cs(&flash, data & 1);
+    if (!(data & 1)) { set_irq(XLNX_SPI_IRQ_NO); }
+    break;
   case SPITFOR: xlnx_spi_regs.spitfor = data; break;
   case SPIRFOR: xlnx_spi_regs.spirfor = data; break;
   case IPISR: xlnx_spi_regs.ipisr ^= data; break;
