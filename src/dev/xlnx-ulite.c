@@ -3,7 +3,7 @@
 
 #include "device.h"
 #include "events.h"
-#include "queue.h"
+#include "fifo.h"
 
 // UART
 #define Rx 0x0
@@ -27,9 +27,9 @@
 #define ULITE_CONTROL_RST_RX 0x02
 
 /* ulite queue */
-static queue_type(int, 1024) ulite_q;
+static fifo_type(int, 1024) ulite_q;
 
-void xlnx_ulite_enqueue(int ch) { queue_push(ulite_q, ch); }
+void xlnx_ulite_enqueue(int ch) { fifo_push(ulite_q, ch); }
 
 /* ulite queue end */
 
@@ -68,10 +68,10 @@ static void stop_cpu_check(char ch) {
 
 static uint32_t xlnx_ulite_peek(paddr_t addr, int len) {
   switch (addr) {
-  case Rx: return queue_top(ulite_q);
+  case Rx: return fifo_top(ulite_q);
   case STAT: {
     uint32_t status = 0;
-    if (!queue_is_empty(ulite_q)) status |= SR_RX_FIFO_VALID_DATA;
+    if (!fifo_is_empty(ulite_q)) status |= SR_RX_FIFO_VALID_DATA;
     if (xlnx_ulite_intr_enabled) status |= SR_CTRL_INTR_BIT;
     if (xlnx_ulite_tx_fifo_empty) status |= SR_TX_FIFO_EMPTY;
     return status;
@@ -88,7 +88,7 @@ static uint32_t xlnx_ulite_read(paddr_t addr, int len) {
   check_ioaddr(addr, len, XLNX_ULITE_SIZE, "ulite.read");
   if (addr == Rx) {
     clear_irq(XLNX_ULITE_IRQ_NO);
-    return queue_pop(ulite_q);
+    return fifo_pop(ulite_q);
   }
   return xlnx_ulite_peek(addr, len);
 }

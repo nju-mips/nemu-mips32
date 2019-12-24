@@ -48,10 +48,6 @@ typedef struct {
   size_t size;
 } map_result_t;
 
-/* for nemu core */
-uint32_t vaddr_read(vaddr_t, int);
-void vaddr_write(vaddr_t, int, uint32_t);
-
 /* for npc diff */
 uint32_t paddr_peek(paddr_t, int);
 

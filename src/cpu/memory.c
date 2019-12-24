@@ -49,24 +49,10 @@ void dbg_vaddr_write(vaddr_t addr, int len, uint32_t data) {
   clear_decode_cache();
 }
 
-uint32_t vaddr_read(vaddr_t addr, int len) {
-  addr = prot_addr(addr, MMU_LOAD);
-  device_t *dev = find_device(addr);
-  CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
-  return dev->read(addr - dev->start, len);
-}
-
 uint32_t paddr_peek(paddr_t addr, int len) {
   device_t *dev = find_device(addr);
   CPUAssert(dev && dev->peek, "bad addr %08x\n", addr);
   return dev->peek(addr - dev->start, len);
-}
-
-void vaddr_write(vaddr_t addr, int len, uint32_t data) {
-  addr = prot_addr(addr, MMU_STORE);
-  device_t *dev = find_device(addr);
-  CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
-  return dev->write(addr - dev->start, len, data);
 }
 
 void init_mmio() {

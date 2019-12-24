@@ -1,26 +1,5 @@
-/*
- * ST M25P80 emulator. Emulate all SPI flash devices based on the m25p80 command
- * set. Known devices table current as of Jun/2012 and taken from linux.
- * See drivers/mtd/devices/m25p80.c.
- *
- * Copyright (C) 2011 Edgar E. Iglesias <edgar.iglesias@gmail.com>
- * Copyright (C) 2012 Peter A. G. Crosthwaite <peter.crosthwaite@petalogix.com>
- * Copyright (C) 2012 PetaLogix
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 or
- * (at your option) a later version of the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
+#include <sys/types.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

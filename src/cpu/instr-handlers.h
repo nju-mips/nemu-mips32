@@ -198,7 +198,7 @@ make_entry() {
     goto *(decode->handler);
   }
 
-  Inst inst = {.val = load_mem(cpu.pc, 4)};
+  Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #  if CONFIG_INSTR_LOG || CONFIG_DECODE_CACHE_CHECK
   decode->inst.val = inst.val;
 #  endif
@@ -313,7 +313,7 @@ make_exec_handler(inv) {
 #if CONFIG_EXCEPTION
   signal_exception(EXC_RI);
 #else
-  uint32_t instr = load_mem(cpu.pc, 4);
+  uint32_t instr = vaddr_read(cpu.pc, 4);
   uint8_t *p = (uint8_t *)&instr;
   printf(
       "invalid opcode(pc = 0x%08x): %02x %02x %02x %02x "
@@ -907,7 +907,7 @@ make_exec_handler(swl) {
   int len = idx + 1;
   uint32_t wdata = cpu.gpr[operands->rt] >> ((3 - idx) * 8);
 
-  store_mem((waddr >> 2) << 2, len, wdata);
+  vaddr_write((waddr >> 2) << 2, len, wdata);
 }
 
 make_exec_handler(swr) {
@@ -915,28 +915,28 @@ make_exec_handler(swr) {
   int len = 4 - (waddr & 0x3);
   uint32_t wdata = cpu.gpr[operands->rt];
 
-  store_mem(waddr, len, wdata);
+  vaddr_write(waddr, len, wdata);
 }
 
 make_exec_handler(sw) {
   CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[operands->rs] + operands->simm);
-  store_mem(cpu.gpr[operands->rs] + operands->simm, 4, cpu.gpr[operands->rt]);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4, cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(sh) {
   CHECK_ALIGNED_ADDR_AdES(2, cpu.gpr[operands->rs] + operands->simm);
-  store_mem(cpu.gpr[operands->rs] + operands->simm, 2, cpu.gpr[operands->rt]);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 2, cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(sb) {
   CHECK_ALIGNED_ADDR_AdES(1, cpu.gpr[operands->rs] + operands->simm);
-  store_mem(cpu.gpr[operands->rs] + operands->simm, 1, cpu.gpr[operands->rt]);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 1, cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(lwl) {
   uint32_t raddr = cpu.gpr[operands->rs] + operands->simm;
   int len = (raddr & 0x3) + 1;
-  uint32_t rdata = load_mem((raddr >> 2) << 2, len);
+  uint32_t rdata = vaddr_read((raddr >> 2) << 2, len);
 
   if (!cpu.has_exception) {
     if (len < 4)
@@ -952,7 +952,7 @@ make_exec_handler(lwr) {
   uint32_t raddr = cpu.gpr[operands->rs] + operands->simm;
   int idx = raddr & 0x3;
   int len = 4 - idx;
-  uint32_t rdata = load_mem(raddr, len);
+  uint32_t rdata = vaddr_read(raddr, len);
   if (!cpu.has_exception) {
     if (len < 4)
       cpu.gpr[operands->rt] = (rdata << idx * 8) >> (idx * 8) |
@@ -965,33 +965,33 @@ make_exec_handler(lwr) {
 
 make_exec_handler(lw) {
   CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = load_mem(cpu.gpr[operands->rs] + operands->simm, 4);
+  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lb) {
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[operands->rs] + operands->simm);
   uint32_t rdata =
-      (int32_t)(int8_t)load_mem(cpu.gpr[operands->rs] + operands->simm, 1);
+      (int32_t)(int8_t)vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lbu) {
   CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = load_mem(cpu.gpr[operands->rs] + operands->simm, 1);
+  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lh) {
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[operands->rs] + operands->simm);
   uint32_t rdata =
-      (int32_t)(int16_t)load_mem(cpu.gpr[operands->rs] + operands->simm, 2);
+      (int32_t)(int16_t)vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lhu) {
   CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = load_mem(cpu.gpr[operands->rs] + operands->simm, 2);
+  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 

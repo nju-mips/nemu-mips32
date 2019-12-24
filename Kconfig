@@ -102,6 +102,15 @@ config MMU_CACHE_CHECK
 config DECODE_CACHE_CHECK
   bool "Check the validness of decode cache"
 
+config MMIO_LOGGER
+  bool "log read and write of mmio"
+  default n
+
+config MMIO_LOGGER_DEVICE
+  string "device to be logged"
+  depends on MMIO_LOGGER=y
+  default "xilinx-spi"
+
 endmenu
 endif
 

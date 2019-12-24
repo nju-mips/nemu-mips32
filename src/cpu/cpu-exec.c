@@ -146,7 +146,7 @@ static inline void update_mmu_cache(
   }
 }
 
-static inline uint32_t load_mem(vaddr_t addr, int len) {
+static inline uint32_t vaddr_read(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
   if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
 #if CONFIG_MMU_CACHE_PERF
@@ -164,11 +164,18 @@ static inline uint32_t load_mem(vaddr_t addr, int len) {
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, attr.dirty);
-    return dev->read(paddr - dev->start, len);
+    uint32_t data = dev->read(paddr - dev->start, len);
+#if CONFIG_MMIO_LOGGER
+    if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
+      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name,
+          paddr - dev->start, len, data);
+    }
+#endif
+    return data;
   }
 }
 
-static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
+static inline void vaddr_write(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
   if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr) &&
       mmu_cache[idx].can_write) {
@@ -189,6 +196,12 @@ static inline void store_mem(vaddr_t addr, int len, uint32_t data) {
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, true);
+#if CONFIG_MMIO_LOGGER
+    if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
+      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name,
+          paddr - dev->start, len, data);
+    }
+#endif
     dev->write(paddr - dev->start, len, data);
   }
 }
@@ -447,7 +460,7 @@ void cpu_exec(uint64_t n) {
     decode_cache_t *decode = decode_cache_fetch(cpu.pc);
 #else
 #  define operands (&inst)
-    Inst inst = {.val = load_mem(cpu.pc, 4)};
+    Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #endif
 
 #include "instr-handlers.h"
