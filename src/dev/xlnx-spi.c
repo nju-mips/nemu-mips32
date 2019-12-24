@@ -24,6 +24,7 @@
 #define R_SPICR_MTI (1 << 8)
 
 #define R_SPISR (0x64 / 4)
+#define SR_SLAVE_MODE_SELECT (1 << 5)
 #define SR_TX_FULL (1 << 3)
 #define SR_TX_EMPTY (1 << 2)
 #define SR_RX_FULL (1 << 1)
@@ -94,6 +95,8 @@ static void xlnx_spi_do_reset() {
   rxfifo_reset();
   txfifo_reset();
 
+  xlnx_spi_regs[R_SPICR] |= 0x180;
+  xlnx_spi_regs[R_SPISR] |= SR_SLAVE_MODE_SELECT;
   xlnx_spi_regs[R_SPISSR] = ~0;
   xlnx_spi_update_irq();
   xlnx_spi_update_cs();
@@ -202,8 +205,8 @@ done:
 
 static void xlnx_spi_init() {
   m25p80_init(&flash);
-  // fifo_create(spi_tx_fifo, FIFO_CAPACITY);
-  // fifo_create(spi_rx_fifo, FIFO_CAPACITY);
+
+  xlnx_spi_do_reset();
 }
 
 DEF_DEV(xlnx_spi_dev) = {
