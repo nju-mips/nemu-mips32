@@ -33,21 +33,6 @@
 #define SPISR_RX_FULL (1 << 1)
 #define SPISR_RX_EMPTY (1 << 0)
 
-/* SPI Data Transmit Register (spidtr), [1] p12, [2] p12 */
-#define SPIDTR_8BIT_MASK GENMASK(7, 0)
-#define SPIDTR_16BIT_MASK GENMASK(15, 0)
-#define SPIDTR_32BIT_MASK GENMASK(31, 0)
-
-/* SPI Data Receive Register (spidrr), [1] p12, [2] p12 */
-#define SPIDRR_8BIT_MASK GENMASK(7, 0)
-#define SPIDRR_16BIT_MASK GENMASK(15, 0)
-#define SPIDRR_32BIT_MASK GENMASK(31, 0)
-
-/* SPI Slave Select Register (spissr), [1] p13, [2] p13 */
-#define SPISSR_MASK(cs) (1 << (cs))
-#define SPISSR_ACT(cs) ~SPISSR_MASK(cs)
-#define SPISSR_OFF ~0UL
-
 /* SPI Software Reset Register (ssr) */
 #define SPISSR_RESET_VALUE 0x0a
 
@@ -65,6 +50,9 @@
 #define XILINX_SPI_QUAD_EXTRA_DUMMY 3
 #define SPI_QUAD_OUT_FAST_READ 0x6B
 
+#define DGIER 0x1c
+#define IPISR 0x20
+#define IPIER 0x28
 #define SRR 0x40     // write
 #define SPICR 0x60   // rw,  0x180
 #define SPISR 0x64   // r,   0x25
@@ -73,6 +61,17 @@
 #define SPISSR 0x70  // rw
 #define SPITFOR 0x74 // r
 #define SPIRFOR 0x78 // r
+
+#define DGIER_IE (1 << 31)
+
+#define XLNX_SPI_IRQ_NO 2
+
+#define IRQ_DRR_NOT_EMPTY (1 << (31 - 23))
+#define IRQ_DRR_OVERRUN (1 << (31 - 26))
+#define IRQ_DRR_FULL (1 << (31 - 27))
+#define IRQ_TX_FF_HALF_EMPTY (1 << 6)
+#define IRQ_DTR_UNDERRUN (1 << 3)
+#define IRQ_DTR_EMPTY (1 << (31 - 29))
 
 struct xilinx_spi_regs {
   u32 __space0__[7];
@@ -108,22 +107,44 @@ void xlnx_spi_flush_txfifo() {
     int data = queue_pop(spi_tx_q);
     int r = 0;
     /* there is only one slave */
-    if ((xlnx_spi_regs.spissr & 1) == 0)
-      r = m25p80_transfer8(&flash, data);
+    if ((xlnx_spi_regs.spissr & 1) == 0) r = m25p80_transfer8(&flash, data);
     queue_push(spi_rx_q, r);
   }
 }
 
-static void xlnx_spi_init(const char *filename) {
-  m25p80_init(&flash);
+static void xlnx_spi_update_irq() {
+  uint32_t pending;
+
+  xlnx_spi_regs.ipisr |= (!queue_is_empty(spi_rx_q) ? IRQ_DRR_NOT_EMPTY : 0) |
+                         (queue_is_full(spi_rx_q) ? IRQ_DRR_FULL : 0);
+
+  pending = xlnx_spi_regs.ipisr & xlnx_spi_regs.ipier;
+
+  pending = pending && xlnx_spi_regs.dgier & DGIER_IE;
+  pending = !!pending;
+
+  if (pending) set_irq(XLNX_SPI_IRQ_NO);
+}
+
+static void xlnx_spi_reset() {
+  memset(&xlnx_spi_regs, 0, sizeof(xlnx_spi_regs));
+
+  queue_reset(spi_rx_q);
+  queue_reset(spi_tx_q);
 
   xlnx_spi_regs.spicr = 0x180;
   xlnx_spi_regs.spisr = 0x25;
   xlnx_spi_regs.spissr = ~0;
 }
 
+static void xlnx_spi_init(const char *filename) {
+  m25p80_init(&flash);
+  xlnx_spi_reset();
+}
+
 static uint32_t xlnx_spi_read(paddr_t addr, int len) {
   check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
+  // printf("[NEMU] read %08x\n", addr);
 
   switch (addr) {
   case SPISR: {
@@ -135,9 +156,12 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
     if (queue_is_full(spi_tx_q)) spisr |= SPISR_TX_FULL;
     return spisr;
   } break;
-  case SPIDRR:
+  case SPIDRR: {
     if (queue_is_empty(spi_rx_q)) return 0xdeadbeef;
-    return queue_pop(spi_rx_q);
+    uint32_t data = queue_pop(spi_rx_q);
+    xlnx_spi_update_irq();
+    return data;
+  } break;
   default:
     if (addr + 4 <= sizeof(xlnx_spi_regs)) {
       uint32_t data = 0;
@@ -152,14 +176,11 @@ static uint32_t xlnx_spi_read(paddr_t addr, int len) {
 }
 
 static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
-  check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.read");
+  // printf("[NEMU] write %08x, %08x\n", addr, data);
+  check_aligned_ioaddr(addr, len, SPI_SIZE, "spi.write");
   switch (addr) {
   case SRR:
-    if (data == 0xa) {
-      queue_reset(spi_rx_q);
-      queue_reset(spi_tx_q);
-      xlnx_spi_regs.spissr = ~0;
-    }
+    if (data == 0xa) { xlnx_spi_reset(); }
     break;
   case SPICR:
     if (data & SPICR_RXFIFO_RESET) queue_reset(spi_rx_q);
@@ -173,16 +194,24 @@ static void xlnx_spi_write(paddr_t addr, int len, uint32_t data) {
     break;
   case SPIDTR: {
     queue_push(spi_tx_q, data);
-    if (xlnx_spi_regs.spicr & SPICR_MASTER_INHIBIT) xlnx_spi_flush_txfifo();
+    if (!(xlnx_spi_regs.spicr & SPICR_MASTER_INHIBIT)) xlnx_spi_flush_txfifo();
   } break;
   case SPIDRR: break;
   case SPISSR: xlnx_spi_regs.spissr = data & 1; break;
   case SPITFOR: xlnx_spi_regs.spitfor = data; break;
   case SPIRFOR: xlnx_spi_regs.spirfor = data; break;
+  case IPISR: xlnx_spi_regs.ipisr ^= data; break;
   default:
-    CPUAssert(false, "spi: address(0x%08x) is not writable", addr);
+    if (addr + 4 <= sizeof(xlnx_spi_regs)) {
+      void *regs_ptr = (void *)&xlnx_spi_regs;
+      memcpy(regs_ptr + addr, &data, sizeof(data));
+    } else {
+      CPUAssert(false, "spi: address(0x%08x) is not writable", addr);
+    }
     break;
   }
+
+  xlnx_spi_update_irq();
 }
 
 DEF_DEV(xlnx_spi_dev) = {
