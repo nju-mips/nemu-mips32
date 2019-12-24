@@ -246,8 +246,9 @@ extern const char *flash_file;
 static void flash_sync_page(Flash *s, int page) {
   if (!flash_file) return;
   int fd = open(flash_file, O_RDWR | O_CREAT, 0644);
-  lseek(fd, page * s->pi->page_size, SEEK_SET);
-  write_s(fd, s->storage, s->pi->page_size);
+  int off = page * s->pi->page_size;
+  lseek(fd, off, SEEK_SET);
+  write_s(fd, s->storage + off, s->pi->page_size);
   close(fd);
 }
 
@@ -255,7 +256,7 @@ static inline void flash_sync_area(Flash *s, int64_t off, int64_t len) {
   if (!flash_file) return;
   int fd = open(flash_file, O_RDWR | O_CREAT, 0644);
   lseek(fd, off, SEEK_SET);
-  write_s(fd, s->storage, len);
+  write_s(fd, s->storage + off, len);
   close(fd);
 }
 
