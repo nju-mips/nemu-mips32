@@ -74,9 +74,6 @@ int iptables(const char *fmt, ...) {
 
 void iptables_add_route(const char *ip) {
   /* sudo iptables-save -t nat */
-  const char *gw = "192.168.12.0";
-  route("del %s dev %s", gw, iface_dev);
-  route("add %s dev %s", gw, iface_dev);
 #if 0
   iptables("-t nat -D POSTROUTING -s %s/24 -d 224.0.0.0/24 -j RETURN", ip);
   iptables(
@@ -110,8 +107,6 @@ void iptables_add_route(const char *ip) {
 
 static void init_tap() {
   iface_fd = tap_create(iface_dev);
-  // perror("ioctl");
-  // tap_set_attribute(iface_dev, inet_addr(iface_gw), iface_hwaddr, 500);
 
   int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   tap_set_down(sockfd, iface_dev);
@@ -121,7 +116,6 @@ static void init_tap() {
   tap_set_up(sockfd, iface_dev);
   close(sockfd);
   route("add -host %s gw %s", iface_gw, iface_gw);
-  // iptables_add_route(iface_ipaddr);
 
   int flags = fcntl(iface_fd, F_GETFL);
   fcntl(iface_fd, F_SETFL, flags | O_NONBLOCK);
@@ -158,24 +152,13 @@ void net_send_data(const uint8_t *data, const int len) {
   } while (len == -1 && errno == EINTR);
 }
 
-uint64_t get_current_time();
-
 int net_recv_data(uint8_t *to, const int maxlen) {
   static uint8_t buf[2048];
 
   pcap_write_and_flush(pcap, NULL, 0);
 
   int vnet_hdr_len = sizeof(struct virtio_net_hdr);
-
-  // struct timeval t;
-  // gettimeofday(&t, NULL);
-  // eprintf("[NEMU] %ld.%06ld: try read\n", t.tv_sec, t.tv_usec);
-
   int nbytes = read(iface_fd, buf, maxlen);
-
-  // gettimeofday(&t, NULL);
-  // eprintf("[NEMU] %ld.%06ld: read end\n", t.tv_sec, t.tv_usec);
-
   if (nbytes < 0 || nbytes < vnet_hdr_len) return -1;
 
   nbytes -= vnet_hdr_len;
@@ -183,14 +166,4 @@ int net_recv_data(uint8_t *to, const int maxlen) {
   pcap_write_and_flush(pcap, to, nbytes);
 
   return nbytes;
-
-#if 0
-  // ioctl(iface_fd, FIONREAD, &nbytes);
-  uint32_t ip = inet_addr(iface_ipaddr);
-  struct ether_header *ehdr = (void *)to;
-  if (ntohs(ehdr->ether_type) == ETH_P_IP) {
-    struct iphdr *iphdr = (void *)to + sizeof(struct ether_header);
-    if (iphdr->daddr != ip) { continue; }
-  }
-#endif
 }
