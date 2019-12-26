@@ -1,5 +1,8 @@
 #include <arpa/inet.h>
+#include <sys/uio.h>
+#include <errno.h>
 #include <linux/if_tun.h>
+#include <linux/virtio_net.h>
 #include <net/if.h>
 #include <netinet/ether.h>
 #include <netinet/ip.h>
@@ -136,20 +139,36 @@ void init_network() { pcap = pcap_open("build/packets.pcap"); }
 void net_send_data(const uint8_t *data, const int len) {
   if (iface_fd < 0) bind_ipaddr_and_hwaddr(data, len);
   pcap_write_and_flush(pcap, data, len);
-  int result = write(iface_fd, data, len);
-  if (result < 0) { /* shit */
-    printf("send failed\n");
-  }
+
+  struct virtio_net_hdr_mrg_rxbuf hdr = {};
+  struct iovec iov_copy[2] = {
+      {.iov_base = &hdr, .iov_len = sizeof(struct virtio_net_hdr_mrg_rxbuf)},
+      {.iov_base = (void *)data, .iov_len = len}};
+
+  do {
+    int ret = writev(iface_fd, iov_copy, 2);
+    (void)ret;
+  } while (len == -1 && errno == EINTR);
 }
 
+uint64_t get_current_time();
+
 int net_recv_data(uint8_t *to, const int maxlen) {
-  uint64_t get_current_time();
-  // ioctl(iface_fd, FIONREAD, &nbytes);
-  int nbytes = read(iface_fd, to, maxlen);
+  static uint8_t buf[2048];
+  pcap_write_and_flush(pcap, NULL, 0);
+
+  int vnet_hdr_len = sizeof(struct virtio_net_hdr);
+  int nbytes = read(iface_fd, buf, maxlen);
+  if (nbytes < 0 || nbytes < vnet_hdr_len) return -1;
+
+  nbytes -= vnet_hdr_len;
+  memcpy(to, buf + vnet_hdr_len, nbytes);
   pcap_write_and_flush(pcap, to, nbytes);
+
   return nbytes;
 
 #if 0
+  // ioctl(iface_fd, FIONREAD, &nbytes);
     uint32_t ip = inet_addr(iface_ipaddr);
     struct ether_header *ehdr = (void *)to;
     if (ntohs(ehdr->ether_type) == ETH_P_IP) {

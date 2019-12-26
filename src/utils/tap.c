@@ -22,7 +22,7 @@ int tap_create(char dev[IFNAMSIZ]) {
 
   if ((fd = open("/dev/net/tun", O_RDWR)) < 0) return -1;
 
-  ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+  ifr.ifr_flags = IFF_TAP | IFF_NO_PI | IFF_VNET_HDR;
 
   if (*dev) { strncpy(ifr.ifr_name, dev, IFNAMSIZ); }
 
