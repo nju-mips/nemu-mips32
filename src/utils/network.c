@@ -1,6 +1,6 @@
 #include <arpa/inet.h>
-#include <sys/uio.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/if_tun.h>
 #include <linux/virtio_net.h>
 #include <net/if.h>
@@ -13,7 +13,9 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <unistd.h>
 
 /* /usr/include/netinet/ether.h */
@@ -114,10 +116,15 @@ static void init_tap() {
   int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   tap_set_down(sockfd, iface_dev);
   tap_set_ipaddr(sockfd, iface_dev, inet_addr(iface_gw));
+  tap_set_netmask(sockfd, iface_dev, inet_addr("255.255.255.0"));
   // tap_set_mtu(sockfd, iface_dev, 500 * 4); // for etherlite, 2000
   tap_set_up(sockfd, iface_dev);
   close(sockfd);
+  route("add -host %s gw %s", iface_gw, iface_gw);
   // iptables_add_route(iface_ipaddr);
+
+  int flags = fcntl(iface_fd, F_GETFL);
+  fcntl(iface_fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 void bind_ipaddr_and_hwaddr(const uint8_t *data, const int len) {
@@ -140,9 +147,9 @@ void net_send_data(const uint8_t *data, const int len) {
   if (iface_fd < 0) bind_ipaddr_and_hwaddr(data, len);
   pcap_write_and_flush(pcap, data, len);
 
-  struct virtio_net_hdr_mrg_rxbuf hdr = {};
+  struct virtio_net_hdr hdr = {};
   struct iovec iov_copy[2] = {
-      {.iov_base = &hdr, .iov_len = sizeof(struct virtio_net_hdr_mrg_rxbuf)},
+      {.iov_base = &hdr, .iov_len = sizeof(struct virtio_net_hdr)},
       {.iov_base = (void *)data, .iov_len = len}};
 
   do {
@@ -155,10 +162,20 @@ uint64_t get_current_time();
 
 int net_recv_data(uint8_t *to, const int maxlen) {
   static uint8_t buf[2048];
+
   pcap_write_and_flush(pcap, NULL, 0);
 
   int vnet_hdr_len = sizeof(struct virtio_net_hdr);
+
+  // struct timeval t;
+  // gettimeofday(&t, NULL);
+  // eprintf("[NEMU] %ld.%06ld: try read\n", t.tv_sec, t.tv_usec);
+
   int nbytes = read(iface_fd, buf, maxlen);
+
+  // gettimeofday(&t, NULL);
+  // eprintf("[NEMU] %ld.%06ld: read end\n", t.tv_sec, t.tv_usec);
+
   if (nbytes < 0 || nbytes < vnet_hdr_len) return -1;
 
   nbytes -= vnet_hdr_len;
@@ -169,11 +186,11 @@ int net_recv_data(uint8_t *to, const int maxlen) {
 
 #if 0
   // ioctl(iface_fd, FIONREAD, &nbytes);
-    uint32_t ip = inet_addr(iface_ipaddr);
-    struct ether_header *ehdr = (void *)to;
-    if (ntohs(ehdr->ether_type) == ETH_P_IP) {
-      struct iphdr *iphdr = (void *)to + sizeof(struct ether_header);
-      if (iphdr->daddr != ip) { continue; }
-    }
+  uint32_t ip = inet_addr(iface_ipaddr);
+  struct ether_header *ehdr = (void *)to;
+  if (ntohs(ehdr->ether_type) == ETH_P_IP) {
+    struct iphdr *iphdr = (void *)to + sizeof(struct ether_header);
+    if (iphdr->daddr != ip) { continue; }
+  }
 #endif
 }
