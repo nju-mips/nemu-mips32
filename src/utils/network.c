@@ -110,7 +110,7 @@ void iptables_add_route(const char *ip) {
 
 static void init_tap() {
   iface_fd = tap_create(iface_dev);
-  perror("ioctl");
+  // perror("ioctl");
   // tap_set_attribute(iface_dev, inet_addr(iface_gw), iface_hwaddr, 500);
 
   int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);

@@ -123,7 +123,7 @@ void init_events() {
 #if CONFIG_NETWORK
   init_network();
 #endif
-#if CONFIG_VGA
+#if CONFIG_GRAPHICS
   init_sdl();
 #endif
   init_console();

@@ -134,6 +134,11 @@ config DUMP_SYSCALL
 endmenu
 
 menu "Device simulation"
+
+config GRAPHICS
+  bool "enable window (by SDL)"
+  default n
+
 menuconfig BRAM
   bool "Block RAM (1 MB)"
 
@@ -190,6 +195,7 @@ config NEMU_CLOCK_BASE
 
 menuconfig NEMU_VGA
   bool "nemu vga"
+  depends on GRAPHICS=y
   select NEMU_VGA_CTRL
 
 config NEMU_VGA_BASE
