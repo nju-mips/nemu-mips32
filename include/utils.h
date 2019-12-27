@@ -51,6 +51,8 @@ typedef struct {
 
 typedef FILE *pcap_handler;
 
+void hexdump(const uint8_t *data, int len);
+
 pcap_handler pcap_open(const char *filename);
 int pcap_write(pcap_handler h, const void *data, const int len);
 void pcap_flush(pcap_handler h);
@@ -64,6 +66,7 @@ const char *find_symbol_by_addr(uint32_t addr);
 
 /* nat */
 void init_network();
+void net_poll_packet();
 void net_bind_mac_addr(const uint8_t mac_addr[ETHER_ADDR_LEN]);
 void net_send_data(const uint8_t *data, const int len);
 int net_recv_data(uint8_t *to, const int maxlen);

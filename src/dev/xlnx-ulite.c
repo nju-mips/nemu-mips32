@@ -118,9 +118,10 @@ static void xlnx_ulite_write(paddr_t addr, int len, uint32_t data) {
   }
 }
 
-static void xlnx_ulite_on_data(void *data, int len) {
+static int xlnx_ulite_on_data(const void *data, int len) {
   for (int i = 0; i < len; i++) { xlnx_ulite_enqueue(((char *)data)[i]); }
   xlnx_ulite_set_irq();
+  return len;
 }
 
 void xlnx_ulite_set_fifo_data(const void *data, int len) {
@@ -139,13 +140,13 @@ DEF_DEV(xlnx_ulite_dev) = {
     .peek = xlnx_ulite_peek,
     .read = xlnx_ulite_read,
     .write = xlnx_ulite_write,
-    .on_data = xlnx_ulite_on_data,
     .set_fifo_data = xlnx_ulite_set_fifo_data,
     .map = NULL,
 };
 
 static void xlnx_ulite_init() {
-  event_add_handler(EVENT_CTRL_C, xlnx_ulite_on_data);
-  event_add_handler(EVENT_CTRL_Z, xlnx_ulite_on_data);
-  event_add_handler(EVENT_STDIN_DATA, xlnx_ulite_on_data);
+  fifo_init(ulite_q);
+  event_bind_handler(EVENT_CTRL_C, xlnx_ulite_on_data);
+  event_bind_handler(EVENT_CTRL_Z, xlnx_ulite_on_data);
+  event_bind_handler(EVENT_STDIN_DATA, xlnx_ulite_on_data);
 }

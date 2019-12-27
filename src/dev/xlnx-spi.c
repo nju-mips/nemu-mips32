@@ -206,6 +206,9 @@ done:
 static void xlnx_spi_init() {
   m25p80_init(&flash);
 
+  fifo_init(spi_tx_fifo);
+  fifo_init(spi_rx_fifo);
+
   xlnx_spi_do_reset();
 }
 

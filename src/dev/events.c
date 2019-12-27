@@ -1,4 +1,5 @@
 #include <SDL/SDL.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -13,26 +14,23 @@ static struct itimerval it;
 
 static event_t events[NR_EVENTS];
 
-void event_add_handler(int event_type, event_handler_t handler) {
+void event_bind_handler(int event_type, event_handler_t handler) {
   assert(handler);
   assert(0 <= event_type && event_type < NR_EVENTS);
 
   event_t *evt = &events[event_type];
-  assert(evt->notify_queue_size + 1 < NR_EVENTS);
-  evt->notify_queue[evt->notify_queue_size++] = handler;
+  assert (!evt->handler);
+  evt->handler = handler;
 }
 
-static void notify_event(int event_type, void *data, int len) {
+int notify_event(int event_type, void *data, int len) {
   assert(0 <= event_type && event_type < NR_EVENTS);
 
   event_t *evt = &events[event_type];
-  for (int i = 0; i < evt->notify_queue_size; i++) {
-    assert(evt->notify_queue[i]);
-    evt->notify_queue[i](data, len);
-  }
+  return evt->handler(data, len);
 }
 
-static void detect_sdl_event() {
+void detect_sdl_event() {
   SDL_Event event = {0};
   if (!SDL_PollEvent(&event)) return;
 
@@ -52,7 +50,7 @@ static void detect_sdl_event() {
   }
 }
 
-static void detect_stdin() {
+void detect_stdin() {
   /* read stdin */
   int n = nchars_stdin();
   if (n > 0) {
@@ -74,10 +72,12 @@ void update_timer() {
   notify_event(EVENT_TIMER, NULL, 0);
 }
 
-static void device_update(int signum) {
+void device_update(int signum) {
   detect_sdl_event();
   detect_stdin();
-  update_timer();
+#if CONFIG_NETWORK
+  net_poll_packet();
+#endif
 }
 
 #if 0
@@ -119,6 +119,11 @@ void init_sdl() {
   SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
+void *event_loop(void *args) {
+  while (1) { device_update(0); }
+  return NULL;
+}
+
 void init_events() {
 #if CONFIG_NETWORK
   init_network();
@@ -127,8 +132,16 @@ void init_events() {
   init_sdl();
 #endif
   init_console();
-  init_timer();
 
-  // signal(SIGINT, ctrl_code_handler);
-  // signal(SIGTSTP, ctrl_code_handler);
+#if 1
+  pthread_t thd = 0;
+  pthread_create(&thd, NULL, event_loop, NULL);
+#else
+  init_timer();
+#endif
+
+#if 0
+  signal(SIGINT, ctrl_code_handler);
+  signal(SIGTSTP, ctrl_code_handler);
+#endif
 }

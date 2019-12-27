@@ -17,9 +17,9 @@
 static int nemu_keyboard_queue[KEYBOARD_QUEUE_LEN];
 static int nemu_keyboard_f = 0, nemu_keyboard_r = 0;
 
-static void nemu_keyboard_on_data(void *data, int len) {
+static int nemu_keyboard_on_data(const void *data, int len) {
   assert(len == 2 * sizeof(int));
-  int *sdlk_data = data;
+  const int *sdlk_data = data;
   uint32_t scancode = SDLKey_to_scancode(sdlk_data[0], sdlk_data[1]);
   int next = (nemu_keyboard_r + 1) % KEYBOARD_QUEUE_LEN;
   if (next != nemu_keyboard_f) { // if not full
@@ -27,6 +27,7 @@ static void nemu_keyboard_on_data(void *data, int len) {
     nemu_keyboard_r = next;
     /* no irq */
   }
+  return len;
 }
 
 static uint32_t nemu_keyboard_read(paddr_t addr, int len) {
@@ -52,10 +53,9 @@ DEF_DEV(nemu_keyboard_dev) = {
     .start = CONFIG_NEMU_KEYBOARD_BASE,
     .size = NEMU_KEYBOARD_SIZE,
     .read = nemu_keyboard_read,
-    .on_data = nemu_keyboard_on_data,
 };
 
 static void nemu_keyboard_init() {
-  event_add_handler(EVENT_SDL_KEY_DOWN, nemu_keyboard_on_data);
-  event_add_handler(EVENT_SDL_KEY_UP, nemu_keyboard_on_data);
+  event_bind_handler(EVENT_SDL_KEY_DOWN, nemu_keyboard_on_data);
+  event_bind_handler(EVENT_SDL_KEY_UP, nemu_keyboard_on_data);
 }

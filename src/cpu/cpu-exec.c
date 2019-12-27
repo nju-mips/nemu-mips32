@@ -14,6 +14,8 @@
 #include "monitor.h"
 #include "utils.h"
 
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+
 /* some global bariables */
 nemu_state_t nemu_state = NEMU_STOP;
 CPU_state cpu;
@@ -123,15 +125,15 @@ static inline void clear_mmu_cache() {
   }
 }
 
-static inline uint32_t mmu_cache_index(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t mmu_cache_index(vaddr_t vaddr) {
   return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
 }
 
-static inline uint32_t mmu_cache_id(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t mmu_cache_id(vaddr_t vaddr) {
   return (vaddr >> (12 + MMU_BITS));
 }
 
-static inline void update_mmu_cache(
+static ALWAYS_INLINE void update_mmu_cache(
     vaddr_t vaddr, paddr_t paddr, device_t *dev, bool can_write) {
 #if CONFIG_MMU_CACHE_PERF
   mmu_cache_miss++;
@@ -146,7 +148,7 @@ static inline void update_mmu_cache(
   }
 }
 
-static inline uint32_t vaddr_read(vaddr_t addr, int len) {
+static ALWAYS_INLINE uint32_t vaddr_read(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
   if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
 #if CONFIG_MMU_CACHE_PERF
@@ -167,15 +169,15 @@ static inline uint32_t vaddr_read(vaddr_t addr, int len) {
     uint32_t data = dev->read(paddr - dev->start, len);
 #if CONFIG_MMIO_LOGGER
     if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
-      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name,
-          paddr - dev->start, len, data);
+      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
+          len, data);
     }
 #endif
     return data;
   }
 }
 
-static inline void vaddr_write(vaddr_t addr, int len, uint32_t data) {
+static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
   if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr) &&
       mmu_cache[idx].can_write) {
@@ -198,8 +200,8 @@ static inline void vaddr_write(vaddr_t addr, int len, uint32_t data) {
     update_mmu_cache(addr, paddr, dev, true);
 #if CONFIG_MMIO_LOGGER
     if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
-      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name,
-          paddr - dev->start, len, data);
+      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
+          len, data);
     }
 #endif
     dev->write(paddr - dev->start, len, data);
@@ -251,15 +253,15 @@ void clear_decode_cache() {
   }
 }
 
-static inline uint32_t decode_cache_index(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t decode_cache_index(vaddr_t vaddr) {
   return vaddr & ((1 << DECODE_CACHE_BITS) - 1);
 }
 
-static inline uint32_t decode_cache_id(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t decode_cache_id(vaddr_t vaddr) {
   return (vaddr >> DECODE_CACHE_BITS);
 }
 
-decode_cache_t *decode_cache_fetch(vaddr_t pc) {
+static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(vaddr_t pc) {
   uint32_t idx = decode_cache_index(pc);
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
@@ -363,7 +365,7 @@ int init_cpu(vaddr_t entry) {
 }
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
-static inline void check_intrs() {
+static ALWAYS_INLINE void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     signal_exception(EXC_INTR);
@@ -371,7 +373,7 @@ static inline void check_intrs() {
 }
 #endif
 
-void update_cp0_timer() {
+static ALWAYS_INLINE void update_cp0_timer() {
   static const uint32_t step = 1;
   uint32_t count0 = cpu.cp0.count[0];
   uint32_t compare = cpu.cp0.compare;

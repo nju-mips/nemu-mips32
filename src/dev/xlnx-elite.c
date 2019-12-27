@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "device.h"
 #include "utils.h"
+#include "events.h"
 
 // emaclite
 #define XLNX_ELITE_SIZE 0x10000
@@ -327,27 +328,7 @@ static u16 phy_regs[32][32]; /* phy_regs[phy][reg] */
 
 #define ACTIVE_PHY 1
 
-void hexdump(const u8 *data, const int len) {
-  for (int i = 0; i < len; i += 16) {
-    printf("%02x: ", i);
-    for (int j = i; j < len && j < i + 16; j++) printf("%02x ", data[j]);
-    printf("\n");
-  }
-}
-
-#if 0
-static void eth_packet_check_crc(u8 *data, const int len) {
-  assert (len >= 16);
-  u32 crc = reverse_table_crc(&data[12], len - 4, reverse_table);
-  printf("%08x, %08x\n", crc, *(u32 *)&data[len - 4]);
-  assert (*(u32 *)&data[len - 4] == crc);
-}
-
-static void eth_packet_modify_crc(u8 *data, const int len) {
-  u32 crc = reverse_table_crc(&data[12], len - 4, reverse_table);
-  *(u32 *)&data[len - 4] = crc;
-}
-#endif
+static int xlnx_elite_rx(const void *data, int len);
 
 static void xlnx_elite_init() {
   /* init phy regs */
@@ -366,6 +347,8 @@ static void xlnx_elite_init() {
   phy_regs[ACTIVE_PHY][MII_LPA] = LPA_LPACK | LPA_PAUSE_ASYM | LPA_PAUSE_CAP |
                                   LPA_1000XPAUSE_ASYM | LPA_100HALF |
                                   LPA_10FULL | LPA_10HALF | 0x1;
+
+  event_bind_handler(EVENT_PACKET_IN, xlnx_elite_rx);
 }
 
 static void mii_transaction() {
@@ -392,21 +375,30 @@ static void mii_transaction() {
   }
 }
 
+static int xlnx_elite_rx(const void *data, int len) {
+  if ((regs.rx_ping_rsr & XEL_RSR_RECV_DONE_MASK) == 0) {
+    regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK;
+    assert(len <= RX_PING_BUF_END - RX_PING);
+    memcpy(&regs.rx_ping, data, len);
+    return len;
+  } else if ((regs.rx_pong_rsr & XEL_RSR_RECV_DONE_MASK) == 0) {
+    regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK;
+    assert(len <= RX_PONG_BUF_END - RX_PONG);
+    memcpy(&regs.rx_pong, data, len);
+    return len;
+  }
+
+  return -1;
+}
+
 static uint32_t xlnx_elite_read(paddr_t addr, int len) {
-  int recvlen = 0;
   switch (addr) {
   case TX_PING_TSR: return regs.tx_ping_tsr;
   case TX_PONG_TSR: return regs.tx_pong_tsr;
   case RX_PING ... RX_PING_BUF_END: return ((u32 *)&regs)[addr / 4];
   case RX_PONG ... RX_PONG_BUF_END: return ((u32 *)&regs)[addr / 4];
-  case RX_PING_RSR:
-    recvlen = net_recv_data((u8 *)&regs.rx_ping, RX_PING_BUF_END - RX_PING);
-    if (recvlen > 0) { regs.rx_ping_rsr |= XEL_RSR_RECV_DONE_MASK; }
-    return regs.rx_ping_rsr;
-  case RX_PONG_RSR:
-    recvlen = net_recv_data((u8 *)&regs.rx_pong, RX_PONG_BUF_END - RX_PONG);
-    if (recvlen > 0) { regs.rx_pong_rsr |= XEL_RSR_RECV_DONE_MASK; }
-    return regs.rx_pong_rsr;
+  case RX_PING_RSR: return regs.rx_ping_rsr;
+  case RX_PONG_RSR: return regs.rx_pong_rsr;
   case MDIO_RD: return regs.mdiord;
   case MDIO_CTRL: return regs.mdioctrl;
   default:
@@ -423,7 +415,6 @@ static void xlnx_elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_ping_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_ping_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_ping, regs.tx_ping_tplr);
-        net_bind_mac_addr(eth_mac_addr);
         regs.tx_ping_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send ping packet */
@@ -437,7 +428,6 @@ static void xlnx_elite_write(paddr_t addr, int len, uint32_t data) {
     if (regs.tx_pong_tsr & XEL_TSR_XMIT_BUSY_MASK) {
       if (regs.tx_pong_tsr & XEL_TSR_PROGRAM_MASK) {
         memcpy(eth_mac_addr, &regs.tx_pong, regs.tx_pong_tplr);
-        net_bind_mac_addr(eth_mac_addr);
         regs.tx_pong_tsr &= ~XEL_TSR_PROG_MAC_ADDR;
       } else {
         /* send pong packet */

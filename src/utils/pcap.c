@@ -3,6 +3,14 @@
 
 #include "utils.h"
 
+void hexdump(const uint8_t *data, int len) {
+  for (int i = 0; i < len; i += 16) {
+    printf("%02x: ", i);
+    for (int j = i; j < len && j < i + 16; j++) printf("%02x ", data[j]);
+    printf("\n");
+  }
+}
+
 pcap_handler pcap_open(const char *filename) {
   FILE *fp = fopen(filename, "wa+");
   pcap_header_t header = {0};

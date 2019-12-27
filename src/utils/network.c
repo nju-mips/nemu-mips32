@@ -29,15 +29,19 @@
 // struct udphdr
 
 #include "debug.h"
+#include "events.h"
+#include "fifo.h"
 #include "utils.h"
 
 static pcap_handler pcap;
 
 static int iface_fd = -1;
 const char *iface_gw = "192.168.12.1";
-const char *iface_ipaddr = "192.168.12.2";
-static uint8_t iface_hwaddr[ETHER_ADDR_LEN];
+// const char *iface_ipaddr = "192.168.12.2";
+// static uint8_t iface_hwaddr[ETHER_ADDR_LEN];
 static char iface_dev[IFNAMSIZ];
+
+static fifo_type(struct iovec, 1024) net_queue;
 
 const char *ipv4_ntoa(uint32_t ip) {
   static char s[128];
@@ -106,13 +110,16 @@ void iptables_add_route(const char *ip) {
 }
 
 static void init_tap() {
+  fifo_init(net_queue);
+
   iface_fd = tap_create(iface_dev);
+  assert(iface_fd > 0);
 
   int sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   tap_set_down(sockfd, iface_dev);
   tap_set_ipaddr(sockfd, iface_dev, inet_addr(iface_gw));
   tap_set_netmask(sockfd, iface_dev, inet_addr("255.255.255.0"));
-  // tap_set_mtu(sockfd, iface_dev, 500 * 4); // for etherlite, 2000
+  /* tap_set_mtu(sockfd, iface_dev, 500 * 4); */
   tap_set_up(sockfd, iface_dev);
   close(sockfd);
   route("add -host %s gw %s", iface_gw, iface_gw);
@@ -121,24 +128,12 @@ static void init_tap() {
   fcntl(iface_fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-void bind_ipaddr_and_hwaddr(const uint8_t *data, const int len) {
-  struct ether_header *ehdr = (void *)data;
-  memcpy(iface_hwaddr, ehdr->ether_shost, ETHER_ADDR_LEN);
-
+void init_network() {
+  pcap = pcap_open("build/packets.pcap");
   init_tap();
 }
 
-void net_bind_mac_addr(const uint8_t eth_addr[ETHER_ADDR_LEN]) {
-  if (iface_fd < 0) {
-    memcpy(iface_hwaddr, eth_addr, ETHER_ADDR_LEN);
-    init_tap();
-  }
-}
-
-void init_network() { pcap = pcap_open("build/packets.pcap"); }
-
 void net_send_data(const uint8_t *data, const int len) {
-  if (iface_fd < 0) bind_ipaddr_and_hwaddr(data, len);
   pcap_write_and_flush(pcap, data, len);
 
   struct virtio_net_hdr hdr = {};
@@ -152,6 +147,41 @@ void net_send_data(const uint8_t *data, const int len) {
   } while (len == -1 && errno == EINTR);
 }
 
+void net_poll_packet() {
+  /* poll all packets firstly */
+  int nbytes = 0;
+  do {
+    static uint8_t raw_buf[1800];
+    nbytes = read(iface_fd, raw_buf, sizeof(raw_buf));
+
+    /* remove */
+    const int vnet_hdr_len = sizeof(struct virtio_net_hdr);
+    if (nbytes <= vnet_hdr_len) break;
+    nbytes -= vnet_hdr_len;
+
+    const void *buf_p = &raw_buf[vnet_hdr_len];
+    pcap_write_and_flush(pcap, buf_p, nbytes);
+
+    /* copy packet */
+    void *buf_copy = malloc(nbytes);
+    memcpy(buf_copy, buf_p, nbytes);
+
+    struct iovec packet = {.iov_base = buf_copy, .iov_len = nbytes};
+
+    fifo_push(net_queue, packet);
+  } while (nbytes > 0);
+
+  /* notify device the packets */
+  while (!fifo_is_empty(net_queue)) {
+    struct iovec packet = fifo_top(net_queue);
+    if (notify_event(EVENT_PACKET_IN, packet.iov_base, packet.iov_len) < 0)
+      break;
+    free(packet.iov_base);
+    fifo_pop(net_queue);
+  }
+}
+
+#if 0
 int net_recv_data(uint8_t *to, const int maxlen) {
   static uint8_t buf[2048];
 
@@ -167,3 +197,4 @@ int net_recv_data(uint8_t *to, const int maxlen) {
 
   return nbytes;
 }
+#endif

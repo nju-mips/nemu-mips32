@@ -10,16 +10,18 @@ enum {
   EVENT_TIMER = 3,
   EVENT_CTRL_C = 4,
   EVENT_CTRL_Z = 5,
+  EVENT_PACKET_IN = 6,
   NR_EVENTS,
 };
 
-typedef void (*event_handler_t)(void *, int);
+typedef int (*event_handler_t)(const void *, int);
 
 typedef struct event_t {
   int notify_queue_size;
-  event_handler_t notify_queue[10];
+  event_handler_t handler;
 } event_t;
 
-void event_add_handler(int event_type, event_handler_t handler);
+void event_bind_handler(int event_type, event_handler_t handler);
+int notify_event(int event_type, void *data, int len);
 
 #endif
