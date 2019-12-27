@@ -373,15 +373,21 @@ static ALWAYS_INLINE void check_intrs() {
 }
 #endif
 
-static ALWAYS_INLINE void update_cp0_timer() {
-  static const uint32_t step = 1;
+#if CONFIG_INTR
+void check_cp0_timer() {
+  static uint32_t oldcount0 = 0;
+
   uint32_t count0 = cpu.cp0.count[0];
   uint32_t compare = cpu.cp0.compare;
-  *(uint64_t *)cpu.cp0.count += step;
-  bool meet_compare = count0 < compare && count0 + step >= compare;
+  bool meet_compare = oldcount0 < compare && compare <= count0;
 
   /* update IP */
   if (compare != 0 && meet_compare) { set_irq(7); }
+}
+#endif
+
+static ALWAYS_INLINE void update_cp0_timer() {
+  *(uint64_t *)cpu.cp0.count += 1;
 }
 
 void nemu_exit() {

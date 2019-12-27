@@ -1072,7 +1072,14 @@ static void m25p80_init(Flash *s) {
   /* FIXME:
    *   drivers/spi/xilinx_spi.c: xilinx_spi_startup_block
    * */
-  s->pi = &known_devices[16];
+  int nr_devices = sizeof(known_devices) / sizeof(*known_devices);
+  for (int i = 0; i < nr_devices; i++) {
+    if (strcmp(known_devices[i].part_name, "n25q512a11") == 0) {
+      eprintf("use flash chip %s\n", known_devices[i].part_name);
+      s->pi = &known_devices[i];
+      break;
+    }
+  }
 
   s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;

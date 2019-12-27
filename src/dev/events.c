@@ -9,6 +9,8 @@
 #include "events.h"
 #include "utils.h"
 
+void check_cp0_timer();
+
 SDL_Surface *screen;
 static struct itimerval it;
 
@@ -19,7 +21,7 @@ void event_bind_handler(int event_type, event_handler_t handler) {
   assert(0 <= event_type && event_type < NR_EVENTS);
 
   event_t *evt = &events[event_type];
-  assert (!evt->handler);
+  assert(!evt->handler);
   evt->handler = handler;
 }
 
@@ -77,6 +79,9 @@ void device_update(int signum) {
   detect_stdin();
 #if CONFIG_NETWORK
   net_poll_packet();
+#endif
+#if CONFIG_INTR
+  check_cp0_timer();
 #endif
 }
 
