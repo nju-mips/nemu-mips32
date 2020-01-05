@@ -22,6 +22,8 @@ extern void instr_enqueue_instr(uint32_t pc);
 extern void print_instr_queue(void);
 extern void print_registers(void);
 
+extern void nemu_epilogue();
+
 /* APIs from iq.c */
 extern uint32_t get_current_pc();
 extern uint32_t get_current_instr();
@@ -38,27 +40,26 @@ void frames_enqueue_ret(uint32_t pc, uint32_t target);
 
 // we are properly doing diff testing in batch_mode, so do
 // not Log in batch_mode
-#define Log(format, ...)                          \
-  do {                                            \
-    eprintf("nemu: %s:%d: %s: " format, __FILE__, \
-            __LINE__, __func__, ##__VA_ARGS__);   \
+#define Log(format, ...)                                              \
+  do {                                                                \
+    eprintf("nemu: %s:%d: %s: " format, __FILE__, __LINE__, __func__, \
+        ##__VA_ARGS__);                                               \
   } while (0)
 
-#define Assert(cond, fmt, ...)                             \
-  do {                                                     \
-    if (!(cond)) {                                         \
-      Log("Assertion `%s' failed: \e[1;31m" fmt "\e[0m\n", \
-          #cond, ##__VA_ARGS__);                           \
-      Abort();                                             \
-    }                                                      \
+#define Assert(cond, fmt, ...)                                    \
+  do {                                                            \
+    if (!(cond)) {                                                \
+      Log("Assertion `%s' failed: \e[1;31m" fmt "\e[0m\n", #cond, \
+          ##__VA_ARGS__);                                         \
+      Abort();                                                    \
+    }                                                             \
   } while (0)
 
-#define panic(fmt, ...)                                   \
-  do {                                                    \
-    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt        \
-            "\e[0m\n",                                    \
-            __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-    Abort();                                              \
+#define panic(fmt, ...)                                                 \
+  do {                                                                  \
+    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt "\e[0m\n", __FILE__, \
+        __LINE__, __func__, ##__VA_ARGS__);                             \
+    Abort();                                                            \
   } while (0)
 
 #define TODO() panic("please implement me")
@@ -73,18 +74,15 @@ void frames_enqueue_ret(uint32_t pc, uint32_t target);
     }                                   \
   } while (0)
 
-#define CPUAssert(cond, fmt, ...)                         \
-  do {                                                    \
-    if (!(cond)) {                                        \
-      eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", \
-              __FILE__, __LINE__, __func__, #cond);       \
-      print_instr_queue();                                \
-      eprintf("=========== dump registers =========\n");  \
-      print_registers();                                  \
-      eprintf("=========== dump    end =========\n");     \
-      eprintf("\e[1;31m" fmt "\e[0m\n", ##__VA_ARGS__);   \
-      CPUAbort();                                         \
-    }                                                     \
+#define CPUAssert(cond, fmt, ...)                                             \
+  do {                                                                        \
+    if (!(cond)) {                                                            \
+      nemu_epilogue();                                                        \
+      eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", __FILE__, __LINE__, \
+          __func__, #cond);                                                   \
+      eprintf("\e[1;31mCPUAssert message: " fmt "\e[0m\n", ##__VA_ARGS__);    \
+      CPUAbort();                                                             \
+    }                                                                         \
   } while (0)
 
 #endif

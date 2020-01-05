@@ -83,33 +83,38 @@ menu "NEMU-MIPS32 debug options"
 
 config MMU_CACHE_PERF
   bool "Profile mmu cache hit rate"
+  default n
 
 config DECODE_CACHE_PERF
   bool "Profile decode cache hit rate"
-
-config DEBUG
-  bool "DEBUG mode (useless)"
+  default n
 
 config INSTR_LOG
-  bool "Log when every instruction commit (used to diff with noop)"
+  bool "Log all executed instructions"
+  default n
 
-config FRAMES_LOG
-  bool "Log when encounter call and return"
+config FUNCTION_TRACE_LOG
+  bool "Log function trace"
+  default n
+
+config BACKTRACE_LOG
+  bool "Log all functions in current stack frame"
+  depends on FUNCTION_TRACE_LOG=y
+
+config MMIO_ACCESS_LOG
+  bool "log read and write of mmio"
+  default n
+
+config MMIO_ACCESS_LOG_DEVICE
+  string "device to be logged"
+  depends on MMIO_ACCESS_LOG=y
+  default "xilinx-spi"
 
 config MMU_CACHE_CHECK
   bool "Check the validness of mmu cache"
 
 config DECODE_CACHE_CHECK
   bool "Check the validness of decode cache"
-
-config MMIO_LOGGER
-  bool "log read and write of mmio"
-  default n
-
-config MMIO_LOGGER_DEVICE
-  string "device to be logged"
-  depends on MMIO_LOGGER=y
-  default "xilinx-spi"
 
 endmenu
 endif

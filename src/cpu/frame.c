@@ -31,7 +31,6 @@ void frames_enqueue_ret(vaddr_t pc, vaddr_t target) {
 }
 
 void print_frames(void) {
-  eprintf("last collected %ld frames:\n", NR_FRAMES);
   int i = pc_ptr;
   do {
     if (frames[i].property == CALL)
@@ -66,7 +65,6 @@ void print_backtrace() {
     i = (i + 1) % NR_FRAMES;
   } while (i != pc_ptr);
 
-  eprintf("last collected %ld backtraces:\n", NR_FRAMES);
   for (int i = 0; i < top; i++) {
     int idx = backtraces[i];
     if (idx < 0) continue;

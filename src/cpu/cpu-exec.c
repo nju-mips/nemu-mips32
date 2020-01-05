@@ -63,7 +63,15 @@ uint64_t get_current_time() { // in us
 
 void print_registers(void) {
   static unsigned int ninstr = 0;
+#if !CONFIG_INSTR_LOG
+  eprintf("enable CONFIG_INSTR_LOG in .config for ????????\n");
+#endif
+
+#if CONFIG_INSTR_LOG
   eprintf("$pc:    0x%08x", get_current_pc());
+#else
+  eprintf("$pc:    ????????");
+#endif
   eprintf("   ");
   eprintf("$hi:    0x%08x", cpu.hi);
   eprintf("   ");
@@ -72,7 +80,11 @@ void print_registers(void) {
 
   eprintf("$ninstr: %08x", ninstr);
   eprintf("                  ");
+#if CONFIG_INSTR_LOG
   eprintf("$instr: %08x", get_current_instr());
+#else
+  eprintf("$instr: ????????");
+#endif
   eprintf("\n");
 
   for (int i = 0; i < 32; i++) {
@@ -167,8 +179,8 @@ static ALWAYS_INLINE uint32_t vaddr_read(vaddr_t addr, int len) {
     CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, attr.dirty);
     uint32_t data = dev->read(paddr - dev->start, len);
-#if CONFIG_MMIO_LOGGER
-    if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
+#if CONFIG_MMIO_ACCESS_LOG
+    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) == 0) {
       eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
           len, data);
     }
@@ -198,8 +210,8 @@ static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, true);
-#if CONFIG_MMIO_LOGGER
-    if (strcmp(CONFIG_MMIO_LOGGER_DEVICE, dev->name) == 0) {
+#if CONFIG_MMIO_ACCESS_LOG
+    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) == 0) {
       eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
           len, data);
     }
@@ -276,9 +288,6 @@ void signal_exception(uint32_t exception) {
   int extra = exception >> 16;
 
   if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
-  if (code == EXC_RI && (cpu.pc & 0xFF000000) != 0x77000000) {
-    printf("RI@%08x\n", cpu.pc);
-  }
 
 #if CONFIG_CAE_CHECK
   save_usual_registers();
@@ -390,7 +399,9 @@ static ALWAYS_INLINE void update_cp0_timer() {
   *(uint64_t *)cpu.cp0.count += 1;
 }
 
-void nemu_exit() {
+void nemu_epilogue() {
+  eprintf(">>>>>> nemu state <<<<<<\n");
+
 #if CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
@@ -404,13 +415,30 @@ void nemu_exit() {
 #endif
 
 #if CONFIG_INSTR_LOG
+  eprintf(">>>>>> last executed instructions\n");
   print_instr_queue();
+  eprintf("\n");
 #endif
 
-#if CONFIG_FRAMES_LOG
+#if CONFIG_FUNCTION_TRACE_LOG
+  eprintf(">>>>>> function invocations\n");
   print_frames();
+  eprintf("\n");
 #endif
 
+#if CONFIG_BACKTRACE_LOG
+  eprintf(">>>>>> functions in stack\n");
+  print_backtrace();
+  eprintf("\n");
+#endif
+
+  eprintf(">>>>>> current registers\n");
+  print_registers();
+  eprintf("\n");
+}
+
+void nemu_exit() {
+  nemu_epilogue();
   exit(0);
 }
 
@@ -471,7 +499,7 @@ void cpu_exec(uint64_t n) {
     Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #endif
 
-#include "instr-handlers.h"
+#include "instr.h"
 
 #if CONFIG_INSTR_LOG
     if (nemu_needs_commit) print_registers();

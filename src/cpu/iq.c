@@ -25,29 +25,28 @@ void instr_enqueue_instr(uint32_t instr) {
 }
 
 uint32_t get_current_pc() {
-#if ! CONFIG_INSTR_LOG
-  panic("please enable CONFIG_INSTR_LOG macro in Makefile\n");
+#if !CONFIG_INSTR_LOG
+  panic("CONFIG_INSTR_LOG is needed for get_current_pc\n");
 #endif
   return iq[instr_ptr].pc;
 }
 
 uint32_t get_current_instr() {
-#if ! CONFIG_INSTR_LOG
-  panic("please enable CONFIG_INSTR_LOG macro in Makefile\n");
+#if !CONFIG_INSTR_LOG
+  panic("CONFIG_INSTR_LOG is needed for get_current_instr\n");
 #endif
-  if(iq[instr_ptr].instr_enq)
-    return iq[instr_ptr].instr;
+  if (iq[instr_ptr].instr_enq) return iq[instr_ptr].instr;
   return 0;
 }
 
 void print_instr_queue(void) {
-  eprintf("last executed %ld instrs:\n", NR_IQ);
   int i = pc_ptr;
   do {
-	if(iq[i].instr_enq)
-	  eprintf("0x%08x: %08x %s\n", iq[i].pc, iq[i].instr, find_symbol_by_addr(iq[i].pc));
-	else
-	  eprintf("0x%08x: xxxxxxxx %s\n", iq[i].pc, find_symbol_by_addr(iq[i].pc));
-	i = (i + 1) % NR_IQ;
-  } while(i != pc_ptr);
+    if (iq[i].instr_enq)
+      eprintf("0x%08x: %08x %s\n", iq[i].pc, iq[i].instr,
+          find_symbol_by_addr(iq[i].pc));
+    else
+      eprintf("0x%08x: xxxxxxxx %s\n", iq[i].pc, find_symbol_by_addr(iq[i].pc));
+    i = (i + 1) % NR_IQ;
+  } while (i != pc_ptr);
 }

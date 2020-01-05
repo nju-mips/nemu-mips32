@@ -26,7 +26,7 @@ CONFIG_EXCEPTION=y
 # CONFIG_DECODE_CACHE_PERF is not set
 # CONFIG_DEBUG is not set
 # CONFIG_INSTR_LOG is not set
-# CONFIG_FRAMES_LOG is not set
+# FUNCTION_TRACE_LOG is not set
 # CONFIG_MMU_CACHE_CHECK is not set
 # CONFIG_DECODE_CACHE_CHECK is not set
 # end of NEMU-MIPS32 debug options

@@ -529,7 +529,8 @@ make_exec_handler(mtc0) {
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
 #if CONFIG_CHECK_IMAGE
-    check_kernel_image(CONFIG_KERNEL_ELF_PATH);
+    extern const char *symbol_file;
+    check_kernel_image(symbol_file);
 #endif
     break;
   }
@@ -1171,7 +1172,7 @@ make_exec_handler(bltzal) {
 make_exec_handler(jal) {
   cpu.gpr[31] = cpu.pc + 8;
   cpu.br_target = (cpu.pc & 0xf0000000) | (operands->addr << 2);
-#if CONFIG_FRAMES_LOG
+#if CONFIG_FUNCTION_TRACE_LOG
   frames_enqueue_call(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
@@ -1181,7 +1182,7 @@ make_exec_handler(jalr) {
   InstAssert(operands->rt == 0 && operands->shamt == 0);
   cpu.gpr[operands->rd] = cpu.pc + 8;
   cpu.br_target = cpu.gpr[operands->rs];
-#if CONFIG_FRAMES_LOG
+#if CONFIG_FUNCTION_TRACE_LOG
   frames_enqueue_call(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
@@ -1195,7 +1196,7 @@ make_exec_handler(j) {
 make_exec_handler(jr) {
   InstAssert(operands->rt == 0 && operands->rd == 0);
   cpu.br_target = cpu.gpr[operands->rs];
-#if CONFIG_FRAMES_LOG
+#if CONFIG_FUNCTION_TRACE_LOG
   if (operands->rs == R_ra) frames_enqueue_ret(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
