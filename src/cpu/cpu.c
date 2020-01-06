@@ -1,4 +1,5 @@
 #include <elf.h>
+#include <pthread.h>
 #include <setjmp.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -40,6 +41,19 @@ const char *regs[32] = {
 
 #define MAX_INSTR_TO_PRINT 10
 
+void nemu_set_irq(int irqno, bool val) {
+  static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+
+  assert(2 <= irqno && irqno < 8);
+  pthread_mutex_lock(&mut);
+  if (val) {
+    cpu.cp0.cause.IP |= 1 << irqno;
+  } else {
+    cpu.cp0.cause.IP &= ~(1 << irqno);
+  }
+  pthread_mutex_unlock(&mut);
+}
+
 // 1s = 10^3 ms = 10^6 us
 uint64_t get_current_time() { // in us
 #if 1
@@ -63,10 +77,6 @@ uint64_t get_current_time() { // in us
 
 void print_registers(void) {
   static unsigned int ninstr = 0;
-#if !CONFIG_INSTR_LOG
-  eprintf("enable CONFIG_INSTR_LOG in .config for ????????\n");
-#endif
-
 #if CONFIG_INSTR_LOG
   eprintf("$pc:    0x%08x", get_current_pc());
 #else
@@ -382,26 +392,39 @@ static ALWAYS_INLINE void check_intrs() {
 }
 #endif
 
+static uint64_t intr_ddl = 0;
+
+uint64_t mips_get_count() {
+  return get_current_time() * 50; // for 50 MHZ
+}
+
+static pthread_mutex_t cp0_intr_mut = PTHREAD_MUTEX_INITIALIZER;
+
+void update_interrupt_deadline() {
+  pthread_mutex_lock(&cp0_intr_mut);
+  uint64_t count = mips_get_count();
+  uint64_t count0 = count & ((1ull << 32) - 1);
+  uint64_t compare = cpu.cp0.compare;
+  if (compare < count0) compare = compare + (1ull << 32);
+  uint64_t intr_interval = compare - count;
+  intr_ddl = count + intr_interval;
+  pthread_mutex_unlock(&cp0_intr_mut);
+}
+
 #if CONFIG_INTR
 void check_cp0_timer() {
-  static uint32_t oldcount0 = 0;
-
-  uint32_t count0 = cpu.cp0.count[0];
-  uint32_t compare = cpu.cp0.compare;
-  bool meet_compare = oldcount0 < compare && compare <= count0;
 
   /* update IP */
-  if (compare != 0 && meet_compare) { set_irq(7); }
+  pthread_mutex_lock(&cp0_intr_mut);
+  if (mips_get_count() > intr_ddl) {
+    nemu_set_irq(7, 1);
+    intr_ddl = -1ull;
+  }
+  pthread_mutex_unlock(&cp0_intr_mut);
 }
 #endif
 
-static ALWAYS_INLINE void update_cp0_timer() {
-  *(uint64_t *)cpu.cp0.count += 1;
-}
-
 void nemu_epilogue() {
-  eprintf(">>>>>> nemu state <<<<<<\n");
-
 #if CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
@@ -432,9 +455,11 @@ void nemu_epilogue() {
   eprintf("\n");
 #endif
 
+#if CONFIG_INSTR_LOG
   eprintf(">>>>>> current registers\n");
   print_registers();
   eprintf("\n");
+#endif
 }
 
 void nemu_exit() {
@@ -467,10 +492,6 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
-#if CONFIG_INTR
-    update_cp0_timer();
-#endif
-
 #if CONFIG_INSTR_LOG
     instr_enqueue_pc(cpu.pc);
 #endif

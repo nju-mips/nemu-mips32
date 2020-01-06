@@ -41,7 +41,7 @@ static const char *xlnx_ulite_stop_string_ptr = NULL;
 
 void xlnx_ulite_set_irq() {
 #if CONFIG_INTR
-  if (xlnx_ulite_intr_enabled) { set_irq(XLNX_ULITE_IRQ_NO); }
+  if (xlnx_ulite_intr_enabled) { nemu_set_irq(XLNX_ULITE_IRQ_NO, 1); }
 #endif
 }
 
@@ -87,7 +87,7 @@ static uint32_t xlnx_ulite_peek(paddr_t addr, int len) {
 static uint32_t xlnx_ulite_read(paddr_t addr, int len) {
   check_ioaddr(addr, len, XLNX_ULITE_SIZE, "ulite.read");
   if (addr == Rx) {
-    clear_irq(XLNX_ULITE_IRQ_NO);
+    nemu_set_irq(XLNX_ULITE_IRQ_NO, 0);
     return fifo_pop(ulite_q);
   }
   return xlnx_ulite_peek(addr, len);
@@ -109,7 +109,7 @@ static void xlnx_ulite_write(paddr_t addr, int len, uint32_t data) {
     xlnx_ulite_intr_enabled = data & SR_CTRL_INTR_BIT;
     if (!xlnx_ulite_intr_enabled) {
       xlnx_ulite_tx_fifo_empty = 0;
-      clear_irq(XLNX_ULITE_IRQ_NO);
+      nemu_set_irq(XLNX_ULITE_IRQ_NO, 0);
     }
     break;
   default:

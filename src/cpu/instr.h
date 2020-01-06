@@ -412,24 +412,13 @@ make_exec_handler(eret) {
 #define CPRS(reg, sel) (((reg) << 3) | (sel))
 
 make_exec_handler(mfc0) {
-#if CONFIG_MARCH_NOOP || CONFIG_MARCH_MIPS32_R1
   /* used for nanos: pal and litenes */
   if (operands->rd == CP0_COUNT) {
-    L64_t us;
-    us.val = get_current_time() * 50; // for 50 MHZ
-    if (operands->sel == 0) {
-      cpu.gpr[operands->rt] = us.lo;
-    } else if (operands->sel == 1) {
-      cpu.gpr[operands->rt] = us.hi;
-    } else {
-      assert(0);
-    }
+    cpu.gpr[operands->rt] = mips_get_count();
+    check_cp0_timer();
   } else {
     cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
   }
-#else
-  cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
-#endif
 }
 
 make_exec_handler(mtc0) {
@@ -471,7 +460,8 @@ make_exec_handler(mtc0) {
   } break;
   case CPRS(CP0_COMPARE, 0):
     cpu.cp0.compare = cpu.gpr[operands->rt];
-    cpu.cp0.cause.IP &= ~(CAUSE_IP_TIMER);
+    update_interrupt_deadline();
+    nemu_set_irq(7, 0);
     break;
   case CPRS(CP0_CAUSE, 0): {
     uint32_t sw_ip_mask = 3;
