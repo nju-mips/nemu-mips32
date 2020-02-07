@@ -72,7 +72,7 @@ uint64_t gdb_decode_hex_str(uint8_t *bytes) {
 
 
 static struct gdb_conn* gdb_begin(int fd) {
-  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn));
   if (conn == NULL)
     err(1, "calloc");
 
@@ -113,7 +113,7 @@ struct gdb_conn *gdb_begin_server(int fd) {
     err(1, "accept");
   }
 
-  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn));
   if (conn == NULL)
     err(1, "calloc");
 
@@ -162,7 +162,7 @@ struct gdb_conn *gdb_server_start(uint16_t port) {
 
   if(connfd < 0) { err(1, "accept"); }
 
-  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn *));
+  struct gdb_conn *conn = calloc(1, sizeof(struct gdb_conn));
   if (conn == NULL) err(1, "calloc");
 
   conn->ack = true;
@@ -373,6 +373,8 @@ uint8_t* gdb_recv(struct gdb_conn *conn, size_t *size) {
 
     if (!conn->ack)
       break;
+
+    if (reply && !acked) free(reply);
 
     // send +/- depending on checksum result, retry if needed
     fputc(acked ? '+' : '-', conn->out);

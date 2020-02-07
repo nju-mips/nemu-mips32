@@ -11,6 +11,7 @@ size_t get_file_size(const char *img_file) {
   if (S_ISLNK(file_status.st_mode)) {
     char *buf = malloc(file_status.st_size + 1);
     size_t size = readlink(img_file, buf, file_status.st_size);
+    (void)size;
     buf[file_status.st_size] = 0;
     size = get_file_size(buf);
     free(buf);

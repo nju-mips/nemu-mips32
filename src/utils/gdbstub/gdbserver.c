@@ -272,7 +272,7 @@ char *gdb_write_memory(char *args, int arglen) {
     sscanf(hex + 1, "%02x", &data);
     dbg_vaddr_write(addr + i, 1, data);
 
-    if (hex[1] == 0 || hex[2] == 0)
+    if (hex && (hex[1] == 0 || hex[2] == 0))
       hex = NULL;
     else
       hex += 2;
@@ -326,7 +326,7 @@ char *gdb_write_memory_hex(char *args, int arglen) {
     dbg_vaddr_write(addr + i, 1, hex[1]);
 
     if (hex > args + arglen)
-      hex = NULL;
+      break;
     else
       hex += 1;
   }
