@@ -24,9 +24,9 @@ CONFIG_EXCEPTION=y
 #
 # CONFIG_MMU_CACHE_PERF is not set
 # CONFIG_DECODE_CACHE_PERF is not set
-# CONFIG_DEBUG is not set
 # CONFIG_INSTR_LOG is not set
-# FUNCTION_TRACE_LOG is not set
+# CONFIG_FUNCTION_TRACE_LOG is not set
+# CONFIG_MMIO_ACCESS_LOG is not set
 # CONFIG_MMU_CACHE_CHECK is not set
 # CONFIG_DECODE_CACHE_CHECK is not set
 # end of NEMU-MIPS32 debug options
@@ -42,13 +42,9 @@ CONFIG_EXCEPTION=y
 # end of Kernel debug options
 
 #
-# Preload kernel image
-#
-# end of Preload kernel image
-
-#
 # Device simulation
 #
+CONFIG_GRAPHICS=y
 CONFIG_BRAM=y
 CONFIG_BRAM_BASE=0x1fc00000
 CONFIG_DDR=y

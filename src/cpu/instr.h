@@ -415,7 +415,9 @@ make_exec_handler(mfc0) {
   /* used for nanos: pal and litenes */
   if (operands->rd == CP0_COUNT) {
     cpu.gpr[operands->rt] = mips_get_count();
+#if CONFIG_INTR
     check_cp0_timer();
+#endif
   } else {
     cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
   }
