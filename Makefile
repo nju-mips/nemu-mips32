@@ -3,7 +3,7 @@ INC_DIR += ./include
 BUILD_DIR ?= ./build
 OBJ_DIR ?= $(BUILD_DIR)/obj
 BINARY ?= $(BUILD_DIR)/$(NAME)
-SHARED ?= $(BUILD_DIR)/$(NAME).a
+SHARED ?= $(BUILD_DIR)/$(NAME).so
 
 .DEFAULT_GOAL = app
 
@@ -50,7 +50,7 @@ OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 $(OBJ_DIR)/%.o: src/%.c Makefile $(config-dep)
 	@echo + CC $<
 	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) -c -o $@ $<
+	@$(CC) $(CFLAGS) -fPIC -c -o $@ $<
 
 # Depencies
 -include $(OBJS:.o=.d)
@@ -66,7 +66,7 @@ $(BINARY): $(OBJS)
 
 $(SHARED): $(OBJS)
 	@echo + AR $@
-	@$(AR) -r -o $@ $^
+	@$(LD) -O2 -o $@ $^ -shared
 
 clean: 
 	rm -rf $(BUILD_DIR) perf.*
