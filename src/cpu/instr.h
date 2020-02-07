@@ -466,14 +466,16 @@ make_exec_handler(mtc0) {
     nemu_set_irq(7, 0);
     break;
   case CPRS(CP0_CAUSE, 0): {
-    uint32_t sw_ip_mask = 3;
     cp0_cause_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    lock_cpr_cause();
 #if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.cause.IV = newVal->IV;
 #endif
     cpu.cp0.cause.WP = newVal->WP;
-    cpu.cp0.cause.IP =
-        (newVal->IP & sw_ip_mask) | (cpu.cp0.cause.IP & ~sw_ip_mask);
+    unlock_cpr_cause();
+
+    nemu_set_irq(0, newVal->IP & (1 << 0));
+    nemu_set_irq(1, newVal->IP & (1 << 1));
   } break;
   case CPRS(CP0_PAGEMASK, 0): {
     cp0_pagemask_t *newVal = (void *)&(cpu.gpr[operands->rt]);

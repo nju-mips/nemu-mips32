@@ -41,17 +41,21 @@ const char *regs[32] = {
 
 #define MAX_INSTR_TO_PRINT 10
 
-void nemu_set_irq(int irqno, bool val) {
-  static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t cpr_cause_mut = PTHREAD_MUTEX_INITIALIZER;
 
-  assert(2 <= irqno && irqno < 8);
-  pthread_mutex_lock(&mut);
+void lock_cpr_cause() { pthread_mutex_lock(&cpr_cause_mut); }
+
+void unlock_cpr_cause() { pthread_mutex_unlock(&cpr_cause_mut); }
+
+void nemu_set_irq(int irqno, bool val) {
+  assert(0 <= irqno && irqno < 8);
+  lock_cpr_cause();
   if (val) {
     cpu.cp0.cause.IP |= 1 << irqno;
   } else {
     cpu.cp0.cause.IP &= ~(1 << irqno);
   }
-  pthread_mutex_unlock(&mut);
+  unlock_cpr_cause();
 }
 
 // 1s = 10^3 ms = 10^6 us
