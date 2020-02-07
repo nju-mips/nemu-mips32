@@ -313,6 +313,7 @@ void signal_exception(uint32_t exception) {
   if (CONFIG_IS_ENABLED(MARCH_NOOP) || cpu.cp0.status.EXL == 0) {
 #if CONFIG_DELAYSLOT
     if (cpu.is_delayslot) {
+      cpu.is_delayslot = false; // !!
       cpu.cp0.epc = cpu.pc - 4;
       cpu.cp0.cause.BD = 1;
     } else
