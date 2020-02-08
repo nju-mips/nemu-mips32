@@ -26,7 +26,7 @@
     do {                           \
       if (!(cond)) {               \
         cpu.cp0.badvaddr = cpu.pc; \
-        signal_exception(EXC_RI);  \
+        launch_exception(EXC_RI);  \
         goto exit;                 \
       }                            \
     } while (0)
@@ -311,7 +311,7 @@ make_exec_handler(inv) {
 // the pc corresponding to this inst
 // pc has been updated by instr_fetch
 #if CONFIG_EXCEPTION
-  signal_exception(EXC_RI);
+  launch_exception(EXC_RI);
 #else
   uint32_t instr = vaddr_read(cpu.pc, 4);
   uint8_t *p = (uint8_t *)&instr;
@@ -350,7 +350,7 @@ make_exec_handler(tlbwr) {
 
 /* temporary strategy: store timer registers in C0 */
 make_exec_handler(syscall) {
-  signal_exception(EXC_SYSCALL);
+  launch_exception(EXC_SYSCALL);
 #if CONFIG_DUMP_SYSCALL
   cpu.is_syscall = true;
   void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
@@ -362,7 +362,7 @@ make_exec_handler(breakpoint) {
   if (work_mode == MODE_GDB) {
     nemu_state = NEMU_STOP;
   } else {
-    signal_exception(EXC_BP);
+    launch_exception(EXC_BP);
   }
 }
 
@@ -414,9 +414,13 @@ make_exec_handler(eret) {
 make_exec_handler(mfc0) {
   /* used for nanos: pal and litenes */
   if (operands->rd == CP0_COUNT) {
+#if CONFIG_MARCH_NOOP
+    cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
+#else
     cpu.gpr[operands->rt] = mips_get_count();
-#if CONFIG_INTR
+#  if CONFIG_INTR
     check_cp0_timer();
+#  endif
 #endif
   } else {
     cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
@@ -559,69 +563,69 @@ make_exec_handler(mtc0) {
 
 make_exec_handler(teq) {
   if ((int32_t)cpu.gpr[operands->rs] == (int32_t)cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(teqi) {
   if ((int32_t)cpu.gpr[operands->rs] == operands->simm) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tge) {
   if ((int32_t)cpu.gpr[operands->rs] >= (int32_t)cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tgei) {
   if ((int32_t)cpu.gpr[operands->rs] >= operands->simm) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tgeiu) {
-  if (cpu.gpr[operands->rs] >= operands->simm) { signal_exception(EXC_TRAP); }
+  if (cpu.gpr[operands->rs] >= operands->simm) { launch_exception(EXC_TRAP); }
 }
 
 make_exec_handler(tgeu) {
   if (cpu.gpr[operands->rs] >= cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tlt) {
   if ((int32_t)cpu.gpr[operands->rs] < (int32_t)cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tlti) {
   if ((int32_t)cpu.gpr[operands->rs] < operands->simm) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tltiu) {
-  if (cpu.gpr[operands->rs] < operands->simm) { signal_exception(EXC_TRAP); }
+  if (cpu.gpr[operands->rs] < operands->simm) { launch_exception(EXC_TRAP); }
 }
 
 make_exec_handler(tltu) {
   if (cpu.gpr[operands->rs] < cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tne) {
   if ((int32_t)cpu.gpr[operands->rs] != (int32_t)cpu.gpr[operands->rt]) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
 make_exec_handler(tnei) {
   if ((int32_t)cpu.gpr[operands->rs] != operands->simm) {
-    signal_exception(EXC_TRAP);
+    launch_exception(EXC_TRAP);
   }
 }
 
@@ -648,7 +652,7 @@ make_exec_handler(add) {
             (int64_t)(int32_t)cpu.gpr[operands->rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #if CONFIG_EXCEPTION
-    signal_exception(EXC_OV);
+    launch_exception(EXC_OV);
 #else
     CPUAssert(0, "add overflow, %08x + %08x\n", cpu.gpr[operands->rs],
         cpu.gpr[operands->rt]);
@@ -665,7 +669,7 @@ make_exec_handler(sub) {
             (int64_t)(int32_t)cpu.gpr[operands->rt];
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #if CONFIG_EXCEPTION
-    signal_exception(EXC_OV);
+    launch_exception(EXC_OV);
 #else
     CPUAssert(0, "sub overflow, %08x - %08x\n", cpu.gpr[operands->rs],
         cpu.gpr[operands->rt]);
@@ -835,7 +839,7 @@ make_exec_handler(addi) {
             (int64_t)(int32_t)operands->simm;
   if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
 #if CONFIG_EXCEPTION
-    signal_exception(EXC_OV);
+    launch_exception(EXC_OV);
 #else
     CPUAssert(0, "addi overflow, %08x + %08x\n", cpu.gpr[operands->rs],
         operands->simm);
@@ -874,14 +878,14 @@ make_exec_handler(slti) {
 #  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
     if (((addr) & (align - 1)) != 0) {         \
       cpu.cp0.badvaddr = addr;                 \
-      signal_exception(EXC_AdEL);              \
+      launch_exception(EXC_AdEL);              \
       goto exit;                               \
     }
 
 #  define CHECK_ALIGNED_ADDR_AdES(align, addr) \
     if (((addr) & (align - 1)) != 0) {         \
       cpu.cp0.badvaddr = addr;                 \
-      signal_exception(EXC_AdES);              \
+      launch_exception(EXC_AdES);              \
       goto exit;                               \
     }
 

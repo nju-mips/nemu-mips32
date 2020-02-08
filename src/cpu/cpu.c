@@ -297,7 +297,7 @@ static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(vaddr_t pc) {
   return &decode_cache[idx];
 }
 
-void signal_exception(uint32_t exception) {
+void launch_exception(uint32_t exception) {
   int code = exception & 0xFFFF;
   int extra = exception >> 16;
 
@@ -392,7 +392,7 @@ int init_cpu(vaddr_t entry) {
 static ALWAYS_INLINE void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
-    signal_exception(EXC_INTR);
+    launch_exception(EXC_INTR);
   }
 }
 #endif
@@ -504,7 +504,7 @@ void cpu_exec(uint64_t n) {
 #if CONFIG_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
-      signal_exception(EXC_AdEL);
+      launch_exception(EXC_AdEL);
       goto check_exception;
     }
 #endif
