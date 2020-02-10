@@ -18,6 +18,9 @@ else
 config-dep := $(AUTO_CONF) $(AUTOCONF_H)
 endif
 
+$(_CONFIG):
+	@echo "You are suggested to make xx_defconfig/menuconfig firstly"
+
 $(AUTO_CONF) $(AUTOCONF_H): $(_CONFIG) $(CONF)
 	@$(CONF) --syncconfig ./Kconfig
 

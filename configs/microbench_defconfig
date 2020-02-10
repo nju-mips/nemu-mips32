@@ -25,13 +25,9 @@ CONFIG_DECODE_CACHE=y
 # end of Kernel debug options
 
 #
-# Preload kernel image
-#
-# end of Preload kernel image
-
-#
 # Device simulation
 #
+# CONFIG_GRAPHICS is not set
 CONFIG_BRAM=y
 CONFIG_BRAM_BASE=0x1fc00000
 CONFIG_DDR=y
@@ -42,7 +38,6 @@ CONFIG_NEMU_TRAP_BASE=0x10000000
 # CONFIG_NEMU_PMU is not set
 CONFIG_NEMU_CLOCK=y
 CONFIG_NEMU_CLOCK_BASE=0x10002000
-# CONFIG_NEMU_VGA is not set
 CONFIG_NEMU_VGA_CTRL=y
 CONFIG_NEMU_VGA_CTRL_BASE=0x10003000
 CONFIG_XLNX_ULITE=y
