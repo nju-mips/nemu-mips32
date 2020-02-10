@@ -417,15 +417,17 @@ void update_interrupt_deadline() {
 }
 
 #if CONFIG_INTR
-void check_cp0_timer() {
-
+bool check_cp0_timer() {
   /* update IP */
+  bool has_intr = false;
   pthread_mutex_lock(&cp0_intr_mut);
   if (mips_get_count() > intr_ddl) {
     nemu_set_irq(7, 1);
     intr_ddl = -1ull;
+    has_intr = true;
   }
   pthread_mutex_unlock(&cp0_intr_mut);
+  return has_intr;
 }
 #endif
 

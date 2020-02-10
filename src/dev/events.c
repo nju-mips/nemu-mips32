@@ -9,7 +9,7 @@
 #include "events.h"
 #include "utils.h"
 
-void check_cp0_timer();
+bool check_cp0_timer();
 
 SDL_Surface *screen;
 static struct itimerval it;
@@ -32,9 +32,9 @@ int notify_event(int event_type, void *data, int len) {
   return evt->handler(data, len);
 }
 
-void detect_sdl_event() {
+bool detect_sdl_event() {
   SDL_Event event = {0};
-  if (!SDL_PollEvent(&event)) return;
+  if (!SDL_PollEvent(&event)) return false;
 
   int sdlk_data[2] = {event.type, event.key.keysym.sym};
   switch (event.type) {
@@ -50,9 +50,10 @@ void detect_sdl_event() {
     /* do nothing */
     break;
   }
+  return true;
 }
 
-void detect_stdin() {
+bool detect_stdin() {
   /* read stdin */
   int n = nchars_stdin();
   if (n > 0) {
@@ -64,6 +65,7 @@ void detect_stdin() {
 
     free(buf);
   }
+  return n > 0;
 }
 
 void update_timer() {
@@ -74,15 +76,24 @@ void update_timer() {
   notify_event(EVENT_TIMER, NULL, 0);
 }
 
-void device_update(int signum) {
-  detect_sdl_event();
-  detect_stdin();
+void detect_event(int signum) {
+  bool has_event = false;
+  static int sleep_duration = 1;
+  has_event = has_event || detect_sdl_event();
+  has_event = has_event || detect_stdin();
 #if CONFIG_NETWORK
-  net_poll_packet();
+  has_event = has_event || net_poll_packet();
 #endif
 #if CONFIG_INTR
-  check_cp0_timer();
+  has_event = has_event || check_cp0_timer();
 #endif
+
+  if (!has_event) {
+    if (sleep_duration < 20) sleep_duration *= 2;
+    usleep(sleep_duration);
+  } else {
+    sleep_duration = 1;
+  }
 }
 
 #if 0
@@ -102,7 +113,7 @@ static void ctrl_code_handler(int no) {
 void init_timer() {
   struct sigaction s;
   memset(&s, 0, sizeof(s));
-  s.sa_handler = device_update;
+  s.sa_handler = detect_event;
   int ret = sigaction(SIGVTALRM, &s, NULL);
   Assert(ret == 0, "Can not set signal handler");
 
@@ -125,7 +136,7 @@ void init_sdl() {
 }
 
 void *event_loop(void *args) {
-  while (1) { device_update(0); }
+  while (1) { detect_event(0); }
   return NULL;
 }
 

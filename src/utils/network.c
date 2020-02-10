@@ -147,12 +147,14 @@ void net_send_data(const uint8_t *data, const int len) {
   } while (len == -1 && errno == EINTR);
 }
 
-void net_poll_packet() {
+bool net_poll_packet() {
+  bool has_packet = false;
   /* poll all packets firstly */
   int nbytes = 0;
   do {
     static uint8_t raw_buf[1800];
     nbytes = read(iface_fd, raw_buf, sizeof(raw_buf));
+    has_packet = nbytes > 0;
 
     /* remove */
     const int vnet_hdr_len = sizeof(struct virtio_net_hdr);
@@ -178,7 +180,9 @@ void net_poll_packet() {
       break;
     free(packet.iov_base);
     fifo_pop(net_queue);
+    has_packet = true;
   }
+  return has_packet;
 }
 
 #if 0

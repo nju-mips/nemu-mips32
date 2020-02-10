@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <net/if.h>
 #include <netinet/ether.h>
@@ -66,7 +67,7 @@ const char *find_symbol_by_addr(uint32_t addr);
 
 /* nat */
 void init_network();
-void net_poll_packet();
+bool net_poll_packet();
 void net_bind_mac_addr(const uint8_t mac_addr[ETHER_ADDR_LEN]);
 void net_send_data(const uint8_t *data, const int len);
 int net_recv_data(uint8_t *to, const int maxlen);
