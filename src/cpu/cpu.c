@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <elf.h>
 #include <setjmp.h>
 #include <sys/resource.h>
@@ -389,34 +390,6 @@ static ALWAYS_INLINE void check_intrs() {
 }
 #endif
 
-static uint64_t intr_ddl = 0;
-
-uint64_t mips_get_count() {
-  return get_current_time() * 50; // for 50 MHZ
-}
-
-void update_interrupt_deadline() {
-  uint64_t count = mips_get_count();
-  uint64_t count0 = count & ((1ull << 32) - 1);
-  uint64_t compare = cpu.cp0.compare;
-  if (compare < count0) compare = compare + (1ull << 32);
-  uint64_t intr_interval = compare - count;
-  intr_ddl = count + intr_interval;
-}
-
-#if CONFIG_INTR
-bool check_cp0_timer() {
-  /* update IP */
-  bool has_intr = false;
-  if (mips_get_count() > intr_ddl) {
-    nemu_set_irq(7, 1);
-    intr_ddl = -1ull;
-    has_intr = true;
-  }
-  return has_intr;
-}
-#endif
-
 void nemu_epilogue() {
 #if CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
@@ -462,6 +435,7 @@ void nemu_exit() {
 
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
+  static uint64_t nintrs = 0;
   if (work_mode == MODE_GDB && nemu_state != NEMU_END) {
     /* assertion failure handler */
     extern jmp_buf gdb_mode_top_caller;
@@ -526,6 +500,12 @@ void cpu_exec(uint64_t n) {
     if (cpu.has_exception) {
       cpu.has_exception = false;
       cpu.pc = cpu.br_target;
+    }
+#endif
+#if CONFIG_INTR
+    nintrs ++;
+    if (nintrs == cpu.cp0.compare) {
+      nemu_set_irq(7, 1);
     }
 #endif
 

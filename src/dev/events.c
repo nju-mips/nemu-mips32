@@ -8,8 +8,6 @@
 #include "events.h"
 #include "utils.h"
 
-bool check_cp0_timer();
-
 SDL_Surface *screen;
 static struct itimerval it;
 
@@ -28,6 +26,7 @@ int notify_event(int event_type, void *data, int len) {
   assert(0 <= event_type && event_type < NR_EVENTS);
 
   event_t *evt = &events[event_type];
+  if (!evt->handler) return -1;
   return evt->handler(data, len);
 }
 
@@ -76,23 +75,9 @@ void update_timer() {
 }
 
 void detect_event(int signum) {
-  bool has_event = false;
-  static int sleep_duration = 1;
-  has_event = has_event || detect_sdl_event();
-  has_event = has_event || detect_stdin();
-#if CONFIG_NETWORK
-  has_event = has_event || net_poll_packet();
-#endif
-#if CONFIG_INTR
-  has_event = has_event || check_cp0_timer();
-#endif
-
-  if (!has_event) {
-    if (sleep_duration < 20) sleep_duration *= 2;
-    usleep(sleep_duration);
-  } else {
-    sleep_duration = 1;
-  }
+  detect_sdl_event();
+  detect_stdin();
+  update_timer();
 }
 
 #if 0
@@ -135,9 +120,6 @@ void init_sdl() {
 }
 
 void init_events() {
-#if CONFIG_NETWORK
-  init_network();
-#endif
 #if CONFIG_GRAPHICS
   init_sdl();
 #endif

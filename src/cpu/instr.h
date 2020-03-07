@@ -368,13 +368,6 @@ make_exec_handler(breakpoint) {
 
 make_exec_handler(wait) {
   /* didn't +4 for pc */
-  int wait_duration = 1;
-  while (1) {
-    if (cpu.cp0.status.IM & cpu.cp0.cause.IP)
-      goto exit;
-    if (wait_duration < 20) wait_duration *= 2;
-    usleep(wait_duration);
-  }
 }
 
 make_exec_handler(eret) {
@@ -420,14 +413,8 @@ make_exec_handler(eret) {
 make_exec_handler(mfc0) {
   /* used for nanos: pal and litenes */
   if (operands->rd == CP0_COUNT) {
-#if CONFIG_MARCH_NOOP
-    cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
-#else
-    cpu.gpr[operands->rt] = mips_get_count();
-#  if CONFIG_INTR
-    check_cp0_timer();
-#  endif
-#endif
+    cpu.cp0.count[0] = nintrs;
+    cpu.gpr[operands->rt] = cpu.cp0.count[0];
   } else {
     cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
   }
@@ -472,7 +459,6 @@ make_exec_handler(mtc0) {
   } break;
   case CPRS(CP0_COMPARE, 0):
     cpu.cp0.compare = cpu.gpr[operands->rt];
-    update_interrupt_deadline();
     nemu_set_irq(7, 0);
     break;
   case CPRS(CP0_CAUSE, 0): {
