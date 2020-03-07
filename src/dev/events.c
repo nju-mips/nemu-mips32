@@ -1,5 +1,4 @@
 #include <SDL/SDL.h>
-#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -135,11 +134,6 @@ void init_sdl() {
   SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
-void *event_loop(void *args) {
-  while (1) { detect_event(0); }
-  return NULL;
-}
-
 void init_events() {
 #if CONFIG_NETWORK
   init_network();
@@ -149,12 +143,7 @@ void init_events() {
 #endif
   init_console();
 
-#if 1
-  pthread_t thd = 0;
-  pthread_create(&thd, NULL, event_loop, NULL);
-#else
   init_timer();
-#endif
 
 #if 0
   signal(SIGINT, ctrl_code_handler);

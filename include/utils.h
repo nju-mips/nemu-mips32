@@ -74,6 +74,7 @@ int net_recv_data(uint8_t *to, const int maxlen);
 
 /* console control */
 void init_console();
+void resume_console();
 void disable_buffer();
 void enable_buffer();
 void echo_off();

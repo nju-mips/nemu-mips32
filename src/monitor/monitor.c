@@ -214,7 +214,10 @@ void parse_args(int argc, char *argv[]) {
 
 static void gdb_sigint_handler(int sig) { nemu_state = NEMU_STOP; }
 
-static void batch_sigint_handler(int sig) { nemu_exit(); }
+static void batch_sigint_handler(int sig) {
+  nemu_exit();
+  resume_console();
+}
 
 work_mode_t init_monitor(void) {
   /* Load the image to memory. */

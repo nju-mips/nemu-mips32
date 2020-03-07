@@ -41,8 +41,6 @@ cfiles-$(CONFIG_NEMU_VGA_CTRL) += src/dev/nemu-vga-ctrl.c
 cfiles-$(CONFIG_NEMU_VGA) += src/dev/nemu-vga.c
 cfiles-$(CONFIG_XLNX_ULITE) += src/dev/xlnx-ulite.c
 cfiles-$(CONFIG_XLNX_ELITE) += src/dev/xlnx-elite.c
-cfiles-$(CONFIG_XLNX_SPI) += src/dev/xlnx-spi.c
-# cfiles-$(CONFIG_XLNX_SPI) += src/dev/m25p80.c
 
 OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 
@@ -62,7 +60,7 @@ app: $(BINARY) $(SHARED)
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
-	@$(LD) -O2 -o $@ $^ -lSDL -lreadline -ldl -lpthread
+	@$(LD) -O2 -o $@ $^ -lSDL -lreadline -ldl
 
 $(SHARED): $(OBJS)
 	@echo + AR $@

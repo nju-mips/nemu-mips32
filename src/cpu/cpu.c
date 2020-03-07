@@ -1,5 +1,4 @@
 #include <elf.h>
-#include <pthread.h>
 #include <setjmp.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -41,21 +40,14 @@ const char *regs[32] = {
 
 #define MAX_INSTR_TO_PRINT 10
 
-static pthread_mutex_t cpr_cause_mut = PTHREAD_MUTEX_INITIALIZER;
-
-void lock_cpr_cause() { pthread_mutex_lock(&cpr_cause_mut); }
-
-void unlock_cpr_cause() { pthread_mutex_unlock(&cpr_cause_mut); }
 
 void nemu_set_irq(int irqno, bool val) {
   assert(0 <= irqno && irqno < 8);
-  lock_cpr_cause();
   if (val) {
     cpu.cp0.cause.IP |= 1 << irqno;
   } else {
     cpu.cp0.cause.IP &= ~(1 << irqno);
   }
-  unlock_cpr_cause();
 }
 
 // 1s = 10^3 ms = 10^6 us
@@ -403,30 +395,24 @@ uint64_t mips_get_count() {
   return get_current_time() * 50; // for 50 MHZ
 }
 
-static pthread_mutex_t cp0_intr_mut = PTHREAD_MUTEX_INITIALIZER;
-
 void update_interrupt_deadline() {
-  pthread_mutex_lock(&cp0_intr_mut);
   uint64_t count = mips_get_count();
   uint64_t count0 = count & ((1ull << 32) - 1);
   uint64_t compare = cpu.cp0.compare;
   if (compare < count0) compare = compare + (1ull << 32);
   uint64_t intr_interval = compare - count;
   intr_ddl = count + intr_interval;
-  pthread_mutex_unlock(&cp0_intr_mut);
 }
 
 #if CONFIG_INTR
 bool check_cp0_timer() {
   /* update IP */
   bool has_intr = false;
-  pthread_mutex_lock(&cp0_intr_mut);
   if (mips_get_count() > intr_ddl) {
     nemu_set_irq(7, 1);
     intr_ddl = -1ull;
     has_intr = true;
   }
-  pthread_mutex_unlock(&cp0_intr_mut);
   return has_intr;
 }
 #endif

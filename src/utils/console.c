@@ -22,12 +22,6 @@ void wrap_set_term_attr(struct termio *ptbuf) {
   }
 }
 
-void init_console() {
-  wrap_get_term_attr(&raw_termio);
-  disable_buffer();
-  echo_off();
-}
-
 /* functions to change terminal state */
 void disable_buffer() {
   struct termio tbuf;
@@ -88,4 +82,16 @@ void init_scr_wh(int *w, int *h) {
   ioctl(STDIN_FILENO, TIOCGWINSZ, &ws);
   *w = ws.ws_col;
   *h = ws.ws_row;
+}
+
+void init_console() {
+  wrap_get_term_attr(&raw_termio);
+  disable_buffer();
+  echo_off();
+}
+
+void resume_console() {
+  echo_on();
+  enable_buffer();
+  wrap_set_term_attr(&raw_termio);
 }

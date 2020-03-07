@@ -477,12 +477,10 @@ make_exec_handler(mtc0) {
     break;
   case CPRS(CP0_CAUSE, 0): {
     cp0_cause_t *newVal = (void *)&(cpu.gpr[operands->rt]);
-    lock_cpr_cause();
 #if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.cause.IV = newVal->IV;
 #endif
     cpu.cp0.cause.WP = newVal->WP;
-    unlock_cpr_cause();
 
     nemu_set_irq(0, newVal->IP & (1 << 0));
     nemu_set_irq(1, newVal->IP & (1 << 1));
