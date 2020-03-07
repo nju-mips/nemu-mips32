@@ -2,7 +2,7 @@ mainmenu "This is an configure for nemu-mips32"
 
 choice
   prompt "Machine selection"
-  default MARCH_LOONGSON
+  default MARCH_MIPS32_R1
 
 config MARCH_BENCH
   bool "optimized for microbench"
@@ -25,31 +25,6 @@ config MARCH_MIPS32_R1
   select XLNX_ULITE
   select BRAM
   select DDR
-
-config MARCH_LOONGSON 
-  bool "loongson 132"
-  select DELAYSLOT
-  select EXCEPTION
-  select PAGING
-  select NEMU_TRAP
-  select XLNX_ULITE
-  select BRAM
-  select DDR
-
-config MARCH_NOOP
-  bool "NJU OOP"
-  select DELAYSLOT
-  select EXCEPTION
-  select PAGING
-  select NEMU_TRAP
-  select NEMU_CLOCK
-  select XLNX_ULITE
-  select BRAM
-  select DDR
-  select NEMU_VGA
-  select NEMU_VGA_CTRL
-  select NEMU_PMU
-  select NEMU_KEYBOARD
 
 endchoice
 
