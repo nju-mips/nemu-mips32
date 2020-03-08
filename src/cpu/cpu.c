@@ -383,6 +383,13 @@ int init_cpu(vaddr_t entry) {
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
 static ALWAYS_INLINE void check_intrs() {
+#if CONFIG_INTR
+  cpu.cp0.count[0] ++;
+  if (cpu.cp0.count[0] == cpu.cp0.compare) {
+    nemu_set_irq(7, 1);
+  }
+#endif
+
   bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     launch_exception(EXC_INTR);
@@ -435,7 +442,6 @@ void nemu_exit() {
 
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
-  static uint64_t nintrs = 0;
   if (work_mode == MODE_GDB && nemu_state != NEMU_END) {
     /* assertion failure handler */
     extern jmp_buf gdb_mode_top_caller;
@@ -500,12 +506,6 @@ void cpu_exec(uint64_t n) {
     if (cpu.has_exception) {
       cpu.has_exception = false;
       cpu.pc = cpu.br_target;
-    }
-#endif
-#if CONFIG_INTR
-    nintrs ++;
-    if (nintrs == cpu.cp0.compare) {
-      nemu_set_irq(7, 1);
     }
 #endif
 
