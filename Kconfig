@@ -26,6 +26,16 @@ config MARCH_MIPS32_R1
   select BRAM
   select DDR
 
+config MARCH_NOOP
+  bool "noop (no uncertainties)"
+  select DELAYSLOT
+  select EXCEPTION
+  select PAGING
+  select NEMU_TRAP
+  select XLNX_ULITE
+  select BRAM
+  select DDR
+
 endchoice
 
 menu "NEMU-MIPS32 features"
@@ -41,6 +51,7 @@ config PAGING
 
 config INTR
   bool "Interrupt support"
+  depends on !MARCH_NOOP
 
 config EXCEPTION
   bool "Exception support"

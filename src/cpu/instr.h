@@ -341,9 +341,12 @@ make_exec_handler(tlbwi) {
 }
 
 make_exec_handler(tlbwr) {
-  uint32_t i = rand() % NR_TLB_ENTRY;
-  cpu.cp0.random = i;
-  tlb_write(i);
+#if CONFIG_MARCH_NOOP
+  cpu.cp0.random = (cpu.cp0.random + 1) % NR_TLB_ENTRY;
+#else
+  cpu.cp0.random = rand() % NR_TLB_ENTRY;
+#endif
+  tlb_write(cpu.cp0.random);
   clear_mmu_cache();
   clear_decode_cache();
 }
