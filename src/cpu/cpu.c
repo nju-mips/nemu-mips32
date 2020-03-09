@@ -372,7 +372,7 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.config1.IL = 3; // 16=2^($3 + 1) bytes per line
   cpu.cp0.config1.IS = 2; // 256=2^($2 + 6) sets
 
-  cpu.cp0.config1.MMU_size = 63; // 64 TLB entries
+  cpu.cp0.config1.MMU_size = NR_TLB_ENTRY - 1;
 
   /* initialize some cache */
   clear_mmu_cache();
