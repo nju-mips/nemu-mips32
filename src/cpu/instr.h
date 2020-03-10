@@ -376,13 +376,10 @@ make_exec_handler(wait) {
 make_exec_handler(eret) {
   cpu.has_exception = true;
 
-#if CONFIG_MARCH_MIPS32_R1
   if (cpu.cp0.status.ERL == 1) {
     cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
     cpu.cp0.status.ERL = 0;
-  } else
-#endif
-  {
+  } else {
     cpu.br_target = cpu.cp0.epc;
     cpu.cp0.status.EXL = 0;
   }
@@ -447,9 +444,7 @@ make_exec_handler(mtc0) {
     cpu.cp0.status.CU = newVal->CU;
     cpu.cp0.status.RP = newVal->RP;
     cpu.cp0.status.RE = newVal->RE;
-#if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.status.BEV = newVal->BEV;
-#endif
     cpu.cp0.status.TS = newVal->TS;
     cpu.cp0.status.SR = newVal->SR;
     cpu.cp0.status.NMI = newVal->NMI;
@@ -465,9 +460,7 @@ make_exec_handler(mtc0) {
     break;
   case CPRS(CP0_CAUSE, 0): {
     cp0_cause_t *newVal = (void *)&(cpu.gpr[operands->rt]);
-#if CONFIG_MARCH_MIPS32_R1
     cpu.cp0.cause.IV = newVal->IV;
-#endif
     cpu.cp0.cause.WP = newVal->WP;
 
     nemu_set_irq(0, newVal->IP & (1 << 0));
