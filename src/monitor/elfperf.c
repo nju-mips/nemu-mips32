@@ -14,7 +14,7 @@ void elfperf_start() {
 
 void elfperf_record(uint32_t pc) {
   const char *sym = elfsym_find_symbol(&elfsym, pc);
-  hash_kv_t key = {(void *)sym, strlen(sym)};
+  hash_kv_t key = {(void *)sym, strlen(sym) + 1};
   hash_element_t *he = hash_get(&perf_ht, key);
   ninstr++;
   if (he == NULL) {
@@ -33,8 +33,8 @@ void elfperf_report() {
     while (he) {
       const char *sym = he->key.buf;
       uint64_t *counter = he->value.buf;
-      printf("%s\t%ld\t%.f\n", sym, *counter,
-          (double)*counter / ninstr);
+      printf("%40s\t%10ld\t%f%%\n", sym, *counter,
+          100 * *counter / (float)ninstr);
 
       he = he->next;
     }
