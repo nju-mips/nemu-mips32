@@ -76,8 +76,19 @@ config DECODE_CACHE_PERF
   default n
 
 config ELF_PERF
-  bool "Profile the executed elf file"
+  bool "Profilling the executed elf file"
   default n
+
+choice
+  prompt "Profiling selection"
+  depends on ELF_PERF
+
+config ELF_PERF_TIME
+  bool "Profilling time the executed elf file"
+
+config ELF_PERF_INSTR
+  bool "Profilling instrs the executed elf file"
+endchoice
 
 config INSTR_LOG
   bool "Log all executed instructions"
