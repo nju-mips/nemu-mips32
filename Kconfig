@@ -75,6 +75,10 @@ config DECODE_CACHE_PERF
   bool "Profile decode cache hit rate"
   default n
 
+config ELF_PERF
+  bool "Profile the executed elf file"
+  default n
+
 config INSTR_LOG
   bool "Log all executed instructions"
   default n

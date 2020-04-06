@@ -1,5 +1,5 @@
 #include "common.h"
-#include "utils.h"
+#include "elfsym.h"
 #include <sys/time.h>
 
 struct frame_t {
@@ -34,15 +34,19 @@ void print_frames(void) {
   int i = pc_ptr;
   do {
     if (frames[i].property == CALL)
-      eprintf("%02ld.%06ld: %08x CALL   %08x: %-20s -> %-20s\n",
-          frames[i].time.tv_sec, frames[i].time.tv_usec, frames[i].pc,
-          frames[i].target, find_symbol_by_addr(frames[i].pc),
-          find_symbol_by_addr(frames[i].target));
+      eprintf(
+          "%02ld.%06ld: %08x CALL   %08x: %-20s -> %-20s\n",
+          frames[i].time.tv_sec, frames[i].time.tv_usec,
+          frames[i].pc, frames[i].target,
+          elfsym_find_symbol(&elfsym, frames[i].pc),
+          elfsym_find_symbol(&elfsym, frames[i].target));
     else if (frames[i].property == RET)
-      eprintf("%02ld.%06ld: %08x RET TO %08x: %-20s -> %-20s\n",
-          frames[i].time.tv_sec, frames[i].time.tv_usec, frames[i].pc,
-          frames[i].target, find_symbol_by_addr(frames[i].pc),
-          find_symbol_by_addr(frames[i].target));
+      eprintf(
+          "%02ld.%06ld: %08x RET TO %08x: %-20s -> %-20s\n",
+          frames[i].time.tv_sec, frames[i].time.tv_usec,
+          frames[i].pc, frames[i].target,
+          elfsym_find_symbol(&elfsym, frames[i].pc),
+          elfsym_find_symbol(&elfsym, frames[i].target));
     else
       /* eprintf("XXXXXXXX: NONE   xxxxxxxx\n")*/;
     i = (i + 1) % NR_FRAMES;
@@ -69,8 +73,9 @@ void print_backtrace() {
     int idx = backtraces[i];
     if (idx < 0) continue;
     assert(idx < NR_FRAMES);
-    eprintf("%08x:%08x %-20s -> %-20s\n", frames[idx].pc, frames[idx].target,
-        find_symbol_by_addr(frames[idx].pc),
-        find_symbol_by_addr(frames[idx].target));
+    eprintf("%08x:%08x %-20s -> %-20s\n", frames[idx].pc,
+        frames[idx].target,
+        elfsym_find_symbol(&elfsym, frames[idx].pc),
+        elfsym_find_symbol(&elfsym, frames[idx].target));
   }
 }

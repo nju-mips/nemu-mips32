@@ -1,5 +1,5 @@
 #include "common.h"
-#include "utils.h"
+#include "elfsym.h"
 
 typedef struct {
   vaddr_t pc;
@@ -33,7 +33,8 @@ uint32_t get_current_pc() {
 
 uint32_t get_current_instr() {
 #if !CONFIG_INSTR_LOG
-  panic("CONFIG_INSTR_LOG is needed for get_current_instr\n");
+  panic(
+      "CONFIG_INSTR_LOG is needed for get_current_instr\n");
 #endif
   if (iq[instr_ptr].instr_enq) return iq[instr_ptr].instr;
   return 0;
@@ -44,9 +45,10 @@ void print_instr_queue(void) {
   do {
     if (iq[i].instr_enq)
       eprintf("0x%08x: %08x %s\n", iq[i].pc, iq[i].instr,
-          find_symbol_by_addr(iq[i].pc));
+          elfsym_find_symbol(&elfsym, iq[i].pc));
     else
-      eprintf("0x%08x: xxxxxxxx %s\n", iq[i].pc, find_symbol_by_addr(iq[i].pc));
+      eprintf("0x%08x: xxxxxxxx %s\n", iq[i].pc,
+          elfsym_find_symbol(&elfsym, iq[i].pc));
     i = (i + 1) % NR_IQ;
   } while (i != pc_ptr);
 }
