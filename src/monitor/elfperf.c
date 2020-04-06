@@ -33,7 +33,7 @@ void elfperf_report() {
     while (he) {
       const char *sym = he->key.buf;
       uint64_t *counter = he->value.buf;
-      printf("%s %ld %.f\n", sym, *counter,
+      printf("%s\t%ld\t%.f\n", sym, *counter,
           (double)*counter / ninstr);
 
       he = he->next;

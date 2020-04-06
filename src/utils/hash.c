@@ -1,12 +1,13 @@
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "hash.h"
 
-static int bkdr_hash(hash_kv_t key) {
-  int h = 0;
+static uint32_t bkdr_hash(hash_kv_t key) {
+  uint32_t h = 0;
   for (int i = 0; i < key.size; i++) {
-    h = h * 131 + ((int8_t *)&key.buf)[i];
+    h = h * 131 + ((uint8_t *)key.buf)[i];
   }
   return (h & 0x7FFFFFFF) % HASH_SIZE;
 }
