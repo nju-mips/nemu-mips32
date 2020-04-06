@@ -14,8 +14,13 @@
 #include "mmu.h"
 #include "monitor.h"
 #include "utils.h"
+#include "elfsym.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
+
+#define IMPL_CPU
+#include "decode-cache.h"
+#include "mmu-cache.h"
 
 /* some global bariables */
 nemu_state_t nemu_state = NEMU_STOP;
@@ -40,7 +45,6 @@ const char *regs[32] = {
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
 #define MAX_INSTR_TO_PRINT 10
-
 
 void nemu_set_irq(int irqno, bool val) {
   assert(0 <= irqno && irqno < 8);
@@ -104,7 +108,6 @@ void print_registers(void) {
 /* if you run your os with multiple processes, disable this
  */
 #if CONFIG_CAE_CHECK
-
 #  define NR_GPR 32
 static uint32_t saved_gprs[NR_GPR];
 
@@ -119,53 +122,7 @@ void check_usual_registers(void) {
         i, saved_gprs[i], cpu.gpr[i]);
   }
 }
-
 #endif
-
-#if CONFIG_MMU_CACHE_PERF
-uint64_t mmu_cache_hit = 0;
-uint64_t mmu_cache_miss = 0;
-#endif
-
-#define MMU_BITS 12
-
-struct mmu_cache_t {
-  uint32_t id;
-  uint8_t *ptr;
-  bool can_write;
-};
-
-static struct mmu_cache_t mmu_cache[1 << MMU_BITS];
-
-static inline void clear_mmu_cache() {
-  for (int i = 0; i < sizeof(mmu_cache) / sizeof(*mmu_cache); i++) {
-    mmu_cache[i].id = 0xFFFFFFFF;
-    mmu_cache[i].ptr = NULL;
-  }
-}
-
-static ALWAYS_INLINE uint32_t mmu_cache_index(vaddr_t vaddr) {
-  return (vaddr >> 12) & ((1 << MMU_BITS) - 1);
-}
-
-static ALWAYS_INLINE uint32_t mmu_cache_id(vaddr_t vaddr) {
-  return (vaddr >> (12 + MMU_BITS));
-}
-
-static ALWAYS_INLINE void update_mmu_cache(
-    vaddr_t vaddr, paddr_t paddr, device_t *dev, bool can_write) {
-#if CONFIG_MMU_CACHE_PERF
-  mmu_cache_miss++;
-#endif
-  if (cpu.has_exception) return;
-  if (dev->map) {
-    uint32_t idx = mmu_cache_index(vaddr);
-    mmu_cache[idx].id = mmu_cache_id(vaddr);
-    mmu_cache[idx].ptr = dev->map((paddr & ~0xFFF) - dev->start, 0);
-    mmu_cache[idx].can_write = can_write;
-    assert(mmu_cache[idx].ptr);
-  }
-}
 
 static ALWAYS_INLINE uint32_t vaddr_read(vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
@@ -225,69 +182,6 @@ static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
 #endif
     dev->write(paddr - dev->start, len, data);
   }
-}
-
-#if CONFIG_DECODE_CACHE_PERF
-uint64_t decode_cache_hit = 0;
-uint64_t decode_cache_miss = 0;
-#endif
-
-#define DECODE_CACHE_BITS 12
-typedef struct {
-  const void *handler;
-  uint32_t id;
-  union {
-    struct {
-      int rs, rt; // R and I
-
-      union {
-        struct {
-          int rd;
-          int shamt;
-          int func;
-        }; // R
-
-        union {
-          uint16_t uimm;
-          int16_t simm;
-        }; // I
-      };   // R and I union
-    };     // R and I union
-
-    uint32_t addr; // J
-  };
-
-  int sel; /* put here will improve performance */
-
-#if CONFIG_INSTR_LOG || CONFIG_DECODE_CACHE_CHECK
-  Inst inst;
-#endif
-} decode_cache_t;
-
-static decode_cache_t decode_cache[1 << DECODE_CACHE_BITS];
-
-void clear_decode_cache() {
-  for (int i = 0; i < sizeof(decode_cache) / sizeof(*decode_cache); i++) {
-    decode_cache[i].handler = NULL;
-  }
-}
-
-static ALWAYS_INLINE uint32_t decode_cache_index(vaddr_t vaddr) {
-  return vaddr & ((1 << DECODE_CACHE_BITS) - 1);
-}
-
-static ALWAYS_INLINE uint32_t decode_cache_id(vaddr_t vaddr) {
-  return (vaddr >> DECODE_CACHE_BITS);
-}
-
-static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(vaddr_t pc) {
-  uint32_t idx = decode_cache_index(pc);
-  uint32_t id = decode_cache_id(pc);
-  if (decode_cache[idx].id != id) {
-    decode_cache[idx].handler = NULL;
-    decode_cache[idx].id = id;
-  }
-  return &decode_cache[idx];
 }
 
 void launch_exception(uint32_t exception) {
@@ -433,6 +327,10 @@ void nemu_epilogue() {
   print_registers();
   eprintf("\n");
 #endif
+
+#if CONFIG_ELF_PERF
+  elfperf_report();
+#endif
 }
 
 void nemu_exit() {
@@ -467,6 +365,10 @@ void cpu_exec(uint64_t n) {
   for (; n > 0; n--) {
 #if CONFIG_INSTR_LOG
     instr_enqueue_pc(cpu.pc);
+#endif
+
+#if CONFIG_ELF_PERF
+    elfperf_record(cpu.pc);
 #endif
 
 #if CONFIG_EXCEPTION

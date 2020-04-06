@@ -1,68 +1,67 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "hash.h"
 
-typedef int (*hash_func_t)(const uint8_t *, size_t);
-
-hash_func_t hash_func = NULL;
-
-int bkdr_hash(const uint8_t *keybuf, size_t size) {
+static int bkdr_hash(hash_kv_t key) {
   int h = 0;
-  for (int i = 0; i < size; i++) {
-    h = h * 131 + keybuf[i];
+  for (int i = 0; i < key.size; i++) {
+    h = h * 131 + ((int8_t *)&key.buf)[i];
   }
   return (h & 0x7FFFFFFF) % HASH_SIZE;
 }
 
+static hash_kv_t hash_kv_copy(hash_kv_t kv) {
+  hash_kv_t copy = {};
+  copy.size = kv.size;
+  copy.buf = malloc(copy.size);
+  memcpy(copy.buf, kv.buf, copy.size);
+  return copy;
+}
+
+static void hash_kv_release(hash_kv_t kv) { free(kv.buf); }
+
+static bool hash_kv_equals(hash_kv_t a, hash_kv_t b) {
+  if (a.size != b.size) return false;
+  return memcmp(a.buf, b.buf, a.size) == 0;
+}
+
 void hash_init(hash_table_t *ht) {
   memset(ht, 0, sizeof(hash_table_t));
-  vector_init(&(ht->full), sizeof(int));
 }
 
-void hash_push(hash_table_t *ht, const void *keybuf,
-    size_t size, const void *value) {
-  int key = hash_func(keybuf, size);
-  if (!ht->pool[key]) vector_push(&(ht->full), &key);
-
+void hash_push(
+    hash_table_t *ht, hash_kv_t key, hash_kv_t value) {
+  int index = bkdr_hash(key);
   hash_element_t *he =
       (hash_element_t *)malloc(sizeof(hash_element_t));
-  memset(he, 0, sizeof(*he));
 
-  he->keybuf = (void *)keybuf;
-  he->size = size;
-  he->next = ht->pool[key];
-  he->value = (void *)value;
-  ht->pool[key] = he;
-  /**/
+  he->key = hash_kv_copy(key);
+  he->next = ht->pool[index];
+  he->value = hash_kv_copy(value);
+  ht->pool[index] = he;
 }
 
-void *hash_get(
-    hash_table_t *ht, const void *keybuf, size_t size) {
-  int key = hash_func(keybuf, size);
-  hash_element_t *he = ht->pool[key];
+hash_element_t *hash_get(hash_table_t *ht, hash_kv_t key) {
+  int index = bkdr_hash(key);
+  hash_element_t *he = ht->pool[index];
   while (he) {
-    if (he->size == size &&
-        memcmp(he->keybuf, keybuf, size) == 0) {
-      return he->value;
-    }
+    if (hash_kv_equals(he->key, key)) { return he; }
     he = he->next;
   }
   return NULL;
 }
 
-void hash_delete(
-    hash_table_t *ht, const void *keybuf, size_t size) {
-  int key = hash_func(keybuf, size);
-  hash_element_t *he = ht->pool[key];
+void hash_delete(hash_table_t *ht, hash_kv_t key) {
+  int index = bkdr_hash(key);
+  hash_element_t *he = ht->pool[index];
   hash_element_t *phe = NULL;
   while (he) {
-    if (he->size == size &&
-        memcmp(he->keybuf, keybuf, size) == 0) {
-      // logd("hash delete: %s\n", (char *)keybuf);
+    if (hash_kv_equals(he->key, key)) {
       if (phe)
         phe->next = he->next;
       else
-        ht->pool[key] = he->next;
+        ht->pool[index] = he->next;
       break;
     }
     phe = he;
@@ -70,33 +69,20 @@ void hash_delete(
   }
 }
 
-static void free_hash_slot(hash_element_t *he) {
+void free_hash_slot(hash_element_t *he) {
   while (he) {
     hash_element_t *curhe = he;
     he = he->next;
+
+    hash_kv_release(curhe->key);
+    hash_kv_release(curhe->value);
     free(curhe);
   }
 }
 
 /*use vector full to record how many slots are in use*/
-void hash_destroy_element(hash_table_t *ht) {
-  size_t vec_n = vector_size(&(ht->full));
-  if (vec_n * 4 > HASH_SIZE) {
-    for (int i = 0; i < HASH_SIZE; i++)
-      free_hash_slot(ht->pool[i]);
-    memset(&(ht->pool), 0, sizeof(ht->pool));
-  } else {
-    int *p = ht->full.p;
-    for (int i = 0; i < vec_n; i++) {
-      free_hash_slot(ht->pool[p[i]]);
-      ht->pool[p[i]] = NULL;
-    }
-  }
-
-  vector_clear(&(ht->full));
-}
-
 void hash_free(hash_table_t *ht) {
-  hash_destroy_element(ht);
-  vector_free(&(ht->full));
+  for (int i = 0; i < HASH_SIZE; i++)
+    free_hash_slot(ht->pool[i]);
+  memset(&(ht->pool), 0, sizeof(ht->pool));
 }

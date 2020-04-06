@@ -229,6 +229,10 @@ work_mode_t init_monitor(void) {
 
   if (symbol_file) elfsym_load(&elfsym, symbol_file);
 
+#if CONFIG_ELF_PERF
+  elfperf_start();
+#endif
+
   if (!(work_mode & MODE_BATCH))
     signal(SIGINT, gdb_sigint_handler);
   else

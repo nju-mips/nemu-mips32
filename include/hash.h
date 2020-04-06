@@ -1,42 +1,38 @@
 #ifndef HASH_H
 #define HASH_H
 
+#include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
-
-#include "vector.h"
 
 #define HASH_SIZE (4 * 1024)
 
-typedef struct hash_element_t {
-  uint8_t *keybuf;
+typedef struct {
+  void *buf;
   size_t size;
-  void *value;
+} hash_kv_t;
+
+typedef struct hash_element_t {
+  hash_kv_t key;
+  hash_kv_t value;
   struct hash_element_t *next;
 } hash_element_t;
 
 typedef struct hash_table_t {
-  vec_t full;
   hash_element_t *pool[HASH_SIZE];
 } hash_table_t;
 
 /* init a hash table */
 void hash_init(hash_table_t *ht);
-
 /* push a element into hash table */
-void hash_push(hash_table_t *ht, const void *keybuf,
-    size_t size, const void *value);
-
+void hash_push(
+    hash_table_t *ht, hash_kv_t key, hash_kv_t value);
 /* find element from hash table */
-void *hash_get(
-    hash_table_t *ht, const void *keybuf, size_t size);
-
+hash_element_t *hash_get(hash_table_t *ht, hash_kv_t key);
 /*delete element from hash table*/
-void hash_delete(
-    hash_table_t *ht, const void *keybuf, size_t size);
-
+void hash_delete(hash_table_t *ht, hash_kv_t key);
 /* destroy all elements in a hash table */
 void hash_destroy_element(hash_table_t *ht);
-
 /*free memory used by hash table*/
 void hash_free(hash_table_t *ht);
 
