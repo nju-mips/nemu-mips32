@@ -13,7 +13,10 @@ typedef struct {
   Elf32_Sym *symtab;
   int nr_symtab_entry;
   int strtab_size;
-  const char **addr2sym_cache;
+  struct {
+    const char *sym;
+    uint32_t addr;
+  } *addr2sym_cache;
 } elfsym_t;
 
 void elfsym_release(elfsym_t *elfsym);

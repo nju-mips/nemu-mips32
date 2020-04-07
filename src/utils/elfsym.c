@@ -105,8 +105,8 @@ const char *elfsym_find_symbol(
     elfsym_t *elfsym, uint32_t addr) {
   uint32_t idx = addr & ((1 << ADDR2SYM_CACHE_BITS) - 1);
   if (elfsym->addr2sym_cache &&
-      elfsym->addr2sym_cache[idx]) {
-    return elfsym->addr2sym_cache[idx];
+      elfsym->addr2sym_cache[idx].addr == addr) {
+    return elfsym->addr2sym_cache[idx].sym;
   }
 
   for (int i = 0; i < elfsym->nr_symtab_entry; i++) {
@@ -122,21 +122,25 @@ const char *elfsym_find_symbol(
 
     int st_name = elfsym->symtab[i].st_name;
     assert(st_name < elfsym->strtab_size);
-    if (elfsym->addr2sym_cache)
-      elfsym->addr2sym_cache[idx] =
+    if (elfsym->addr2sym_cache) {
+      elfsym->addr2sym_cache[idx].sym =
           elfsym->strtab + st_name;
+      elfsym->addr2sym_cache[idx].addr = addr;
+    }
     return elfsym->strtab + st_name;
   }
 
   const char *notfound = "?";
-  if (elfsym->addr2sym_cache)
-    elfsym->addr2sym_cache[idx] = notfound;
+  if (elfsym->addr2sym_cache) {
+    elfsym->addr2sym_cache[idx].sym = notfound;
+    elfsym->addr2sym_cache[idx].addr = addr;
+  }
   return notfound;
 }
 
 void elfsym_optimize_find_symbol(elfsym_t *elfsym) {
-  uint32_t size =
-      sizeof(const char *) * NR_ADDR2SYM_CACHE_ENTRIES;
+  uint32_t size = sizeof(*(elfsym->addr2sym_cache)) *
+                  NR_ADDR2SYM_CACHE_ENTRIES;
   elfsym->addr2sym_cache = malloc(size);
   memset(elfsym->addr2sym_cache, 0, size);
 }
