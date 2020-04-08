@@ -893,6 +893,7 @@ make_exec_handler(swl) {
   uint32_t wdata = cpu.gpr[operands->rt] >> ((3 - idx) * 8);
 
   vaddr_write((waddr >> 2) << 2, len, wdata);
+  if (cpu.has_exception) cpu.cp0.badvaddr = waddr;
 }
 
 make_exec_handler(swr) {
@@ -930,6 +931,8 @@ make_exec_handler(lwl) {
           ((uint32_t)cpu.gpr[operands->rt] << (len * 8)) >> (len * 8);
     else
       cpu.gpr[operands->rt] = rdata;
+  } else {
+    cpu.cp0.badvaddr = raddr;
   }
 }
 
