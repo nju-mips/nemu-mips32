@@ -1,5 +1,5 @@
-#include <limits.h>
 #include <elf.h>
+#include <limits.h>
 #include <setjmp.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -10,11 +10,11 @@
 
 #include "debug.h"
 #include "device.h"
+#include "elfsym.h"
 #include "memory.h"
 #include "mmu.h"
 #include "monitor.h"
 #include "utils.h"
-#include "elfsym.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 
@@ -67,11 +67,13 @@ uint64_t get_current_time() { // in us
   clock_getcpuclockid(getpid(), &clockid);
   clock_gettime(clockid, &tp);
   // clock_gettime(CLOCK_THREAD_CPUTIME_ID, &tp);
-  return (tp.tv_sec * 1000000 + tp.tv_nsec / 1000) - nemu_start_time;
+  return (tp.tv_sec * 1000000 + tp.tv_nsec / 1000) -
+         nemu_start_time;
 #elif 0
   struct rusage usage = {0};
   getrusage(RUSAGE_SELF /* current thread */, &usage);
-  return (usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec) -
+  return (usage.ru_utime.tv_sec * 1000000 +
+             usage.ru_utime.tv_usec) -
          nemu_start_time;
 #endif
 }
@@ -99,7 +101,8 @@ void print_registers(void) {
   eprintf("\n");
 
   for (int i = 0; i < 32; i++) {
-    eprintf("$%s:0x%08x%c", regs[i], cpu.gpr[i], (i + 1) % 4 == 0 ? '\n' : ' ');
+    eprintf("$%s:0x%08x%c", regs[i], cpu.gpr[i],
+        (i + 1) % 4 == 0 ? '\n' : ' ');
   }
 
   ninstr++;
@@ -112,26 +115,31 @@ void print_registers(void) {
 static uint32_t saved_gprs[NR_GPR];
 
 void save_usual_registers(void) {
-  for (int i = 0; i < NR_GPR; i++) saved_gprs[i] = cpu.gpr[i];
+  for (int i = 0; i < NR_GPR; i++)
+    saved_gprs[i] = cpu.gpr[i];
 }
 
 void check_usual_registers(void) {
   for (int i = 0; i < NR_GPR; i++) {
     if (i == R_k0 || i == R_k1) continue;
-    CPUAssert(saved_gprs[i] == cpu.gpr[i], "gpr[%d] %08x <> %08x after eret\n",
-        i, saved_gprs[i], cpu.gpr[i]);
+    CPUAssert(saved_gprs[i] == cpu.gpr[i],
+        "gpr[%d] %08x <> %08x after eret\n", i,
+        saved_gprs[i], cpu.gpr[i]);
   }
 }
 #endif
 
-static ALWAYS_INLINE uint32_t vaddr_read(vaddr_t addr, int len) {
+static ALWAYS_INLINE uint32_t vaddr_read(
+    vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
-  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr)) {
+  if (CONFIG_IS_ENABLED(MMU_CACHE) &&
+      mmu_cache[idx].id == mmu_cache_id(addr)) {
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
-    uint32_t data = *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
-                    (~0u >> ((4 - len) << 3));
+    uint32_t data =
+        *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
+        (~0u >> ((4 - len) << 3));
 #if CONFIG_MMU_CACHE_CHECK
     assert(data == dbg_vaddr_read(addr, len));
 #endif
@@ -144,18 +152,21 @@ static ALWAYS_INLINE uint32_t vaddr_read(vaddr_t addr, int len) {
     update_mmu_cache(addr, paddr, dev, attr.dirty);
     uint32_t data = dev->read(paddr - dev->start, len);
 #if CONFIG_MMIO_ACCESS_LOG
-    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) == 0) {
-      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
-          len, data);
+    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) ==
+        0) {
+      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name,
+          paddr - dev->start, len, data);
     }
 #endif
     return data;
   }
 }
 
-static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
+static ALWAYS_INLINE void vaddr_write(
+    vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
-  if (CONFIG_IS_ENABLED(MMU_CACHE) && mmu_cache[idx].id == mmu_cache_id(addr) &&
+  if (CONFIG_IS_ENABLED(MMU_CACHE) &&
+      mmu_cache[idx].id == mmu_cache_id(addr) &&
       mmu_cache[idx].can_write) {
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
@@ -166,7 +177,8 @@ static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
     assert(paddr != blackhole_dev.start);
     device_t *dev = find_device(paddr);
     assert(dev && dev->map);
-    assert(mmu_cache[idx].ptr == dev->map((paddr & ~0xFFF) - dev->start, 0));
+    assert(mmu_cache[idx].ptr ==
+           dev->map((paddr & ~0xFFF) - dev->start, 0));
 #endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
   } else {
@@ -175,9 +187,10 @@ static ALWAYS_INLINE void vaddr_write(vaddr_t addr, int len, uint32_t data) {
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, true);
 #if CONFIG_MMIO_ACCESS_LOG
-    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) == 0) {
-      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name, paddr - dev->start,
-          len, data);
+    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) ==
+        0) {
+      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name,
+          paddr - dev->start, len, data);
     }
 #endif
     dev->write(paddr - dev->start, len, data);
@@ -188,7 +201,9 @@ void launch_exception(uint32_t exception) {
   int code = exception & 0xFFFF;
   int extra = exception >> 16;
 
-  if (code == EXC_TRAP) { panic("HIT BAD TRAP @%08x\n", get_current_pc()); }
+  if (code == EXC_TRAP) {
+    panic("HIT BAD TRAP @%08x\n", get_current_pc());
+  }
 
 #if CONFIG_CAE_CHECK
   save_usual_registers();
@@ -197,7 +212,8 @@ void launch_exception(uint32_t exception) {
   cpu.has_exception = true;
 
   uint32_t vecOff = 0;
-  if (CONFIG_IS_ENABLED(MARCH_NOOP) || cpu.cp0.status.EXL == 0) {
+  if (CONFIG_IS_ENABLED(MARCH_NOOP) ||
+      cpu.cp0.status.EXL == 0) {
 #if CONFIG_DELAYSLOT
     if (cpu.is_delayslot) {
       cpu.is_delayslot = false; // !!
@@ -242,7 +258,9 @@ int init_cpu(vaddr_t entry) {
   cpu.cp0.count[0] = 0;
   cpu.cp0.compare = 0xFFFFFFFF;
 
+#if !CONFIG_DIFF_WITH_QEMU
   cpu.cp0.status.CU = CU0_ENABLE;
+#endif
   cpu.cp0.status.ERL = 0;
   cpu.cp0.status.BEV = 1;
   cpu.cp0.status.IM = 0x00;
@@ -277,14 +295,15 @@ int init_cpu(vaddr_t entry) {
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
 static ALWAYS_INLINE void check_intrs() {
-#if CONFIG_INTR
-  cpu.cp0.count[0] ++;
+#  if CONFIG_INTR
+  cpu.cp0.count[0]++;
   if (cpu.cp0.count[0] == cpu.cp0.compare) {
     nemu_set_irq(7, 1);
   }
-#endif
+#  endif
 
-  bool ie = !(cpu.cp0.status.ERL) && !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
+  bool ie = !(cpu.cp0.status.ERL) &&
+            !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
     launch_exception(EXC_INTR);
   }
@@ -295,13 +314,15 @@ void nemu_epilogue() {
 #if CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
-      mmu_cache_hit / (double)(mmu_cache_hit + mmu_cache_miss));
+      mmu_cache_hit /
+          (double)(mmu_cache_hit + mmu_cache_miss));
 #endif
 
 #if CONFIG_DECODE_CACHE_PERF
   printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
       decode_cache_hit + decode_cache_miss,
-      decode_cache_hit / (double)(decode_cache_hit + decode_cache_miss));
+      decode_cache_hit /
+          (double)(decode_cache_hit + decode_cache_miss));
 #endif
 
 #if CONFIG_INSTR_LOG
@@ -414,5 +435,7 @@ void cpu_exec(uint64_t n) {
     if (nemu_state != NEMU_RUNNING) { return; }
   }
 
-  if (nemu_state == NEMU_RUNNING) { nemu_state = NEMU_STOP; }
+  if (nemu_state == NEMU_RUNNING) {
+    nemu_state = NEMU_STOP;
+  }
 }

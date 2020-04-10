@@ -83,6 +83,7 @@ enum {
   OPT_FLASH,
   OPT_BLOCK_DATA,
   OPT_FIFO_DATA,
+  OPT_DIFF_TEST,
 };
 
 const struct option long_options[] = {
@@ -97,6 +98,7 @@ const struct option long_options[] = {
     {"flash", 1, NULL, OPT_FLASH},
     {"block-data", 1, NULL, OPT_BLOCK_DATA},
     {"fifo-data", 1, NULL, OPT_FIFO_DATA},
+    {"diff-test", 0, NULL, OPT_DIFF_TEST},
     {NULL, 0, NULL, 0},
 };
 
@@ -186,7 +188,6 @@ void parse_args(int argc, char *argv[]) {
       (o = getopt_long(argc, argv, "-bcde:i:s:h", long_options, NULL)) != -1) {
     switch (o) {
     case 's': symbol_file = optarg; break;
-    case 'd': work_mode |= MODE_DIFF; break;
     case 'b': work_mode |= MODE_BATCH; break;
     case 'c': work_mode |= MODE_LOG; break;
     case 'e':
@@ -204,6 +205,9 @@ void parse_args(int argc, char *argv[]) {
     case OPT_FLASH: flash_file = optarg; break;
     case OPT_BLOCK_DATA: parse_block_data_option(optarg); break;
     case OPT_FIFO_DATA: parse_fifo_data_option(optarg); break;
+#if CONFIG_DIFF_WITH_QEMU
+    case OPT_DIFF_TEST: work_mode |= MODE_DIFF; break;
+#endif
     case 'h':
     default: print_help(argv[0]); exit(0);
     }

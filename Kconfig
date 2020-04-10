@@ -57,6 +57,10 @@ config EXCEPTION
   bool "Exception support"
 endif
 
+config DIFF_WITH_QEMU
+  bool "Diff test with qemu"
+  depends on MARCH_NOOP
+
 config MMU_CACHE
   bool "Cache mmu results"
 

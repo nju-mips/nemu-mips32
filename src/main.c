@@ -8,7 +8,7 @@ void init_events();
 void parse_args(int, char *[]);
 int init_monitor(void);
 void gdb_mainloop();
-void qemu_diff();
+void difftest();
 void cpu_exec(uint64_t);
 
 int main(int argc, char *argv[]) {
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   if (mode & MODE_BATCH) {
     init_events();
     if (mode == MODE_DIFF) {
-      qemu_diff();
+      difftest();
     } else {
       cpu_exec(-1);
       nemu_exit(0);
