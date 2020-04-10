@@ -97,9 +97,11 @@ typedef struct {
   uint32_t WP : 1;
   uint32_t IV : 1;
 
-  uint32_t __ : 4;
+  uint32_t __ : 2;
+  uint32_t PCI: 1;
+  uint32_t DC : 1;
   uint32_t CE : 2;
-  uint32_t __ : 1;
+  uint32_t TI : 1;
   uint32_t BD : 1;
 } cp0_cause_t;
 

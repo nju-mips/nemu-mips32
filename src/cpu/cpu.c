@@ -368,8 +368,6 @@ void cpu_exec(uint64_t n) {
     if (code != 0) nemu_state = NEMU_END;
   }
 
-  // stop_cpu_when_ulite_send("Starting ");
-
   if (nemu_state == NEMU_END) {
     printf(
         "Program execution has ended. To restart the "

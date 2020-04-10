@@ -11,7 +11,8 @@
 
 /* kernel-debug */
 extern void check_kernel_image(const char *image);
-extern void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
+extern void dump_syscall(
+    uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
 
 /* nemu-diff */
 void init_nemu_dylib();
@@ -40,26 +41,27 @@ void frames_enqueue_ret(uint32_t pc, uint32_t target);
 
 // we are properly doing diff testing in batch_mode, so do
 // not Log in batch_mode
-#define Log(format, ...)                                              \
-  do {                                                                \
-    eprintf("nemu: %s:%d: %s: " format, __FILE__, __LINE__, __func__, \
-        ##__VA_ARGS__);                                               \
+#define Log(format, ...)                          \
+  do {                                            \
+    eprintf("nemu: %s:%d: %s: " format, __FILE__, \
+        __LINE__, __func__, ##__VA_ARGS__);       \
   } while (0)
 
-#define Assert(cond, fmt, ...)                                    \
-  do {                                                            \
-    if (!(cond)) {                                                \
-      Log("Assertion `%s' failed: \e[1;31m" fmt "\e[0m\n", #cond, \
-          ##__VA_ARGS__);                                         \
-      Abort();                                                    \
-    }                                                             \
+#define Assert(cond, fmt, ...)                             \
+  do {                                                     \
+    if (!(cond)) {                                         \
+      Log("Assertion `%s' failed: \e[1;31m" fmt "\e[0m\n", \
+          #cond, ##__VA_ARGS__);                           \
+      Abort();                                             \
+    }                                                      \
   } while (0)
 
-#define panic(fmt, ...)                                                 \
-  do {                                                                  \
-    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt "\e[0m\n", __FILE__, \
-        __LINE__, __func__, ##__VA_ARGS__);                             \
-    Abort();                                                            \
+#define panic(fmt, ...)                               \
+  do {                                                \
+    eprintf("nemu: %s:%d: %s: panic: \e[1;31m" fmt    \
+            "\e[0m\n",                                \
+        __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+    Abort();                                          \
   } while (0)
 
 #define TODO() panic("please implement me")
@@ -74,15 +76,16 @@ void frames_enqueue_ret(uint32_t pc, uint32_t target);
     }                                   \
   } while (0)
 
-#define CPUAssert(cond, fmt, ...)                                             \
-  do {                                                                        \
-    if (!(cond)) {                                                            \
-      nemu_epilogue();                                                        \
-      eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n", __FILE__, __LINE__, \
-          __func__, #cond);                                                   \
-      eprintf("\e[1;31mCPUAssert message: " fmt "\e[0m\n", ##__VA_ARGS__);    \
-      CPUAbort();                                                             \
-    }                                                                         \
+#define CPUAssert(cond, fmt, ...)                          \
+  do {                                                     \
+    if (!(cond)) {                                         \
+      nemu_epilogue();                                     \
+      eprintf("nemu: %s:%d: %s: Assertion `%s' failed\n",  \
+          __FILE__, __LINE__, __func__, #cond);            \
+      eprintf("\e[1;31mCPUAssert message: " fmt "\e[0m\n", \
+          ##__VA_ARGS__);                                  \
+      CPUAbort();                                          \
+    }                                                      \
   } while (0)
 
 #endif
