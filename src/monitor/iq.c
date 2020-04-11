@@ -1,5 +1,5 @@
 #include "common.h"
-#include "elfsym.h"
+#include "utils/elfsym.h"
 
 typedef struct {
   vaddr_t pc;

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "cpu.h"
+#include "cpu/reg.h"
 
 typedef struct {
   uint32_t pfn : 24;

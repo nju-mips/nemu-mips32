@@ -1,7 +1,7 @@
 #ifndef EVENTS_H
 #define EVENTS_H
 
-#include "device.h"
+#include "dev/device.h"
 
 enum {
   EVENT_STDIN_DATA = 0,

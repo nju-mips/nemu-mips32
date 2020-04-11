@@ -3,9 +3,9 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 
-#include "cpu.h"
-#include "memory.h"
-#include "qemu.h"
+#include "cpu/reg.h"
+#include "cpu/memory.h"
+#include "utils/qemu.h"
 
 void cpu_exec(uint64_t);
 

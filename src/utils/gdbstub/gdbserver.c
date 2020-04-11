@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cpu.h"
-#include "memory.h"
+#include "cpu/reg.h"
+#include "cpu/memory.h"
 #include "monitor.h"
-#include "protocol.h"
+#include "utils/gdb-proto.h"
 
 void cpu_exec(uint64_t);
 

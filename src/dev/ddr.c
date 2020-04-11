@@ -1,4 +1,4 @@
-#include "device.h"
+#include "dev/device.h"
 
 #define DDR_SIZE (128 * 1024 * 1024) // 0x08000000
 

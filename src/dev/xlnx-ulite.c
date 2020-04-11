@@ -1,9 +1,9 @@
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
-#include "device.h"
-#include "events.h"
-#include "fifo.h"
+#include "dev/device.h"
+#include "dev/events.h"
+#include "utils/fifo.h"
 
 // UART
 #define Rx 0x0

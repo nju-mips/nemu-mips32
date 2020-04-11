@@ -7,9 +7,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "device.h"
-#include "memory.h"
-#include "syscalls.h"
+#include "dev/device.h"
+#include "cpu/memory.h"
+#include "utils/syscalls.h"
 
 size_t get_file_size(const char *img_file);
 void *read_file(const char *filename);

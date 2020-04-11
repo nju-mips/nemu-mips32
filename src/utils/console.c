@@ -4,7 +4,7 @@
 #include <termios.h>
 
 #include "debug.h"
-#include "utils.h"
+#include "utils/utils.h"
 
 #define STDIN_FILENO 0
 

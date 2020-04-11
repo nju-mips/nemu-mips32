@@ -9,12 +9,12 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "device.h"
-#include "elfsym.h"
-#include "memory.h"
-#include "mmu.h"
+#include "dev/device.h"
+#include "utils/elfsym.h"
+#include "cpu/memory.h"
+#include "cpu/mmu.h"
 #include "monitor.h"
-#include "utils.h"
+#include "utils/utils.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 

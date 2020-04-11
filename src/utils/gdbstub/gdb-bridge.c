@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "protocol.h"
+#include "utils/gdb-proto.h"
 
 extern char *symbol_file;
 

@@ -1,7 +1,7 @@
 #ifndef QEMU_H
 #define QEMU_H
 
-#include "protocol.h"
+#include "utils/gdb-proto.h"
 
 typedef struct gdb_conn qemu_conn_t;
 typedef union {

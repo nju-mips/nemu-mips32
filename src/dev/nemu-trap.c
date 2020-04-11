@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "device.h"
+#include "dev/device.h"
 #include "monitor.h"
 
 #define NEMU_TRAP_SIZE 0x1000

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hash.h"
+#include "utils/hash.h"
 
 static uint32_t bkdr_hash(hash_kv_t key) {
   uint32_t h = 0;

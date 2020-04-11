@@ -4,9 +4,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "device.h"
-#include "events.h"
-#include "utils.h"
+#include "dev/device.h"
+#include "dev/events.h"
+#include "utils/utils.h"
 
 SDL_Surface *screen;
 static struct itimerval it;

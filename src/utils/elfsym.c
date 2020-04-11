@@ -1,5 +1,5 @@
 #include "common.h"
-#include "elfsym.h"
+#include "utils/elfsym.h"
 
 #include <malloc.h>
 #include <stdio.h>

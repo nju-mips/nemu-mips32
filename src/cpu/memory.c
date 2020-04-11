@@ -1,5 +1,5 @@
-#include "device.h"
-#include "memory.h"
+#include "dev/device.h"
+#include "cpu/memory.h"
 
 #include <SDL/SDL.h>
 #include <stdlib.h>

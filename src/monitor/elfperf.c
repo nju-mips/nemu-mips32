@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "common.h"
-#include "elfsym.h"
-#include "hash.h"
+#include "utils/elfsym.h"
+#include "utils/hash.h"
 
 #if CONFIG_ELF_PERF_TIME
 static const char *last_sym = NULL;

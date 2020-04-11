@@ -35,7 +35,7 @@
 #include <sys/types.h>
 
 #include "common.h"
-#include "protocol.h"
+#include "utils/gdb-proto.h"
 
 struct gdb_conn {
   FILE *in;

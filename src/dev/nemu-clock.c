@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "device.h"
+#include "dev/device.h"
 
 #define NEMU_CLOCK_SIZE 0x4
 

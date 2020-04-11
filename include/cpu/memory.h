@@ -2,8 +2,8 @@
 #define MEMORY_H
 
 #include "common.h"
-#include "cpu.h"
-#include "mmu.h"
+#include "cpu/reg.h"
+#include "cpu/mmu.h"
 
 /*
  * FFFF FFFF -\

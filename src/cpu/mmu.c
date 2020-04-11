@@ -1,8 +1,8 @@
 #include "common.h"
-#include "cpu.h"
-#include "device.h"
-#include "memory.h"
-#include "mmu.h"
+#include "cpu/reg.h"
+#include "dev/device.h"
+#include "cpu/memory.h"
+#include "cpu/mmu.h"
 
 extern device_t blackhole_dev;
 

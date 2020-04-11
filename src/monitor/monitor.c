@@ -3,11 +3,11 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "device.h"
-#include "memory.h"
+#include "dev/device.h"
+#include "cpu/memory.h"
 #include "monitor.h"
-#include "utils.h"
-#include "elfsym.h"
+#include "utils/utils.h"
+#include "utils/elfsym.h"
 
 elfsym_t elfsym;
 const char *flash_file = NULL;
