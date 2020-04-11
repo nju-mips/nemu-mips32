@@ -32,7 +32,7 @@ int qemu_start(const char *elf, int port) {
   snprintf(remote_s, sizeof(remote_s), "tcp::%d", port);
 
   execlp(exec, exec, "-S", "-gdb", remote_s, "-kernel", elf,
-      NULL);
+      "-nographic", NULL);
   return -1;
 }
 

@@ -10,10 +10,10 @@
 void cpu_exec(uint64_t);
 
 void print_qemu_registers(qemu_regs_t *regs) {
+  eprintf("$cause:%08x\n", regs->cause);
   eprintf(
-      "$pc:    0x%08x    $hi:    0x%08x    $lo:    "
-      "0x%08x\n",
-      regs->pc - 4, regs->hi, regs->lo);
+      "$pc:0x%08x  $hi:0x%08x  $lo:0x%08x  $sr:0x%08x\n",
+      regs->pc - 4, regs->hi, regs->lo, regs->sr);
   eprintf(
       "$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n",
       regs->gpr[0], regs->gpr[1], regs->gpr[2],
@@ -141,13 +141,23 @@ void difftest_start_qemu(int port, int ppid) {
           __FILE__, __LINE__, __func__, #cond);           \
       eprintf("\e[1;31mmessage: " fmt "\e[0m\n",          \
           ##__VA_ARGS__);                                 \
-      breakpoint();                                       \
+      difftest_finish_qemu(conn);                         \
     }                                                     \
   } while (0)
 
-void __attribute__((noinline)) breakpoint() {}
+void __attribute__((noinline))
+difftest_finish_qemu(qemu_conn_t *conn) {
+  for (int i = 0; i < 20; i++) {
+    qemu_regs_t regs = {0};
+    qemu_single_step(conn);
+    qemu_getregs(conn, &regs);
+    print_qemu_registers(&regs);
+  }
+  abort();
+}
 
-void difftest_check_registers(qemu_regs_t *regs) {
+void difftest_check_registers(
+    qemu_regs_t *regs, qemu_conn_t *conn) {
   DiffAssert(regs->pc == cpu.pc,
       "differ at pc:{%08x <> %08x}\n", regs->pc, cpu.pc);
 
@@ -225,7 +235,7 @@ void difftest_body(int port) {
 
     cpu.cp0.cause.IP = ((cp0_cause_t *)&regs.cause)->IP;
     cpu.cp0.cause.TI = ((cp0_cause_t *)&regs.cause)->TI;
-    difftest_check_registers(&regs);
+    difftest_check_registers(&regs, conn);
   }
 
   qemu_disconnect(conn);
