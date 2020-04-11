@@ -23,7 +23,7 @@ void load_rom(uint32_t entry) {
   uint32_t *p = vaddr_map(CPU_INIT_PC, 16);
   assert(p);
   p[0] = 0x3c080000 | (entry >> 16);    // lui t0, %hi(entry)
-  p[1] = 0x25080000 | (entry & 0xFFFF); // addiu t0, t0, %lo(entry)
+  p[1] = 0x35080000 | (entry & 0xFFFF); // ori t0, t0, %lo(entry)
   p[2] = 0x01000008;                    // jr t0
   p[3] = 0x00000000;                    // nop
 }

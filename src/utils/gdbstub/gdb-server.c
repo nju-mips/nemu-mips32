@@ -394,10 +394,10 @@ static gdb_cmd_handler_t handlers[128] = {
 };
 
 void gdb_server_mainloop(int servfd) {
-  struct gdb_conn *gdb = gdb_begin_server(servfd);
+  struct gdb_conn *conn = gdb_begin_server(servfd);
   while (1) {
     size_t size = 0;
-    char *data = (void *)gdb_recv(gdb, &size);
+    char *data = (void *)gdb_recv(conn, &size);
 
     gdb_cmd_handler_t handler = handlers[(int)data[0]];
     if (handler) {
@@ -405,15 +405,16 @@ void gdb_server_mainloop(int servfd) {
       // printf("[NEMU] Client request '%s'\n", data);
       if (resp) {
         // printf("[NEMU] Server response '%s'\n", resp);
-        gdb_send(gdb, (void *)resp, strlen(resp));
+        gdb_send(conn, (void *)resp, strlen(resp));
       } else {
-        gdb_send(gdb, (void *)"", 0);
+        gdb_send(conn, (void *)"", 0);
       }
       free(data);
     } else {
-      printf("[NEMU] WARNING: Unsupport gdb request '%s'\n", data);
-      gdb_send(gdb, (void *)"", 0);
+      printf("[NEMU] WARNING: Unsupport conn request '%s'\n", data);
+      gdb_send(conn, (void *)"", 0);
       free(data);
     }
   }
+  free(conn);
 }
