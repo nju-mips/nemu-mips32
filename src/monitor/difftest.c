@@ -3,17 +3,17 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 
-#include "cpu/reg.h"
 #include "cpu/memory.h"
+#include "cpu/reg.h"
 #include "utils/qemu.h"
 
 void cpu_exec(uint64_t);
 
 void print_qemu_registers(qemu_regs_t *regs) {
-  eprintf("$cause:%08x\n", regs->cause);
+  eprintf("$pc:%08x\n", regs->pc - 4);
   eprintf(
-      "$pc:0x%08x  $hi:0x%08x  $lo:0x%08x  $sr:0x%08x\n",
-      regs->pc - 4, regs->hi, regs->lo, regs->sr);
+      "$cs:0x%08x  $hi:0x%08x  $lo:0x%08x  $sr:0x%08x\n",
+      regs->cause, regs->hi, regs->lo, regs->sr);
   eprintf(
       "$0 :0x%08x  $at:0x%08x  $v0:0x%08x  $v1:0x%08x\n",
       regs->gpr[0], regs->gpr[1], regs->gpr[2],
@@ -120,6 +120,12 @@ bool inst_is_mmio(Inst inst, qemu_regs_t *regs) {
          inst_is_store_mmio(inst, regs);
 }
 
+bool pc_in_ex_entry(uint32_t pc) {
+  return pc == 0xbfc00200 || pc == 0xbfc00380 ||
+         pc == 0xbfc00400 || pc == 0x80000000 ||
+         pc == 0x80000180 || pc == 0x80000200;
+}
+
 void difftest_start_qemu(int port, int ppid) {
   // install a parent death signal in the child
   int r = prctl(PR_SET_PDEATHSIG, SIGTERM);
@@ -183,6 +189,35 @@ void difftest_check_registers(
       regs->cause, cpu.cp0.cpr[CP0_CAUSE][0]);
 }
 
+void difftest_sync_regs(
+    qemu_conn_t *conn, Inst inst, qemu_regs_t *regs) {
+  if (inst_is_mfc0(inst)) {
+    if (inst.rd == CP0_PRID || inst.rd == CP0_CONFIG) {
+      regs->gpr[inst.rt] = cpu.gpr[inst.rt];
+      qemu_setregs(conn, regs);
+    } else if (inst.rd == CP0_COUNT) {
+      cpu.gpr[inst.rt] = regs->gpr[inst.rt];
+    } else if (inst.rd == CP0_CAUSE) {
+      cp0_cause_t *qemu_cause = (cp0_cause_t *)&regs->cause;
+      if ((qemu_cause->ExcCode == EXC_IBE ||
+              qemu_cause->ExcCode == EXC_DBE) &&
+          (cpu.cp0.cause.ExcCode == EXC_AdEL ||
+              cpu.cp0.cause.ExcCode == EXC_AdES)) {
+        qemu_cause->ExcCode = cpu.cp0.cause.ExcCode;
+        regs->gpr[inst.rt] = cpu.gpr[inst.rt];
+        qemu_setregs(conn, regs);
+      }
+    }
+  } else if (inst_is_load_mmio(inst, regs)) {
+    regs->pc = cpu.pc;
+    regs->gpr[inst.rt] = cpu.gpr[inst.rt];
+    qemu_setregs(conn, regs);
+  } else if (inst_is_store_mmio(inst, regs)) {
+    regs->pc = cpu.pc;
+    qemu_setregs(conn, regs);
+  }
+}
+
 void difftest_body(int port) {
   qemu_regs_t regs = {0};
 
@@ -204,37 +239,27 @@ void difftest_body(int port) {
   while (1) {
     Inst inst = {.val = dbg_vaddr_read(cpu.pc, 4)};
     cpu_exec(1);
-    // printf("NEMU: %08x\n", cpu.pc);
+    printf("NEMU: %08x %d %d\n", cpu.pc,
+        inst_is_branch(inst), pc_in_ex_entry(cpu.pc));
 
     if (nemu_state == NEMU_END) break;
 
     if (!inst_is_mmio(inst, &regs)) qemu_single_step(conn);
     qemu_getregs(conn, &regs);
-    if (cpu.pc != regs.pc && inst_is_branch(inst)) {
-      // printf("NEMU: %08x %d\n", cpu.pc,
-      //     inst_branch_taken(inst));
+    cp0_cause_t *qemu_cause = (cp0_cause_t *)&regs.cause;
+    if (cpu.pc != regs.pc &&
+        (inst_is_branch(inst) || pc_in_ex_entry(cpu.pc))) {
+      difftest_sync_regs(conn, inst, &regs);
       inst.val = dbg_vaddr_read(cpu.pc, 4);
       cpu_exec(1);
-    }
-    if (inst_is_mfc0(inst)) {
-      if (inst.rd == CP0_PRID || inst.rd == CP0_CONFIG) {
-        regs.gpr[inst.rt] = cpu.gpr[inst.rt];
-        qemu_setregs(conn, &regs);
-      } else if (inst.rd == CP0_COUNT) {
-        cpu.gpr[inst.rt] = regs.gpr[inst.rt];
-      }
-    } else if (inst_is_load_mmio(inst, &regs)) {
-      regs.pc = cpu.pc;
-      regs.gpr[inst.rt] = cpu.gpr[inst.rt];
-      qemu_setregs(conn, &regs);
-    } else if (inst_is_store_mmio(inst, &regs)) {
-      regs.pc = cpu.pc;
-      qemu_setregs(conn, &regs);
-    }
-    // printf("QEMU: %08x\n", regs.pc);
 
-    cpu.cp0.cause.IP = ((cp0_cause_t *)&regs.cause)->IP;
-    cpu.cp0.cause.TI = ((cp0_cause_t *)&regs.cause)->TI;
+      printf("NEMU: %08x -\n", cpu.pc);
+    }
+    difftest_sync_regs(conn, inst, &regs);
+    printf("QEMU: %08x\n", regs.pc);
+
+    cpu.cp0.cause.IP = qemu_cause->IP;
+    cpu.cp0.cause.TI = qemu_cause->TI;
     difftest_check_registers(&regs, conn);
   }
 
