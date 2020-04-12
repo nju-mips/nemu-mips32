@@ -1,31 +1,31 @@
-.PHONY: app clean prepare menuconfig
+.PHONY: app clean menuconfig
 
-AUTO_CONF := include/config/auto.conf
+AUTO_CONF  := include/config/auto.conf
 AUTOCONF_H := include/generated/autoconf.h
-_CONFIG := .config
+_CONFIG    := .config
+CONF       := kconfig/conf
+MCONF      := kconfig/mconf
+
+CFLAGS += -include $(AUTOCONF_H)
+
 -include $(AUTO_CONF)
 
-CONF := kconfig/conf
-MCONF := kconfig/mconf
-$(CONF) $(MCONF):
-	@cd $(@D) && make -s $(@F)
-
-ifeq ($(wildcard $(AUTO_CONF)),)
-config-dep := prepare
-prepare: $(AUTO_CONF)
-	@make $(MAKEGOALS)
-else
-config-dep := $(AUTO_CONF) $(AUTOCONF_H)
-endif
-
-$(_CONFIG):
-	@echo "You are suggested to make xx_defconfig/menuconfig firstly"
-
-$(AUTO_CONF) $(AUTOCONF_H): $(_CONFIG) $(CONF)
+ifneq ($(MAKECMDGOALS),menuconfig)
+$(AUTO_CONF): $(_CONFIG)
 	@$(CONF) --syncconfig ./Kconfig
+endif
 
 menuconfig: $(MCONF)
 	@$(MCONF) ./Kconfig
+
+$(CONF) $(MCONF): %:
+	@cd $(@D) && make -s $(@F)
+
+$(_CONFIG): $(CONF)
+	@$(CONF) ./Kconfig
+
+$(AUTOCONF_H): $(_CONFIG)
+	@$(CONF) --syncconfig ./Kconfig
 
 %_defconfig:
 	@cp configs/$@ ./.config
