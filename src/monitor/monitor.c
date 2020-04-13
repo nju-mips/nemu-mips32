@@ -13,6 +13,7 @@ elfsym_t elfsym;
 const char *flash_file = NULL;
 const char *elf_file = NULL;
 const char *symbol_file = NULL;
+const char *boot_cmdline = "";
 static char *img_file = NULL;
 // static char *kernel_img = NULL;
 
@@ -84,6 +85,7 @@ enum {
   OPT_BLOCK_DATA,
   OPT_FIFO_DATA,
   OPT_DIFF_TEST,
+  OPT_BOOT_CMDLINE,
 };
 
 const struct option long_options[] = {
@@ -99,6 +101,7 @@ const struct option long_options[] = {
     {"block-data", 1, NULL, OPT_BLOCK_DATA},
     {"fifo-data", 1, NULL, OPT_FIFO_DATA},
     {"diff-test", 0, NULL, OPT_DIFF_TEST},
+    {"cmdline", 1, NULL, OPT_BOOT_CMDLINE},
     {NULL, 0, NULL, 0},
 };
 
@@ -208,6 +211,9 @@ void parse_args(int argc, char *argv[]) {
 #if CONFIG_DIFF_WITH_QEMU
     case OPT_DIFF_TEST: work_mode |= MODE_DIFF; break;
 #endif
+    case OPT_BOOT_CMDLINE:
+       boot_cmdline = optarg;
+       break;
     case 'h':
     default: print_help(argv[0]); exit(0);
     }

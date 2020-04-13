@@ -27,7 +27,7 @@ config MARCH_MIPS32_R1
   select DDR
 
 config MARCH_NOOP
-  bool "noop (no uncertainties)"
+  bool "noop (no intr)"
   select DELAYSLOT
   select EXCEPTION
   select PAGING
@@ -55,11 +55,11 @@ config INTR
 
 config EXCEPTION
   bool "Exception support"
-endif
 
-config DIFF_WITH_QEMU
-  bool "Diff test with qemu"
-  depends on MARCH_NOOP
+config CMDLINE_ADDR
+  hex "The cmdline address"
+  default 0xbfc10000
+endif
 
 config MMU_CACHE
   bool "Cache mmu results"
@@ -93,6 +93,10 @@ config ELF_PERF_TIME
 config ELF_PERF_INSTR
   bool "Profilling instrs the executed elf file"
 endchoice
+
+config DIFF_WITH_QEMU
+  bool "Diff test with qemu"
+  depends on MARCH_NOOP
 
 config INSTR_LOG
   bool "Log all executed instructions"

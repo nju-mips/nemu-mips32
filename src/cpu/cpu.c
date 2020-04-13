@@ -8,12 +8,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "debug.h"
-#include "dev/device.h"
-#include "utils/elfsym.h"
 #include "cpu/memory.h"
 #include "cpu/mmu.h"
+#include "debug.h"
+#include "dev/device.h"
 #include "monitor.h"
+#include "utils/elfsym.h"
 #include "utils/utils.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
@@ -289,6 +289,16 @@ int init_cpu(vaddr_t entry) {
   /* initialize some cache */
   clear_mmu_cache();
   clear_decode_cache();
+
+  /* prepare kernel commandline */
+  extern const char *boot_cmdline;
+  int len = strlen(boot_cmdline);
+  for (int i = 0; i < len; i++) {
+    vaddr_write(
+        CONFIG_CMDLINE_ADDR + i, 1, boot_cmdline[i]);
+  }
+  vaddr_write(CONFIG_CMDLINE_ADDR + len, 1, 0);
+  cpu.gpr[R_a0] = CONFIG_CMDLINE_ADDR;
 
   return 0;
 }
