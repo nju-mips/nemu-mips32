@@ -293,12 +293,17 @@ int init_cpu(vaddr_t entry) {
   /* prepare kernel commandline */
   extern const char *boot_cmdline;
   int len = strlen(boot_cmdline);
+  uint32_t cmdline_st = CONFIG_CMDLINE_ADDR + 8;
+  /* argv[0] */
+  vaddr_write(CONFIG_CMDLINE_ADDR, 4, cmdline_st);
+  /* argv[1] */
+  vaddr_write(CONFIG_CMDLINE_ADDR + 4, 4, 0);
   for (int i = 0; i < len; i++) {
-    vaddr_write(
-        CONFIG_CMDLINE_ADDR + i, 1, boot_cmdline[i]);
+    vaddr_write(cmdline_st + i, 1, boot_cmdline[i]);
   }
-  vaddr_write(CONFIG_CMDLINE_ADDR + len, 1, 0);
-  cpu.gpr[R_a0] = CONFIG_CMDLINE_ADDR;
+  vaddr_write(cmdline_st + len, 1, 0);
+  cpu.gpr[R_a0] = 1;
+  cpu.gpr[R_a1] = CONFIG_CMDLINE_ADDR;
 
   return 0;
 }
