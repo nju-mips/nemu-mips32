@@ -24,8 +24,8 @@ menuconfig: $(MCONF)
 $(CONF) $(MCONF): %:
 	@cd $(@D) && make -s $(@F)
 
-$(_CONFIG): | $(CONF)
-	@$(CONF) ./Kconfig
+$(_CONFIG): Kconfig | $(CONF)
+	@$(CONF) $<
 
 $(AUTOCONF_H): $(_CONFIG)
 	@$(CONF) --syncconfig ./Kconfig

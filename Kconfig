@@ -55,11 +55,11 @@ config INTR
 
 config EXCEPTION
   bool "Exception support"
+endif
 
 config CMDLINE_ADDR
   hex "The cmdline address"
   default 0xbfc10000
-endif
 
 config MMU_CACHE
   bool "Cache mmu results"
