@@ -11,6 +11,8 @@ enum {
   FPU_FMT_PS,
   FPU_FMT_OB,
   FPU_FMT_QH,
+  FPU_FMT_UW,
+  FPU_FMT_UD,
 };
 
 /*
@@ -1433,17 +1435,19 @@ make_exec_handler(ext) {
 }
 
 make_exec_handler(mfc1) {
-  cpu.gpr[operands->rt] =
-      cpu.cp0.cpr[operands->rd][operands->sel];
+  cpu.gpr[operands->rt] = cpu.fpr[operands->fs];
 }
 make_exec_handler(cfc1) { InstAssert(0); }
-make_exec_handler(mfhc1) { InstAssert(0); }
+make_exec_handler(mfhc1) {
+  cpu.gpr[operands->rt] = cpu.fpr[operands->fs + 1];
+}
 make_exec_handler(mtc1) {
-  cpu.cp0.cpr[operands->rd][operands->sel] =
-      cpu.gpr[operands->rt];
+  cpu.fpr[operands->fs] = cpu.gpr[operands->rt];
 }
 make_exec_handler(ctc1) { InstAssert(0); }
-make_exec_handler(mthc1) { InstAssert(0); }
+make_exec_handler(mthc1) {
+  cpu.fpr[operands->fs + 1] = cpu.gpr[operands->rt];
+}
 make_exec_handler(bc1) { InstAssert(0); }
 
 make_exec_handler(add_s) {
