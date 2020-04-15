@@ -48,10 +48,12 @@
 
 /*
  * default config:
- *   {1'b1, 21'b0, 3'b1, 4'b0, cp0_regs_Config[2:0]}; //Release 1
+ *   {1'b1, 21'b0, 3'b1, 4'b0, cp0_regs_Config[2:0]};
+ * //Release 1
  *
  * default config1:
- *   {1'b0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd2, 3'd5, 3'd0, 7'd0};
+ *   {1'b0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd2, 3'd5, 3'd0,
+ * 7'd0};
  *
  *   Cache Size:   I:128-64B-direct, D:256-64B-direct
  */
@@ -98,7 +100,7 @@ typedef struct {
   uint32_t IV : 1;
 
   uint32_t __ : 2;
-  uint32_t PCI: 1;
+  uint32_t PCI : 1;
   uint32_t DC : 1;
   uint32_t CE : 2;
   uint32_t TI : 1;
@@ -121,9 +123,9 @@ typedef struct {
                    // 2 xxx, 3 xxx
   uint32_t AR : 3; // 0 for revision 1
   uint32_t AT : 2; // 0 for mips32,
-                   // 1 for mips64 with access only to 32-bit seg
-                   // 2 for mips64 with all access to 32-bit seg
-                   // 3 reserved
+                   // 1 for mips64 with access only to
+                   // 32-bit seg 2 for mips64 with all
+                   // access to 32-bit seg 3 reserved
   uint32_t BE : 1; // 0 for little endian, 1 for big endian
   uint32_t Impl : 15;
   uint32_t M : 1; // donate that config1 impled at sel 1
@@ -140,30 +142,31 @@ typedef struct {
   uint32_t MD : 1; // not used on mips32 processor
   uint32_t C2 : 1; // coprocessor present bit
 
-  uint32_t DA : 3;       // dcache associativity
-                         // 0 for direct mapped
-                         // 2^(DA) ways
-                         // ---------------------------
-  uint32_t DL : 3;       // dcache line size:
-                         // 0 for no icache, 7 reserved
-                         // othwise: 2^(DL + 1) bytes
-                         // ---------------------------
-  uint32_t DS : 3;       // dcache sets per way:
-                         // 2^(IS + 8)
-                         // ---------------------------
-  uint32_t IA : 3;       // icache associativity
-                         // 0 for direct mapped
-                         // 2^(IA) ways
-                         // ---------------------------
-  uint32_t IL : 3;       // icache line size:
-                         // 0 for no icache, 7 reserved
-                         // othwise: 2^(IL + 1) bytes
-                         // ---------------------------
-  uint32_t IS : 3;       // icache sets per way:
-                         // 2^(IS + 8)
-                         // ---------------------------
-  uint32_t MMU_size : 6; // 0 to 63 indicates 1 to 64 TLB entries
-  uint32_t M : 1;        // indicate config 2 is present
+  uint32_t DA : 3; // dcache associativity
+                   // 0 for direct mapped
+                   // 2^(DA) ways
+                   // ---------------------------
+  uint32_t DL : 3; // dcache line size:
+                   // 0 for no icache, 7 reserved
+                   // othwise: 2^(DL + 1) bytes
+                   // ---------------------------
+  uint32_t DS : 3; // dcache sets per way:
+                   // 2^(IS + 8)
+                   // ---------------------------
+  uint32_t IA : 3; // icache associativity
+                   // 0 for direct mapped
+                   // 2^(IA) ways
+                   // ---------------------------
+  uint32_t IL : 3; // icache line size:
+                   // 0 for no icache, 7 reserved
+                   // othwise: 2^(IL + 1) bytes
+                   // ---------------------------
+  uint32_t IS : 3; // icache sets per way:
+                   // 2^(IS + 8)
+                   // ---------------------------
+  uint32_t
+      MMU_size : 6; // 0 to 63 indicates 1 to 64 TLB entries
+  uint32_t M : 1;   // indicate config 2 is present
 } cp0_config1_t;
 
 typedef struct {
@@ -275,6 +278,8 @@ typedef struct {
 #if CONFIG_DUMP_SYSCALL
   bool is_syscall;
 #endif
+
+  uint32_t fpr[32];
 } CPU_state;
 
 #define CAUSE_IP_TIMER 0x80
@@ -336,6 +341,16 @@ typedef struct {
 
     uint32_t addr : 26; // J-type
     uint32_t sel : 3;   // MFC0
+
+    // FPU
+    struct {
+      uint32_t _1 : 6;
+      uint32_t fd : 5;
+      uint32_t fs : 5;
+      uint32_t ft : 5;
+      uint32_t fmt : 5;
+      uint32_t _2 : 6;
+    };
   };
 } Inst; // Instruction
 

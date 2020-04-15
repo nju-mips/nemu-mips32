@@ -3,6 +3,16 @@
 #define make_entry()
 #define make_exit() make_label(exit)
 
+enum {
+  FPU_FMT_S,
+  FPU_FMT_D,
+  FPU_FMT_W,
+  FPU_FMT_L,
+  FPU_FMT_PS,
+  FPU_FMT_OB,
+  FPU_FMT_QH,
+};
+
 /*
  * ABS.D ADD.D ADDIU ADD.S ADDU AND ANDI BC1F BC1T BEQ
  * BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE BREAK C.EQ.D
@@ -174,13 +184,64 @@ static const void *cop0_table_func[64] = {
     /* 0x3c */ &&inv,  &&inv,  &&inv,   &&inv,
 };
 
+static const void *cop1_table_rs[32] = {
+    /* 0x00 */ &&mfc1, &&inv, &&cfc1, &&mfhc1,
+    /* 0x04 */ &&mtc1, &&inv, &&ctc1, &&mthc1,
+    /* 0x08 */ &&bc1, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x10 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
+};
+
+static const void *cop1_table_rs_S[64] = {
+    /* 0x00 */ &&add_s, &&sub_s, &&mul_s, &&div_s,
+    /* 0x04 */ &&sqrt_s, &&abs_s, &&mov_s, &&neg_s,
+    /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&trunc_w_s, &&inv, &&inv,
+    /* 0x10 */ &&inv, &&inv, &&movz_s, &&movn_s,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&cvt_d, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&cvt_w, &&inv, &&inv,
+
+    /* 0x20 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x30 */ &&inv, &&c_un_s, &&c_eq_s, &&c_ueq_s,
+    /* 0x34 */ &&c_olt_s, &&c_ult_s, &&c_ole_s, &&c_ule_s,
+    /* 0x38 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x3c */ &&c_lt_s, &&inv, &&c_le_s, &&inv,
+};
+
+static const void *cop1_table_rs_D[64] = {
+    /* 0x00 */ &&add_d, &&sub_d, &&mul_d, &&div_d,
+    /* 0x04 */ &&sqrt_d, &&abs_d, &&mov_d, &&neg_d,
+    /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&trunc_w_d, &&inv, &&inv,
+    /* 0x10 */ &&inv, &&inv, &&movz_d, &&movn_d,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&cvt_d, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&cvt_w, &&inv, &&inv,
+
+    /* 0x20 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x30 */ &&inv, &&c_un_d, &&c_eq_d, &&c_ueq_d,
+    /* 0x34 */ &&c_olt_d, &&c_ult_d, &&c_ole_d, &&c_ule_d,
+    /* 0x38 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x3c */ &&c_lt_d, &&inv, &&c_le_d, &&inv,
+};
+
 /* I-type */
 static const void *opcode_table[64] = {
     /* 0x00 */ &&exec_special, &&exec_regimm, &&j, &&jal,
     /* 0x04 */ &&beq, &&bne, &&blez, &&bgtz,
     /* 0x08 */ &&addi, &&addiu, &&slti, &&sltiu,
     /* 0x0c */ &&andi, &&ori, &&xori, &&lui,
-    /* 0x10 */ &&exec_cop0, &&inv, &&inv, &&inv,
+    /* 0x10 */ &&exec_cop0, &&exec_cop1, &&inv, &&inv,
     /* 0x14 */ &&beql, &&bnel, &&blezl, &&bgtzl,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x1c */ &&exec_special2, &&inv, &&inv, &&exec_special3,
@@ -331,6 +392,15 @@ make_exec_handler(exec_cop0) {
     goto *cop0_table_func[operands->func];
   else
     goto *cop0_table_rs[operands->rs];
+}
+
+make_exec_handler(exec_cop1) {
+  if (operands->rs == FPU_FMT_S)
+    goto *cop1_table_rs_S[operands->func];
+  else if (operands->rs == FPU_FMT_D)
+    goto *cop1_table_rs_D[operands->func];
+  else
+    goto *cop1_table_rs[operands->rs];
 }
 #endif
 
@@ -1340,9 +1410,149 @@ make_exec_handler(ext) {
   cpu.gpr[operands->rt] = ((rs_val & (mask << lsb)) >> lsb);
 }
 
+make_exec_handler(mfc1) {
+  cpu.gpr[operands->rt] =
+      cpu.cp0.cpr[operands->rd][operands->sel];
+}
+make_exec_handler(cfc1) { InstAssert(0); }
+make_exec_handler(mfhc1) { InstAssert(0); }
+make_exec_handler(mtc1) {
+  cpu.cp0.cpr[operands->rd][operands->sel] =
+      cpu.gpr[operands->rt];
+}
+make_exec_handler(ctc1) { InstAssert(0); }
+make_exec_handler(mthc1) { InstAssert(0); }
+make_exec_handler(bc1) { InstAssert(0); }
+
+make_exec_handler(add_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs] +
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(add_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs] +
+      *(double *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(sub_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs] -
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(sub_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs] -
+      *(double *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(mul_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs] *
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(mul_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs] *
+      *(double *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(div_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs] /
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(div_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs] /
+      *(double *)&cpu.fpr[operands->ft];
+}
+
+make_exec_handler(sqrt_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      sqrtf(*(float *)&cpu.fpr[operands->fs]);
+}
+make_exec_handler(sqrt_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      sqrt(*(double *)&cpu.fpr[operands->fs]);
+}
+
+make_exec_handler(abs_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      fabsf(*(float *)&cpu.fpr[operands->fs]);
+}
+make_exec_handler(abs_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      fabs(*(double *)&cpu.fpr[operands->fs]);
+}
+
+make_exec_handler(mov_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(mov_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs];
+}
+
+make_exec_handler(neg_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      -*(float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(neg_d) {
+  *(double *)&cpu.fpr[operands->fd] =
+      -*(double *)&cpu.fpr[operands->fs];
+}
+
+make_exec_handler(trunc_w_s) { InstAssert(0); }
+make_exec_handler(trunc_w_d) { InstAssert(0); }
+
+make_exec_handler(movz_s) {
+  if (cpu.gpr[operands->rt] == 0) {
+    *(float *)&cpu.fpr[operands->fd] =
+        -*(float *)&cpu.fpr[operands->fs];
+  }
+}
+
+make_exec_handler(movz_d) {
+  if (cpu.gpr[operands->rt] == 0) {
+    *(double *)&cpu.fpr[operands->fd] =
+        -*(double *)&cpu.fpr[operands->fs];
+  }
+}
+make_exec_handler(movn_s) {
+  if (cpu.gpr[operands->rt] != 0) {
+    *(float *)&cpu.fpr[operands->fd] =
+        -*(float *)&cpu.fpr[operands->fs];
+  }
+}
+make_exec_handler(movn_d) {
+  if (cpu.gpr[operands->rt] != 0) {
+    *(double *)&cpu.fpr[operands->fd] =
+        -*(double *)&cpu.fpr[operands->fs];
+  }
+}
+make_exec_handler(cvt_d) { InstAssert(0); }
+make_exec_handler(cvt_w) { InstAssert(0); }
+make_exec_handler(c_un_s) { InstAssert(0); }
+make_exec_handler(c_un_d) { InstAssert(0); }
+make_exec_handler(c_eq_s) { InstAssert(0); }
+make_exec_handler(c_eq_d) { InstAssert(0); }
+make_exec_handler(c_ueq_s) { InstAssert(0); }
+make_exec_handler(c_ueq_d) { InstAssert(0); }
+make_exec_handler(c_olt_s) { InstAssert(0); }
+make_exec_handler(c_olt_d) { InstAssert(0); }
+make_exec_handler(c_ult_s) { InstAssert(0); }
+make_exec_handler(c_ult_d) { InstAssert(0); }
+make_exec_handler(c_ole_s) { InstAssert(0); }
+make_exec_handler(c_ole_d) { InstAssert(0); }
+make_exec_handler(c_ule_s) { InstAssert(0); }
+make_exec_handler(c_ule_d) { InstAssert(0); }
+make_exec_handler(c_lt_s) { InstAssert(0); }
+make_exec_handler(c_lt_d) { InstAssert(0); }
+make_exec_handler(c_le_s) { InstAssert(0); }
+make_exec_handler(c_le_d) { InstAssert(0); }
+
 make_exec_handler(sdc1) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
-  vaddr_write(waddr, 4, 0x00000000);
+  vaddr_write(waddr, 4, cpu.fpr[operands->ft]);
 }
 
 #if CONFIG_DELAYSLOT

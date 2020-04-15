@@ -1,5 +1,5 @@
 #ifndef IMPL_CPU
-#error "this file can only be included by cpu.c"
+#  error "this file can only be included by cpu.c"
 #endif
 
 #if CONFIG_DECODE_CACHE_PERF
@@ -8,17 +8,19 @@ uint64_t decode_cache_miss = 0;
 #endif
 
 #define DECODE_CACHE_BITS 12
+/* clang-format off */
 typedef struct {
   const void *handler;
   uint32_t id;
   union {
     struct {
-      int rs, rt; // R and I
+      int rs;
+      union { int rt; int ft; }; // R and I
 
       union {
         struct {
-          int rd;
-          int shamt;
+          union { int rd; int fs; };
+          union { int shamt; int fd; };
           int func;
         }; // R
 
@@ -38,24 +40,30 @@ typedef struct {
   Inst inst;
 #endif
 } decode_cache_t;
+/* clang-format on */
 
 static decode_cache_t decode_cache[1 << DECODE_CACHE_BITS];
 
 void clear_decode_cache() {
-  for (int i = 0; i < sizeof(decode_cache) / sizeof(*decode_cache); i++) {
+  for (int i = 0;
+       i < sizeof(decode_cache) / sizeof(*decode_cache);
+       i++) {
     decode_cache[i].handler = NULL;
   }
 }
 
-static ALWAYS_INLINE uint32_t decode_cache_index(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t decode_cache_index(
+    vaddr_t vaddr) {
   return vaddr & ((1 << DECODE_CACHE_BITS) - 1);
 }
 
-static ALWAYS_INLINE uint32_t decode_cache_id(vaddr_t vaddr) {
+static ALWAYS_INLINE uint32_t decode_cache_id(
+    vaddr_t vaddr) {
   return (vaddr >> DECODE_CACHE_BITS);
 }
 
-static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(vaddr_t pc) {
+static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(
+    vaddr_t pc) {
   uint32_t idx = decode_cache_index(pc);
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
