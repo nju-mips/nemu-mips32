@@ -202,11 +202,11 @@ static const void *cop1_table_rs_S[64] = {
     /* 0x0c */ &&inv, &&trunc_w_s, &&inv, &&inv,
     /* 0x10 */ &&inv, &&inv, &&movz_s, &&movn_s,
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x18 */ &&inv, &&cvt_d, &&inv, &&inv,
-    /* 0x1c */ &&inv, &&cvt_w, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
 
-    /* 0x20 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x20 */ &&inv, &&cvt_d_s, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&cvt_w_s, &&inv, &&inv,
     /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
     /* 0x30 */ &&inv, &&c_un_s, &&c_eq_s, &&c_ueq_s,
@@ -222,17 +222,37 @@ static const void *cop1_table_rs_D[64] = {
     /* 0x0c */ &&inv, &&trunc_w_d, &&inv, &&inv,
     /* 0x10 */ &&inv, &&inv, &&movz_d, &&movn_d,
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x18 */ &&inv, &&cvt_d, &&inv, &&inv,
-    /* 0x1c */ &&inv, &&cvt_w, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
 
-    /* 0x20 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x20 */ &&cvt_s_d, &&inv, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&cvt_w_d, &&inv, &&inv,
     /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
     /* 0x30 */ &&inv, &&c_un_d, &&c_eq_d, &&c_ueq_d,
     /* 0x34 */ &&c_olt_d, &&c_ult_d, &&c_ole_d, &&c_ule_d,
     /* 0x38 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x3c */ &&c_lt_d, &&inv, &&c_le_d, &&inv,
+};
+
+static const void *cop1_table_rs_W[64] = {
+    /* 0x00 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x10 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
+
+    /* 0x20 */ &&cvt_s_w, &&cvt_d_w, &&inv, &&inv,
+    /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x30 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x34 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x38 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
 };
 
 /* I-type */
@@ -250,7 +270,7 @@ static const void *opcode_table[64] = {
     /* 0x28 */ &&sb, &&sh, &&swl, &&sw,
     /* 0x2c */ &&inv, &&inv, &&swr, &&cache,
     /* 0x30 */ &&ll, &&inv, &&inv, &&pref,
-    /* 0x34 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x34 */ &&inv, &&ldc1, &&inv, &&inv,
     /* 0x38 */ &&sc, &&inv, &&inv, &&inv,
     /* 0x3c */ &&inv, &&sdc1, &&inv, &&inv,
 };
@@ -399,6 +419,8 @@ make_exec_handler(exec_cop1) {
     goto *cop1_table_rs_S[operands->func];
   else if (operands->rs == FPU_FMT_D)
     goto *cop1_table_rs_D[operands->func];
+  else if (operands->rs == FPU_FMT_W)
+    goto *cop1_table_rs_W[operands->func];
   else
     goto *cop1_table_rs[operands->rs];
 }
@@ -1507,30 +1529,52 @@ make_exec_handler(trunc_w_d) { InstAssert(0); }
 make_exec_handler(movz_s) {
   if (cpu.gpr[operands->rt] == 0) {
     *(float *)&cpu.fpr[operands->fd] =
-        -*(float *)&cpu.fpr[operands->fs];
+        *(float *)&cpu.fpr[operands->fs];
   }
 }
 
 make_exec_handler(movz_d) {
   if (cpu.gpr[operands->rt] == 0) {
     *(double *)&cpu.fpr[operands->fd] =
-        -*(double *)&cpu.fpr[operands->fs];
+        *(double *)&cpu.fpr[operands->fs];
   }
 }
 make_exec_handler(movn_s) {
   if (cpu.gpr[operands->rt] != 0) {
     *(float *)&cpu.fpr[operands->fd] =
-        -*(float *)&cpu.fpr[operands->fs];
+        *(float *)&cpu.fpr[operands->fs];
   }
 }
 make_exec_handler(movn_d) {
   if (cpu.gpr[operands->rt] != 0) {
     *(double *)&cpu.fpr[operands->fd] =
-        -*(double *)&cpu.fpr[operands->fs];
+        *(double *)&cpu.fpr[operands->fs];
   }
 }
-make_exec_handler(cvt_d) { InstAssert(0); }
-make_exec_handler(cvt_w) { InstAssert(0); }
+make_exec_handler(cvt_d_s) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(cvt_w_s) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(cvt_s_d) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(cvt_w_d) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(double *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(cvt_s_w) {
+  *(float *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(cvt_d_w) {
+  *(double *)&cpu.fpr[operands->fd] =
+      *(float *)&cpu.fpr[operands->fs];
+}
 make_exec_handler(c_un_s) { InstAssert(0); }
 make_exec_handler(c_un_d) { InstAssert(0); }
 make_exec_handler(c_eq_s) { InstAssert(0); }
@@ -1549,6 +1593,14 @@ make_exec_handler(c_lt_s) { InstAssert(0); }
 make_exec_handler(c_lt_d) { InstAssert(0); }
 make_exec_handler(c_le_s) { InstAssert(0); }
 make_exec_handler(c_le_d) { InstAssert(0); }
+
+make_exec_handler(ldc1) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
+  if (!cpu.has_exception) { cpu.fpr[operands->rt] = rdata; }
+}
 
 make_exec_handler(sdc1) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
