@@ -174,7 +174,7 @@ static const void *opcode_table[64] = {
     /* 0x30 */ &&ll, &&inv, &&inv, &&pref,
     /* 0x34 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x38 */ &&sc, &&inv, &&inv, &&inv,
-    /* 0x3c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x3c */ &&inv, &&sdc1, &&inv, &&inv,
 };
 
 /* clang-format on */
@@ -1320,8 +1320,12 @@ make_exec_handler(ext) {
   uint32_t rs_val = cpu.gpr[operands->rs];
   uint32_t mask = (1ull << size) - 1;
 
-  cpu.gpr[operands->rt] =
-      ((rs_val & (mask << lsb)) >> lsb);
+  cpu.gpr[operands->rt] = ((rs_val & (mask << lsb)) >> lsb);
+}
+
+make_exec_handler(sdc1) {
+  uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
+  vaddr_write(waddr, 4, 0x00000000);
 }
 
 #if CONFIG_DELAYSLOT
