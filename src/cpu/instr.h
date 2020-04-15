@@ -83,8 +83,8 @@ static const void *special2_table[64] = {
 };
 
 static const void *special3_table[64] = {
-    /* 0x00 */ &&inv, &&inv, &&mul, &&inv,
-    /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x00 */ &&ext, &&inv, &&mul, &&inv,
+    /* 0x04 */ &&ins, &&inv, &&inv, &&inv,
     /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
     /* 0x10 */ &&inv, &&inv, &&inv, &&inv,
@@ -103,7 +103,7 @@ static const void *special3_table[64] = {
 
 /* shamt */
 static const void *bshfl_table[64] = {
-    /* 0x00 */ &&inv, &&inv, &&mul, &&inv,
+    /* 0x00 */ &&inv, &&inv, &&wsbh, &&inv,
     /* 0x04 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x0c */ &&inv, &&inv, &&inv, &&inv,
@@ -122,7 +122,7 @@ static const void *regimm_table[64] = {
     /* 0x10 */ &&bltzal, &&bgezal, &&bltzall, &&bgezall,
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
+    /* 0x1c */ &&inv, &&inv, &&inv, &&synci,
 };
 
 /* R-type */
@@ -292,12 +292,22 @@ make_entry() {
 #endif
 
 #if 1
-make_exec_handler(exec_special) { goto *special_table[operands->func]; }
-make_exec_handler(exec_special2) { goto *special2_table[operands->func]; }
-make_exec_handler(exec_special3) { goto *special3_table[operands->func]; }
-make_exec_handler(exec_bshfl) { goto *bshfl_table[operands->shamt]; }
+make_exec_handler(exec_special) {
+  goto *special_table[operands->func];
+}
+make_exec_handler(exec_special2) {
+  goto *special2_table[operands->func];
+}
+make_exec_handler(exec_special3) {
+  goto *special3_table[operands->func];
+}
+make_exec_handler(exec_bshfl) {
+  goto *bshfl_table[operands->shamt];
+}
 
-make_exec_handler(exec_regimm) { goto *regimm_table[operands->rt]; }
+make_exec_handler(exec_regimm) {
+  goto *regimm_table[operands->rt];
+}
 
 make_exec_handler(exec_cop0) {
   if (operands->rs & 0x10)
@@ -334,7 +344,8 @@ make_exec_handler(tlbr) {
 
 make_exec_handler(tlbwi) {
   uint32_t i = cpu.cp0.index.idx;
-  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n", i, NR_TLB_ENTRY);
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n",
+      i, NR_TLB_ENTRY);
   tlb_write(i);
   clear_mmu_cache();
   clear_decode_cache();
@@ -357,8 +368,10 @@ make_exec_handler(syscall) {
   launch_exception(EXC_SYSCALL);
 #if CONFIG_DUMP_SYSCALL
   cpu.is_syscall = true;
-  void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
-  dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1], cpu.gpr[R_a2]);
+  void dump_syscall(
+      uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
+  dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1],
+      cpu.gpr[R_a2]);
 #endif
 }
 
@@ -370,8 +383,7 @@ make_exec_handler(breakpoint) {
   }
 }
 
-make_exec_handler(wait) {
-  /* didn't +4 for pc */
+make_exec_handler(wait) { /* didn't +4 for pc */
 }
 
 make_exec_handler(eret) {
@@ -392,7 +404,8 @@ make_exec_handler(eret) {
 
 #if CONFIG_DUMP_SYSCALL
   if (cpu.is_syscall) {
-    printf("==> v0: %08x & %d\n", cpu.gpr[R_v0], cpu.gpr[R_v0]);
+    printf("==> v0: %08x & %d\n", cpu.gpr[R_v0],
+        cpu.gpr[R_v0]);
     cpu.is_syscall = false;
   }
 #endif
@@ -416,7 +429,8 @@ make_exec_handler(mfc0) {
   if (operands->rd == CP0_COUNT) {
     cpu.gpr[operands->rt] = cpu.cp0.count[0];
   } else {
-    cpu.gpr[operands->rt] = cpu.cp0.cpr[operands->rd][operands->sel];
+    cpu.gpr[operands->rt] =
+        cpu.cp0.cpr[operands->rd][operands->sel];
   }
 }
 
@@ -425,11 +439,13 @@ make_exec_handler(mtc0) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
   case CPRS(CP0_COUNT, 0):
   case CPRS(CP0_EPC, 0):
-    cpu.cp0.cpr[operands->rd][operands->sel] = cpu.gpr[operands->rt];
+    cpu.cp0.cpr[operands->rd][operands->sel] =
+        cpu.gpr[operands->rt];
     break;
   case CPRS(CP0_BADVADDR, 0): break;
   case CPRS(CP0_CONTEXT, 0): {
-    cp0_context_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cp0_context_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
     cpu.cp0.context.PTEBase = newVal->PTEBase;
   } break;
   case CPRS(CP0_CONFIG, 0): {
@@ -468,12 +484,14 @@ make_exec_handler(mtc0) {
     nemu_set_irq(1, newVal->IP & (1 << 1));
   } break;
   case CPRS(CP0_PAGEMASK, 0): {
-    cp0_pagemask_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cp0_pagemask_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
     cpu.cp0.pagemask.mask = newVal->mask;
     break;
   }
   case CPRS(CP0_ENTRY_LO0, 0): {
-    cp0_entry_lo_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cp0_entry_lo_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
     cpu.cp0.entry_lo0.g = newVal->g;
     cpu.cp0.entry_lo0.v = newVal->v;
     cpu.cp0.entry_lo0.d = newVal->d;
@@ -481,7 +499,8 @@ make_exec_handler(mtc0) {
     cpu.cp0.entry_lo0.pfn = newVal->pfn;
   } break;
   case CPRS(CP0_ENTRY_LO1, 0): {
-    cp0_entry_lo_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cp0_entry_lo_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
     cpu.cp0.entry_lo1.g = newVal->g;
     cpu.cp0.entry_lo1.v = newVal->v;
     cpu.cp0.entry_lo1.d = newVal->d;
@@ -489,7 +508,8 @@ make_exec_handler(mtc0) {
     cpu.cp0.entry_lo1.pfn = newVal->pfn;
   } break;
   case CPRS(CP0_ENTRY_HI, 0): {
-    cp0_entry_hi_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cp0_entry_hi_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
     cpu.cp0.entry_hi.asid = newVal->asid;
     cpu.cp0.entry_hi.vpn = newVal->vpn;
     clear_mmu_cache();
@@ -502,7 +522,8 @@ make_exec_handler(mtc0) {
   // please don't use it in real codes
   case CPRS(CP0_RESERVED, CP0_RESERVED_BASE):
 #if CONFIG_SEGMENT
-    cpu.cp0.cpr[operands->rd][operands->sel] = cpu.gpr[operands->rt];
+    cpu.cp0.cpr[operands->rd][operands->sel] =
+        cpu.gpr[operands->rt];
 #endif
     break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
@@ -537,18 +558,20 @@ make_exec_handler(mtc0) {
     if (cpu.gpr[operands->rt] == 0)
       printf("\e[1;32mHIT GOOD TRAP\e[0m\n");
     else
-      printf("\e[1;31mHIT BAD TRAP %d\e[0m\n", cpu.gpr[operands->rt]);
+      printf("\e[1;31mHIT BAD TRAP %d\e[0m\n",
+          cpu.gpr[operands->rt]);
     nemu_exit(0);
   } break;
   default:
-    printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[operands->rt],
-        operands->rd, operands->sel);
+    printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc,
+        regs[operands->rt], operands->rd, operands->sel);
     break;
   }
 }
 
 make_exec_handler(teq) {
-  if ((int32_t)cpu.gpr[operands->rs] == (int32_t)cpu.gpr[operands->rt]) {
+  if ((int32_t)cpu.gpr[operands->rs] ==
+      (int32_t)cpu.gpr[operands->rt]) {
     launch_exception(EXC_TRAP);
   }
 }
@@ -560,7 +583,8 @@ make_exec_handler(teqi) {
 }
 
 make_exec_handler(tge) {
-  if ((int32_t)cpu.gpr[operands->rs] >= (int32_t)cpu.gpr[operands->rt]) {
+  if ((int32_t)cpu.gpr[operands->rs] >=
+      (int32_t)cpu.gpr[operands->rt]) {
     launch_exception(EXC_TRAP);
   }
 }
@@ -572,7 +596,9 @@ make_exec_handler(tgei) {
 }
 
 make_exec_handler(tgeiu) {
-  if (cpu.gpr[operands->rs] >= operands->simm) { launch_exception(EXC_TRAP); }
+  if (cpu.gpr[operands->rs] >= operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
 }
 
 make_exec_handler(tgeu) {
@@ -582,7 +608,8 @@ make_exec_handler(tgeu) {
 }
 
 make_exec_handler(tlt) {
-  if ((int32_t)cpu.gpr[operands->rs] < (int32_t)cpu.gpr[operands->rt]) {
+  if ((int32_t)cpu.gpr[operands->rs] <
+      (int32_t)cpu.gpr[operands->rt]) {
     launch_exception(EXC_TRAP);
   }
 }
@@ -594,7 +621,9 @@ make_exec_handler(tlti) {
 }
 
 make_exec_handler(tltiu) {
-  if (cpu.gpr[operands->rs] < operands->simm) { launch_exception(EXC_TRAP); }
+  if (cpu.gpr[operands->rs] < operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
 }
 
 make_exec_handler(tltu) {
@@ -604,7 +633,8 @@ make_exec_handler(tltu) {
 }
 
 make_exec_handler(tne) {
-  if ((int32_t)cpu.gpr[operands->rs] != (int32_t)cpu.gpr[operands->rt]) {
+  if ((int32_t)cpu.gpr[operands->rs] !=
+      (int32_t)cpu.gpr[operands->rt]) {
     launch_exception(EXC_TRAP);
   }
 }
@@ -615,11 +645,12 @@ make_exec_handler(tnei) {
   }
 }
 
-#define R_SIMPLE(name, op, t)                                 \
-  make_exec_handler(name) {                                   \
-    InstAssert(operands->shamt == 0);                         \
-    cpu.gpr[operands->rd] =                                   \
-        (t)cpu.gpr[operands->rs] op(t) cpu.gpr[operands->rt]; \
+#define R_SIMPLE(name, op, t)          \
+  make_exec_handler(name) {            \
+    InstAssert(operands->shamt == 0);  \
+    cpu.gpr[operands->rd] =            \
+        (t)cpu.gpr[operands->rs] op(t) \
+            cpu.gpr[operands->rt];     \
   }
 
 R_SIMPLE(or, |, uint32_t)
@@ -640,8 +671,8 @@ make_exec_handler(add) {
 #if CONFIG_EXCEPTION
     launch_exception(EXC_OV);
 #else
-    CPUAssert(0, "add overflow, %08x + %08x\n", cpu.gpr[operands->rs],
-        cpu.gpr[operands->rt]);
+    CPUAssert(0, "add overflow, %08x + %08x\n",
+        cpu.gpr[operands->rs], cpu.gpr[operands->rt]);
 #endif
   } else {
     cpu.gpr[operands->rd] = ret.lo;
@@ -657,8 +688,8 @@ make_exec_handler(sub) {
 #if CONFIG_EXCEPTION
     launch_exception(EXC_OV);
 #else
-    CPUAssert(0, "sub overflow, %08x - %08x\n", cpu.gpr[operands->rs],
-        cpu.gpr[operands->rt]);
+    CPUAssert(0, "sub overflow, %08x - %08x\n",
+        cpu.gpr[operands->rs], cpu.gpr[operands->rt]);
 #endif
   } else {
     cpu.gpr[operands->rd] = ret.lo;
@@ -667,7 +698,8 @@ make_exec_handler(sub) {
 
 make_exec_handler(nor) {
   InstAssert(operands->shamt == 0);
-  cpu.gpr[operands->rd] = ~(cpu.gpr[operands->rs] | cpu.gpr[operands->rt]);
+  cpu.gpr[operands->rd] =
+      ~(cpu.gpr[operands->rs] | cpu.gpr[operands->rt]);
 }
 
 #undef R_SIMPLE
@@ -676,7 +708,8 @@ make_exec_handler(clz) {
   if (cpu.gpr[operands->rs] == 0) {
     cpu.gpr[operands->rd] = 32;
   } else {
-    cpu.gpr[operands->rd] = __builtin_clz(cpu.gpr[operands->rs]);
+    cpu.gpr[operands->rd] =
+        __builtin_clz(cpu.gpr[operands->rs]);
   }
 }
 
@@ -696,7 +729,8 @@ make_exec_handler(maddu) {
   L64_t hilo;
   hilo.hi = cpu.hi;
   hilo.lo = cpu.lo;
-  hilo.val += (uint64_t)cpu.gpr[operands->rs] * (uint64_t)cpu.gpr[operands->rt];
+  hilo.val += (uint64_t)cpu.gpr[operands->rs] *
+              (uint64_t)cpu.gpr[operands->rt];
   cpu.hi = hilo.hi;
   cpu.lo = hilo.lo;
 }
@@ -717,7 +751,8 @@ make_exec_handler(msubu) {
   L64_t hilo;
   hilo.hi = cpu.hi;
   hilo.lo = cpu.lo;
-  hilo.val -= (uint64_t)cpu.gpr[operands->rs] * (uint64_t)cpu.gpr[operands->rt];
+  hilo.val -= (uint64_t)cpu.gpr[operands->rs] *
+              (uint64_t)cpu.gpr[operands->rt];
   cpu.hi = hilo.hi;
   cpu.lo = hilo.lo;
 }
@@ -732,16 +767,18 @@ make_exec_handler(mult) {
 
 make_exec_handler(multu) {
   InstAssert(operands->rd == 0 && operands->shamt == 0);
-  uint64_t prod =
-      (uint64_t)cpu.gpr[operands->rs] * (uint64_t)cpu.gpr[operands->rt];
+  uint64_t prod = (uint64_t)cpu.gpr[operands->rs] *
+                  (uint64_t)cpu.gpr[operands->rt];
   cpu.lo = (uint32_t)prod;
   cpu.hi = (uint32_t)(prod >> 32);
 }
 
 make_exec_handler(divide) {
   InstAssert(operands->rd == 0 && operands->shamt == 0);
-  cpu.lo = (int32_t)cpu.gpr[operands->rs] / (int32_t)cpu.gpr[operands->rt];
-  cpu.hi = (int32_t)cpu.gpr[operands->rs] % (int32_t)cpu.gpr[operands->rt];
+  cpu.lo = (int32_t)cpu.gpr[operands->rs] /
+           (int32_t)cpu.gpr[operands->rt];
+  cpu.hi = (int32_t)cpu.gpr[operands->rs] %
+           (int32_t)cpu.gpr[operands->rt];
 }
 
 make_exec_handler(divu) {
@@ -752,7 +789,8 @@ make_exec_handler(divu) {
 
 make_exec_handler(sll) {
   InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rd] = cpu.gpr[operands->rt] << operands->shamt;
+  cpu.gpr[operands->rd] = cpu.gpr[operands->rt]
+                          << operands->shamt;
 }
 
 make_exec_handler(sllv) {
@@ -763,53 +801,77 @@ make_exec_handler(sllv) {
 
 make_exec_handler(sra) {
   InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rd] = (int32_t)cpu.gpr[operands->rt] >> operands->shamt;
+  cpu.gpr[operands->rd] =
+      (int32_t)cpu.gpr[operands->rt] >> operands->shamt;
 }
 
 make_exec_handler(srav) {
   InstAssert(operands->shamt == 0);
-  cpu.gpr[operands->rd] =
-      (int32_t)cpu.gpr[operands->rt] >> (cpu.gpr[operands->rs] & 0x1f);
+  cpu.gpr[operands->rd] = (int32_t)cpu.gpr[operands->rt] >>
+                          (cpu.gpr[operands->rs] & 0x1f);
 }
 
 make_exec_handler(srl) {
-  InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rd] = cpu.gpr[operands->rt] >> operands->shamt;
+  if ((operands->rs & 0x1) == 0x1) {
+    /* rotr */
+    uint32_t rt_val = cpu.gpr[operands->rt];
+    uint32_t sa = operands->shamt;
+    cpu.gpr[operands->rd] =
+        (rt_val >> sa) | (rt_val << (32 - sa));
+  } else {
+    InstAssert(operands->rs == 0);
+    cpu.gpr[operands->rd] =
+        cpu.gpr[operands->rt] >> operands->shamt;
+  }
 }
 
 make_exec_handler(srlv) {
-  InstAssert(operands->shamt == 0);
-  cpu.gpr[operands->rd] =
-      cpu.gpr[operands->rt] >> (cpu.gpr[operands->rs] & 0x1f);
+  if ((operands->shamt & 0x1) == 0x1) {
+    /* rotrv */
+    uint32_t rt_val = cpu.gpr[operands->rt];
+    uint32_t sa = cpu.gpr[operands->rs] & 0x1f;
+    cpu.gpr[operands->rd] =
+        (rt_val >> sa) | (rt_val << (32 - sa));
+  } else {
+    InstAssert(operands->shamt == 0);
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rt] >>
+                            (cpu.gpr[operands->rs] & 0x1f);
+  }
 }
 
 make_exec_handler(movn) {
   InstAssert(operands->shamt == 0);
-  if (cpu.gpr[operands->rt] != 0) cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+  if (cpu.gpr[operands->rt] != 0)
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
 }
 
 make_exec_handler(movz) {
   InstAssert(operands->shamt == 0);
-  if (cpu.gpr[operands->rt] == 0) cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+  if (cpu.gpr[operands->rt] == 0)
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
 }
 
 make_exec_handler(mfhi) {
-  InstAssert(operands->rs == 0 && operands->rt == 0 && operands->shamt == 0);
+  InstAssert(operands->rs == 0 && operands->rt == 0 &&
+             operands->shamt == 0);
   cpu.gpr[operands->rd] = cpu.hi;
 }
 
 make_exec_handler(mthi) {
-  InstAssert(operands->rt == 0 && operands->rd == 0 && operands->shamt == 0);
+  InstAssert(operands->rt == 0 && operands->rd == 0 &&
+             operands->shamt == 0);
   cpu.hi = cpu.gpr[operands->rs];
 }
 
 make_exec_handler(mflo) {
-  InstAssert(operands->rs == 0 && operands->rt == 0 && operands->shamt == 0);
+  InstAssert(operands->rs == 0 && operands->rt == 0 &&
+             operands->shamt == 0);
   cpu.gpr[operands->rd] = cpu.lo;
 }
 
 make_exec_handler(mtlo) {
-  InstAssert(operands->rt == 0 && operands->rd == 0 && operands->shamt == 0);
+  InstAssert(operands->rt == 0 && operands->rd == 0 &&
+             operands->shamt == 0);
   cpu.lo = cpu.gpr[operands->rs];
 }
 
@@ -827,8 +889,8 @@ make_exec_handler(addi) {
 #if CONFIG_EXCEPTION
     launch_exception(EXC_OV);
 #else
-    CPUAssert(0, "addi overflow, %08x + %08x\n", cpu.gpr[operands->rs],
-        operands->simm);
+    CPUAssert(0, "addi overflow, %08x + %08x\n",
+        cpu.gpr[operands->rs], operands->simm);
 #endif
   } else {
     cpu.gpr[operands->rt] = ret.lo;
@@ -836,27 +898,33 @@ make_exec_handler(addi) {
 }
 
 make_exec_handler(addiu) {
-  cpu.gpr[operands->rt] = cpu.gpr[operands->rs] + operands->simm;
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] + operands->simm;
 }
 
 make_exec_handler(andi) {
-  cpu.gpr[operands->rt] = cpu.gpr[operands->rs] & operands->uimm;
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] & operands->uimm;
 }
 
 make_exec_handler(ori) {
-  cpu.gpr[operands->rt] = cpu.gpr[operands->rs] | operands->uimm;
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] | operands->uimm;
 }
 
 make_exec_handler(xori) {
-  cpu.gpr[operands->rt] = cpu.gpr[operands->rs] ^ operands->uimm;
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] ^ operands->uimm;
 }
 
 make_exec_handler(sltiu) {
-  cpu.gpr[operands->rt] = cpu.gpr[operands->rs] < operands->simm;
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] < operands->simm;
 }
 
 make_exec_handler(slti) {
-  cpu.gpr[operands->rt] = (int32_t)cpu.gpr[operands->rs] < operands->simm;
+  cpu.gpr[operands->rt] =
+      (int32_t)cpu.gpr[operands->rs] < operands->simm;
 }
 
 #if CONFIG_EXCEPTION
@@ -877,9 +945,10 @@ make_exec_handler(slti) {
 
 #else
 
-#  define CHECK_ALIGNED_ADDR(align, addr)  \
-    CPUAssert(((addr) & (align - 1)) == 0, \
-        "address(0x%08x) is unaligned, pc=%08x\n", (addr), cpu.pc)
+#  define CHECK_ALIGNED_ADDR(align, addr)                  \
+    CPUAssert(((addr) & (align - 1)) == 0,                 \
+        "address(0x%08x) is unaligned, pc=%08x\n", (addr), \
+        cpu.pc)
 
 #  define CHECK_ALIGNED_ADDR_AdEL CHECK_ALIGNED_ADDR
 #  define CHECK_ALIGNED_ADDR_AdES CHECK_ALIGNED_ADDR
@@ -905,18 +974,24 @@ make_exec_handler(swr) {
 }
 
 make_exec_handler(sw) {
-  CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4, cpu.gpr[operands->rt]);
+  CHECK_ALIGNED_ADDR_AdES(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4,
+      cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(sh) {
-  CHECK_ALIGNED_ADDR_AdES(2, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 2, cpu.gpr[operands->rt]);
+  CHECK_ALIGNED_ADDR_AdES(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 2,
+      cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(sb) {
-  CHECK_ALIGNED_ADDR_AdES(1, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 1, cpu.gpr[operands->rt]);
+  CHECK_ALIGNED_ADDR_AdES(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 1,
+      cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(lwl) {
@@ -928,7 +1003,8 @@ make_exec_handler(lwl) {
     if (len < 4)
       cpu.gpr[operands->rt] =
           rdata << ((4 - len) * 8) |
-          ((uint32_t)cpu.gpr[operands->rt] << (len * 8)) >> (len * 8);
+          ((uint32_t)cpu.gpr[operands->rt] << (len * 8)) >>
+              (len * 8);
     else
       cpu.gpr[operands->rt] = rdata;
   } else {
@@ -943,62 +1019,77 @@ make_exec_handler(lwr) {
   uint32_t rdata = vaddr_read(raddr, len);
   if (!cpu.has_exception) {
     if (len < 4)
-      cpu.gpr[operands->rt] = (rdata << idx * 8) >> (idx * 8) |
-                              ((uint32_t)cpu.gpr[operands->rt] >> (len * 8))
-                                  << (len * 8);
+      cpu.gpr[operands->rt] =
+          (rdata << idx * 8) >> (idx * 8) |
+          ((uint32_t)cpu.gpr[operands->rt] >> (len * 8))
+              << (len * 8);
     else
-      cpu.gpr[operands->rt] = (rdata << idx * 8) >> (idx * 8);
+      cpu.gpr[operands->rt] =
+          (rdata << idx * 8) >> (idx * 8);
   }
 }
 
 make_exec_handler(lw) {
-  CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
+  CHECK_ALIGNED_ADDR_AdEL(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lb) {
-  CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      (int32_t)(int8_t)vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
+  CHECK_ALIGNED_ADDR_AdEL(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata = (int32_t)(int8_t)vaddr_read(
+      cpu.gpr[operands->rs] + operands->simm, 1);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lbu) {
-  CHECK_ALIGNED_ADDR_AdEL(1, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
+  CHECK_ALIGNED_ADDR_AdEL(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lh) {
-  CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      (int32_t)(int16_t)vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
+  CHECK_ALIGNED_ADDR_AdEL(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata = (int32_t)(int16_t)vaddr_read(
+      cpu.gpr[operands->rs] + operands->simm, 2);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(lhu) {
-  CHECK_ALIGNED_ADDR_AdEL(2, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
+  CHECK_ALIGNED_ADDR_AdEL(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
   if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(pref) {}
 
 make_exec_handler(ll) {
-  CHECK_ALIGNED_ADDR_AdEL(4, cpu.gpr[operands->rs] + operands->simm);
-  cpu.gpr[operands->rt] = vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
+  CHECK_ALIGNED_ADDR_AdEL(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  cpu.gpr[operands->rt] =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
 }
 
 make_exec_handler(sc) {
-  CHECK_ALIGNED_ADDR_AdES(4, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4, cpu.gpr[operands->rt]);
+  CHECK_ALIGNED_ADDR_AdES(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4,
+      cpu.gpr[operands->rt]);
   if (!cpu.has_exception) cpu.gpr[operands->rt] = 1;
 }
 
 make_exec_handler(cache) { clear_decode_cache(); }
 
 make_exec_handler(sync) {}
+make_exec_handler(synci) {}
 
 //////////////////////////////////////////////////////////////
 //                      likely branch //
@@ -1158,7 +1249,8 @@ make_exec_handler(bltzal) {
 
 make_exec_handler(jal) {
   cpu.gpr[31] = cpu.pc + 8;
-  cpu.br_target = (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  cpu.br_target =
+      (cpu.pc & 0xf0000000) | (operands->addr << 2);
 #if CONFIG_FUNCTION_TRACE_LOG
   frames_enqueue_call(cpu.pc, cpu.br_target);
 #endif
@@ -1176,7 +1268,8 @@ make_exec_handler(jalr) {
 }
 
 make_exec_handler(j) {
-  cpu.br_target = (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  cpu.br_target =
+      (cpu.pc & 0xf0000000) | (operands->addr << 2);
   prepare_delayslot();
 }
 
@@ -1184,17 +1277,51 @@ make_exec_handler(jr) {
   InstAssert(operands->rt == 0 && operands->rd == 0);
   cpu.br_target = cpu.gpr[operands->rs];
 #if CONFIG_FUNCTION_TRACE_LOG
-  if (operands->rs == R_ra) frames_enqueue_ret(cpu.pc, cpu.br_target);
+  if (operands->rs == R_ra)
+    frames_enqueue_ret(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
 }
 
 make_exec_handler(seb) {
-  cpu.gpr[operands->rd] = (int32_t)(int8_t)cpu.gpr[operands->rt];
+  cpu.gpr[operands->rd] =
+      (int32_t)(int8_t)cpu.gpr[operands->rt];
 }
 
 make_exec_handler(seh) {
-  cpu.gpr[operands->rd] = (int32_t)(int16_t)cpu.gpr[operands->rt];
+  cpu.gpr[operands->rd] =
+      (int32_t)(int16_t)cpu.gpr[operands->rt];
+}
+
+make_exec_handler(wsbh) {
+  uint32_t rt_val = cpu.gpr[operands->rt];
+  cpu.gpr[operands->rd] = ((rt_val & 0x00FF0000) << 8) |
+                          ((rt_val & 0xFF000000) >> 8) |
+                          ((rt_val & 0x000000FF) << 8) |
+                          ((rt_val & 0x0000FF00) >> 8);
+}
+
+make_exec_handler(ins) {
+  uint32_t lsb = operands->shamt;
+  uint32_t msb = operands->rd;
+  assert(lsb <= msb);
+  uint32_t rs_val = cpu.gpr[operands->rs];
+  uint32_t rt_val = cpu.gpr[operands->rt];
+  uint32_t mask = (1ull << (msb - lsb + 1)) - 1;
+
+  cpu.gpr[operands->rt] =
+      (rt_val & ~(mask << lsb)) | ((rs_val & mask) << lsb);
+}
+
+make_exec_handler(ext) {
+  uint32_t lsb = operands->shamt;
+  uint32_t msbd = operands->rd;
+  uint32_t size = msbd + 1;
+  uint32_t rs_val = cpu.gpr[operands->rs];
+  uint32_t mask = (1ull << size) - 1;
+
+  cpu.gpr[operands->rt] =
+      ((rs_val & (mask << lsb)) >> lsb);
 }
 
 #if CONFIG_DELAYSLOT
