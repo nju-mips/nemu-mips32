@@ -4,10 +4,10 @@
 #define make_exit() make_label(exit)
 
 enum {
-  FPU_FMT_S,
-  FPU_FMT_D,
-  FPU_FMT_W,
-  FPU_FMT_L,
+  FPU_FMT_S = 16,
+  FPU_FMT_D = 17,
+  FPU_FMT_W = 20,
+  FPU_FMT_L = 21,
   FPU_FMT_PS,
   FPU_FMT_OB,
   FPU_FMT_QH,
@@ -51,13 +51,13 @@ enum {
 #endif
 
 #if CONFIG_EXCEPTION
-#  define InstAssert(cond)         \
-    do {                           \
-      if (!(cond)) {               \
-        cpu.cp0.badvaddr = cpu.pc; \
-        launch_exception(EXC_RI);  \
-        goto exit;                 \
-      }                            \
+#  define InstAssert(cond)                               \
+    do {                                                 \
+      if (!(cond)) {                                     \
+        cpu.cp0.badvaddr = cpu.pc;                       \
+        launch_exception(EXC_RI);                        \
+        goto exit;                                       \
+      }                                                  \
     } while (0)
 #else
 #  define InstAssert(cond) assert(cond)
@@ -202,7 +202,7 @@ static const void *cop1_table_rs_S[64] = {
     /* 0x04 */ &&sqrt_s, &&abs_s, &&mov_s, &&neg_s,
     /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x0c */ &&inv, &&trunc_w_s, &&inv, &&inv,
-    /* 0x10 */ &&inv, &&inv, &&movz_s, &&movn_s,
+    /* 0x10 */ &&inv, &&movcf_s, &&movz_s, &&movn_s,
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
@@ -222,7 +222,7 @@ static const void *cop1_table_rs_D[64] = {
     /* 0x04 */ &&sqrt_d, &&abs_d, &&mov_d, &&neg_d,
     /* 0x08 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x0c */ &&inv, &&trunc_w_d, &&inv, &&inv,
-    /* 0x10 */ &&inv, &&inv, &&movz_d, &&movn_d,
+    /* 0x10 */ &&inv, &&movcf_d, &&movz_d, &&movn_d,
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
@@ -271,9 +271,9 @@ static const void *opcode_table[64] = {
     /* 0x24 */ &&lbu, &&lhu, &&lwr, &&inv,
     /* 0x28 */ &&sb, &&sh, &&swl, &&sw,
     /* 0x2c */ &&inv, &&inv, &&swr, &&cache,
-    /* 0x30 */ &&ll, &&inv, &&inv, &&pref,
+    /* 0x30 */ &&ll, &&lwc1, &&inv, &&pref,
     /* 0x34 */ &&inv, &&ldc1, &&inv, &&inv,
-    /* 0x38 */ &&sc, &&inv, &&inv, &&inv,
+    /* 0x38 */ &&sc, &&swc1, &&inv, &&inv,
     /* 0x3c */ &&inv, &&sdc1, &&inv, &&inv,
 };
 
@@ -495,6 +495,7 @@ make_exec_handler(breakpoint) {
 }
 
 make_exec_handler(wait) { /* didn't +4 for pc */
+  usleep(1);
 }
 
 make_exec_handler(eret) {
@@ -1448,7 +1449,24 @@ make_exec_handler(ctc1) { InstAssert(0); }
 make_exec_handler(mthc1) {
   cpu.fpr[operands->fs + 1] = cpu.gpr[operands->rt];
 }
-make_exec_handler(bc1) { InstAssert(0); }
+make_exec_handler(bc1) {
+  InstAssert(operands->nd == 0);
+  if (operands->tf == 0) {
+    /* bc1f */
+    if (cpu.fcc[operands->cc2] == 0)
+      cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+    else
+      cpu.br_target = cpu.pc + 8;
+  } else if (operands->tf == 1) {
+    /* bc1t */
+    if (cpu.fcc[operands->cc2] == 1)
+      cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+    else
+      cpu.br_target = cpu.pc + 8;
+  }
+
+  prepare_delayslot();
+}
 
 make_exec_handler(add_s) {
   *(float *)&cpu.fpr[operands->fd] =
@@ -1527,8 +1545,37 @@ make_exec_handler(neg_d) {
       -*(double *)&cpu.fpr[operands->fs];
 }
 
-make_exec_handler(trunc_w_s) { InstAssert(0); }
-make_exec_handler(trunc_w_d) { InstAssert(0); }
+make_exec_handler(trunc_w_s) {
+  cpu.fpr[operands->fd] =
+      (int32_t) * (float *)&cpu.fpr[operands->fs];
+}
+make_exec_handler(trunc_w_d) {
+  cpu.fpr[operands->fd] =
+      (int32_t) * (double *)&cpu.fpr[operands->fs];
+}
+
+make_exec_handler(movcf_s) {
+  if (operands->tf == 0) {
+    if (cpu.fcc[operands->cc2] == 0)
+      *(float *)&cpu.fpr[operands->fd] =
+          *(float *)&cpu.fpr[operands->fs];
+  } else {
+    if (cpu.fcc[operands->cc2] == 1)
+      *(float *)&cpu.fpr[operands->fd] =
+          *(float *)&cpu.fpr[operands->fs];
+  }
+}
+make_exec_handler(movcf_d) {
+  if (operands->tf == 0) {
+    if (cpu.fcc[operands->cc2] == 0)
+      *(double *)&cpu.fpr[operands->fd] =
+          *(double *)&cpu.fpr[operands->fs];
+  } else {
+    if (cpu.fcc[operands->cc2] == 1)
+      *(double *)&cpu.fpr[operands->fd] =
+          *(double *)&cpu.fpr[operands->fs];
+  }
+}
 
 make_exec_handler(movz_s) {
   if (cpu.gpr[operands->rt] == 0) {
@@ -1560,24 +1607,24 @@ make_exec_handler(cvt_d_s) {
       *(float *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_w_s) {
-  *(float *)&cpu.fpr[operands->fd] =
-      *(float *)&cpu.fpr[operands->fs];
+  cpu.fpr[operands->fd] =
+      (int32_t) * (float *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_s_d) {
   *(float *)&cpu.fpr[operands->fd] =
       *(double *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_w_d) {
-  *(float *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs];
+  cpu.fpr[operands->fd] =
+      (int32_t) * (double *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_s_w) {
   *(float *)&cpu.fpr[operands->fd] =
-      *(float *)&cpu.fpr[operands->fs];
+      (int32_t)cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_d_w) {
   *(double *)&cpu.fpr[operands->fd] =
-      *(float *)&cpu.fpr[operands->fs];
+      (int32_t)cpu.fpr[operands->fs];
 }
 make_exec_handler(c_un_s) { InstAssert(0); }
 make_exec_handler(c_un_d) { InstAssert(0); }
@@ -1593,12 +1640,28 @@ make_exec_handler(c_ole_s) { InstAssert(0); }
 make_exec_handler(c_ole_d) { InstAssert(0); }
 make_exec_handler(c_ule_s) { InstAssert(0); }
 make_exec_handler(c_ule_d) { InstAssert(0); }
-make_exec_handler(c_lt_s) { InstAssert(0); }
-make_exec_handler(c_lt_d) { InstAssert(0); }
-make_exec_handler(c_le_s) { InstAssert(0); }
-make_exec_handler(c_le_d) { InstAssert(0); }
+make_exec_handler(c_lt_s) {
+  cpu.fcc[operands->cc1] =
+      *(float *)&cpu.fpr[operands->fs] <
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(c_lt_d) {
+  cpu.fcc[operands->cc1] =
+      *(double *)&cpu.fpr[operands->fs] <
+      *(double *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(c_le_s) {
+  cpu.fcc[operands->cc1] =
+      *(float *)&cpu.fpr[operands->fs] <=
+      *(float *)&cpu.fpr[operands->ft];
+}
+make_exec_handler(c_le_d) {
+  cpu.fcc[operands->cc1] =
+      *(double *)&cpu.fpr[operands->fs] <=
+      *(double *)&cpu.fpr[operands->ft];
+}
 
-make_exec_handler(ldc1) {
+make_exec_handler(lwc1) {
   CHECK_ALIGNED_ADDR_AdEL(
       4, cpu.gpr[operands->rs] + operands->simm);
   uint32_t rdata =
@@ -1606,9 +1669,28 @@ make_exec_handler(ldc1) {
   if (!cpu.has_exception) { cpu.fpr[operands->rt] = rdata; }
 }
 
+make_exec_handler(swc1) {
+  uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
+  vaddr_write(waddr, 4, cpu.fpr[operands->ft]);
+}
+
+make_exec_handler(ldc1) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata_l =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
+  uint32_t rdata_h = vaddr_read(
+      cpu.gpr[operands->rs] + operands->simm + 4, 4);
+  if (!cpu.has_exception) {
+    cpu.fpr[operands->rt] = rdata_l;
+    cpu.fpr[operands->rt + 1] = rdata_h;
+  }
+}
+
 make_exec_handler(sdc1) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
   vaddr_write(waddr, 4, cpu.fpr[operands->ft]);
+  vaddr_write(waddr + 4, 4, cpu.fpr[operands->ft + 1]);
 }
 
 #if CONFIG_DELAYSLOT

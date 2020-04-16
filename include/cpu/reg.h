@@ -280,6 +280,7 @@ typedef struct {
 #endif
 
   uint32_t fpr[32];
+  uint32_t fcc[8];
 } CPU_state;
 
 #define CAUSE_IP_TIMER 0x80
@@ -350,6 +351,22 @@ typedef struct {
       uint32_t ft : 5;
       uint32_t fmt : 5;
       uint32_t _2 : 6;
+    };
+
+    struct {
+      uint32_t cond : 4;
+      uint32_t fc : 2;
+      uint32_t A0 : 1;
+      uint32_t _3 : 1;
+      uint32_t cc1 : 3;
+    };
+
+    struct {
+      uint32_t _4 : 16;
+      uint32_t tf : 1;
+      uint32_t nd : 1;
+      uint32_t cc2 : 3;
+      uint32_t bc : 5;
     };
   };
 } Inst; // Instruction
