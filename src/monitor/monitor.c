@@ -3,14 +3,13 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "dev/device.h"
 #include "cpu/memory.h"
+#include "dev/device.h"
 #include "monitor.h"
-#include "utils/utils.h"
 #include "utils/elfsym.h"
+#include "utils/utils.h"
 
 elfsym_t elfsym;
-const char *flash_file = NULL;
 const char *elf_file = NULL;
 const char *symbol_file = NULL;
 const char *boot_cmdline = "";
@@ -23,10 +22,11 @@ work_mode_t work_mode = MODE_GDB;
 void load_rom(uint32_t entry) {
   uint32_t *p = vaddr_map(CPU_INIT_PC, 16);
   assert(p);
-  p[0] = 0x3c080000 | (entry >> 16);    // lui t0, %hi(entry)
-  p[1] = 0x35080000 | (entry & 0xFFFF); // ori t0, t0, %lo(entry)
-  p[2] = 0x01000008;                    // jr t0
-  p[3] = 0x00000000;                    // nop
+  p[0] = 0x3c080000 | (entry >> 16); // lui t0, %hi(entry)
+  p[1] = 0x35080000 |
+         (entry & 0xFFFF); // ori t0, t0, %lo(entry)
+  p[2] = 0x01000008;       // jr t0
+  p[3] = 0x00000000;       // nop
 }
 
 void load_elf() {
@@ -36,7 +36,8 @@ void load_elf() {
   const uint32_t elf_magic = 0x464c457f;
 
   void *buf = read_file(elf_file);
-  Assert(buf, "elf file '%s' cannot be opened for read\n", elf_file);
+  Assert(buf, "elf file '%s' cannot be opened for read\n",
+      elf_file);
 
   Elf32_Ehdr *elf = buf;
 
@@ -46,12 +47,14 @@ void load_elf() {
   assert(*p_magic == elf_magic);
 
   for (int i = 0; i < elf->e_phnum; i++) {
-    Elf32_Phdr *ph = (void *)buf + i * elf->e_phentsize + elf->e_phoff;
+    Elf32_Phdr *ph =
+        (void *)buf + i * elf->e_phentsize + elf->e_phoff;
     if (ph->p_type != PT_LOAD) { continue; }
 
     void *ptr = vaddr_map(ph->p_vaddr, ph->p_memsz);
     memcpy(ptr, buf + ph->p_offset, ph->p_filesz);
-    memset(ptr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+    memset(
+        ptr + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
   }
 
   if (elf->e_entry != CPU_INIT_PC) load_rom(elf->e_entry);
@@ -59,7 +62,8 @@ void load_elf() {
   free(buf);
 }
 
-static inline void load_image(const char *img, vaddr_t vaddr) {
+static inline void load_image(
+    const char *img, vaddr_t vaddr) {
   Assert(img, "Need an image file");
   Log("The image is %s\n", img);
 
@@ -81,8 +85,8 @@ static inline void assume_elf_file() {
 
 enum {
   OPT_BEG = 128,
-  OPT_FLASH,
   OPT_BLOCK_DATA,
+  OPT_BLKIO_FILE,
   OPT_FIFO_DATA,
   OPT_DIFF_TEST,
   OPT_BOOT_CMDLINE,
@@ -97,8 +101,8 @@ const struct option long_options[] = {
     {"symbol", 1, NULL, 'S'},
     {"help", 0, NULL, 'h'},
     /* ------------------ */
-    {"flash", 1, NULL, OPT_FLASH},
     {"block-data", 1, NULL, OPT_BLOCK_DATA},
+    {"blkio-file", 1, NULL, OPT_BLKIO_FILE},
     {"fifo-data", 1, NULL, OPT_FIFO_DATA},
     {"diff-test", 0, NULL, OPT_DIFF_TEST},
     {"cmdline", 1, NULL, OPT_BOOT_CMDLINE},
@@ -124,10 +128,12 @@ Report bugs to ouxianfei@smail.nju.edu.cn.\n");
 }
 
 void parse_fifo_data_option(const char *optarg) {
-  for (device_t *head = get_device_list_head(); head; head = head->next) {
+  for (device_t *head = get_device_list_head(); head;
+       head = head->next) {
     int len = strlen(head->name);
     if (memcmp(head->name, optarg, len) != 0) continue;
-    if (optarg[len] != ':' || !head->set_fifo_data) continue;
+    if (optarg[len] != ':' || !head->set_fifo_data)
+      continue;
 
     const char *file = &optarg[len + 1];
     int filesz = get_file_size(file);
@@ -145,10 +151,12 @@ void parse_fifo_data_option(const char *optarg) {
 }
 
 void parse_block_data_option(const char *optarg) {
-  for (device_t *head = get_device_list_head(); head; head = head->next) {
+  for (device_t *head = get_device_list_head(); head;
+       head = head->next) {
     int len = strlen(head->name);
     if (memcmp(head->name, optarg, len) != 0) continue;
-    if (optarg[len] != ':' || !head->set_block_data) continue;
+    if (optarg[len] != ':' || !head->set_block_data)
+      continue;
 
     const char *addr_s = &optarg[len + 1];
     char *file_s = NULL;
@@ -169,7 +177,10 @@ void parse_block_data_option(const char *optarg) {
       void *buf = read_file(file);
       if (!buf) panic("file %s not found\n", file);
       if (head->size <= addr || head->size <= addr + filesz)
-        panic("addr %08x in option %s is out of device bound\n", addr, optarg);
+        panic(
+            "addr %08x in option %s is out of device "
+            "bound\n",
+            addr, optarg);
       head->set_block_data(addr, buf, filesz);
       free(buf);
     } else {
@@ -185,10 +196,30 @@ void parse_block_data_option(const char *optarg) {
   free(dup_s);
 }
 
+void parse_blkio_file_option(const char *optarg) {
+  for (device_t *head = get_device_list_head(); head;
+       head = head->next) {
+    int len = strlen(head->name);
+    if (memcmp(head->name, optarg, len) != 0) continue;
+    if (optarg[len] != ':' || !head->set_blkio_file)
+      continue;
+
+    const char *file = &optarg[len + 1];
+    int filesz = get_file_size(file);
+    if (head->size <= filesz)
+      panic(
+          "filesz %08x in option %s is out of device "
+          "bound\n",
+          filesz, optarg);
+    head->set_blkio_file(file);
+    return;
+  }
+}
+
 void parse_args(int argc, char *argv[]) {
   int o;
-  while (
-      (o = getopt_long(argc, argv, "-bcde:i:s:h", long_options, NULL)) != -1) {
+  while ((o = getopt_long(argc, argv, "-bcde:i:s:h",
+              long_options, NULL)) != -1) {
     switch (o) {
     case 's': symbol_file = optarg; break;
     case 'b': work_mode |= MODE_BATCH; break;
@@ -205,15 +236,19 @@ void parse_args(int argc, char *argv[]) {
       else
         img_file = optarg;
       break;
-    case OPT_FLASH: flash_file = optarg; break;
-    case OPT_BLOCK_DATA: parse_block_data_option(optarg); break;
-    case OPT_FIFO_DATA: parse_fifo_data_option(optarg); break;
+    case OPT_BLOCK_DATA:
+      parse_block_data_option(optarg);
+      break;
+    case OPT_BLKIO_FILE:
+      parse_blkio_file_option(optarg);
+      break;
+    case OPT_FIFO_DATA:
+      parse_fifo_data_option(optarg);
+      break;
 #if CONFIG_DIFF_WITH_QEMU
     case OPT_DIFF_TEST: work_mode |= MODE_DIFF; break;
 #endif
-    case OPT_BOOT_CMDLINE:
-       boot_cmdline = optarg;
-       break;
+    case OPT_BOOT_CMDLINE: boot_cmdline = optarg; break;
     case 'h':
     default: print_help(argv[0]); exit(0);
     }
@@ -222,7 +257,9 @@ void parse_args(int argc, char *argv[]) {
   if (!symbol_file) symbol_file = elf_file;
 }
 
-static void gdb_sigint_handler(int sig) { nemu_state = NEMU_STOP; }
+static void gdb_sigint_handler(int sig) {
+  nemu_state = NEMU_STOP;
+}
 
 static void batch_sigint_handler(int sig) {
   resume_console();
