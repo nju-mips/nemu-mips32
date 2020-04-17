@@ -61,11 +61,7 @@ static void rxfifo_reset() {
 }
 
 static void xlnx_spi_update_cs() {
-  for (int i = 0; i < 1; ++i) {
-    m25p80_cs(&flash, 1);
-    // qemu_set_irq(s->cs_lines[i],
-    // !(~xlnx_spi_regs[R_SPISSR] & 1 << i));
-  }
+  for (int i = 0; i < 1; ++i) { m25p80_cs(&flash, 1); }
 }
 
 static bool xlnx_spi_update_irq() {
@@ -206,7 +202,7 @@ static void xlnx_spi_set_blkio_file(const char *file) {
 }
 
 DEF_DEV(xlnx_spi_dev) = {
-    .name = "xilinx-spi",
+    .name = "xlnx-spi",
     .start = CONFIG_XLNX_SPI_BASE,
     .size = SPI_SIZE,
     .init = xlnx_spi_init,

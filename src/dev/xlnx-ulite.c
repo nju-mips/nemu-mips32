@@ -45,11 +45,9 @@ static const char *xlnx_ulite_stop_string = NULL;
 static const char *xlnx_ulite_stop_string_ptr = NULL;
 
 void xlnx_ulite_set_irq() {
-#if CONFIG_INTR
   if (xlnx_ulite_intr_enabled) {
     nemu_set_irq(XLNX_ULITE_IRQ_NO, 1);
   }
-#endif
 }
 
 void stop_cpu_when_ulite_send(const char *string) {

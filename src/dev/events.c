@@ -16,10 +16,12 @@ void update_irq(int signum) {
       &evt, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_QUIT));
   if (cnt > 0) nemu_exit();
 
+#if CONFIG_INTR
   for (device_t *dev = get_device_list_head(); dev;
        dev = dev->next) {
     if (dev->update_irq) { dev->update_irq(); }
   }
+#endif
 
   /* TIMER */
   int ret = setitimer(ITIMER_VIRTUAL, &it, NULL);

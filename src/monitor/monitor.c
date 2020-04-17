@@ -206,15 +206,15 @@ void parse_blkio_file_option(const char *optarg) {
       continue;
 
     const char *file = &optarg[len + 1];
-    int filesz = get_file_size(file);
-    if (head->size <= filesz)
-      panic(
-          "filesz %08x in option %s is out of device "
-          "bound\n",
-          filesz, optarg);
     head->set_blkio_file(file);
     return;
   }
+
+  char *dup_s = strdup(optarg);
+  char *delim = strchr(dup_s, ':');
+  if (delim) *delim = '\0';
+  panic("device '%s' not found\n", dup_s);
+  free(dup_s);
 }
 
 void parse_args(int argc, char *argv[]) {

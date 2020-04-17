@@ -13,7 +13,7 @@
 
 #define KiB 1024
 
-#define M25P80_ERR_DEBUG 0
+#define M25P80_ERR_DEBUG 1
 
 #define DB_PRINT_L(fmt, ...)                          \
   do {                                                \
@@ -160,6 +160,9 @@ typedef struct FlashPartInfo {
 #define WINBOND_CONTINUOUS_READ_MODE_CMD_LEN 1
 
 static const FlashPartInfo known_devices[] = {
+    {INFO("nemu512M", 0xc22640, 0, 64 << 10, 8192, ER_4K)},
+    {INFO("nemu1G", 0xc22641, 0, 64 << 10, 16384, ER_4K)},
+
     /* Atmel -- some are (confusingly) marketed as
        "DataFlash" */
     {INFO("at25fs010", 0x1f6601, 0, 32 << 10, 4, ER_4K)},
@@ -462,7 +465,7 @@ typedef struct Flash {
 
   int64_t dirty_page;
 
-  const char *img_file;
+  const char *blkio_file;
 
   const FlashPartInfo *pi;
 
@@ -493,8 +496,8 @@ static inline uint32_t extract32(
 }
 
 static void flash_sync_page(Flash *s, int page) {
-  if (!s->img_file) return;
-  int fd = open(s->img_file, O_RDWR | O_CREAT, 0644);
+  if (!s->blkio_file) return;
+  int fd = open(s->blkio_file, O_RDWR | O_CREAT, 0644);
   int off = page * s->pi->page_size;
   lseek(fd, off, SEEK_SET);
   write_s(fd, s->storage + off, s->pi->page_size);
@@ -503,8 +506,8 @@ static void flash_sync_page(Flash *s, int page) {
 
 static inline void flash_sync_area(
     Flash *s, int64_t off, int64_t len) {
-  if (!s->img_file) return;
-  int fd = open(s->img_file, O_RDWR | O_CREAT, 0644);
+  if (!s->blkio_file) return;
+  int fd = open(s->blkio_file, O_RDWR | O_CREAT, 0644);
   lseek(fd, off, SEEK_SET);
   write_s(fd, s->storage + off, len);
   close(fd);
@@ -1155,31 +1158,24 @@ static void flash_init(Flash *s) {
   /* FIXME:
    *   drivers/spi/xilinx_spi.c: xilinx_spi_startup_block
    * */
-  int nr_devices =
-      sizeof(known_devices) / sizeof(*known_devices);
-  for (int i = 0; i < nr_devices; i++) {
-    if (strcmp(known_devices[i].part_name, "n25q512a11") ==
-        0) {
-      eprintf("use flash chip %s\n",
-          known_devices[i].part_name);
-      s->pi = &known_devices[i];
-      break;
-    }
-  }
-
+  s->pi = &known_devices[0];
   s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;
 
   s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
+
+  if (s->blkio_file) {
+    int fd = open(s->blkio_file, O_RDONLY);
+    int size = get_file_size(s->blkio_file);
+    if (size > s->size) size = s->size;
+    read_s(fd, s->storage, size);
+  }
 }
 
 static void flash_set_blkio_file(
     Flash *s, const char *file) {
   if (!file) { return; }
 
-  int fd = open(file, O_RDONLY);
-  read_s(fd, s->storage, s->size);
-
-  s->img_file = file;
+  s->blkio_file = file;
 }
