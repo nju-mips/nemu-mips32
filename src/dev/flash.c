@@ -160,8 +160,8 @@ typedef struct FlashPartInfo {
 #define WINBOND_CONTINUOUS_READ_MODE_CMD_LEN 1
 
 static const FlashPartInfo known_devices[] = {
-    {INFO("nemu512M", 0xc84040, 0, 64 << 10, 8192, ER_4K)},
-    {INFO("nemu1G", 0xc84041, 0, 64 << 10, 16384, ER_4K)},
+    {INFO("nemu512M", 0x20bb23, 0, 64 << 10, 8192, ER_4K)},
+    {INFO("nemu1G", 0x20bb24, 0, 64 << 10, 16384, ER_4K)},
 
     /* Atmel -- some are (confusingly) marketed as
        "DataFlash" */
@@ -1162,6 +1162,7 @@ static void flash_init(Flash *s) {
   s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;
 
+#if 0
   const int nr_devices =
       sizeof(known_devices) / sizeof(*known_devices);
   for (int i = 0; i < nr_devices; i++) {
@@ -1171,6 +1172,7 @@ static void flash_init(Flash *s) {
       s->size = s->pi->sector_size * s->pi->n_sectors;
     }
   }
+#endif
 
   s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
