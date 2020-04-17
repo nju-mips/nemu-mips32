@@ -6,7 +6,7 @@
 
 #include "dev/device.h"
 #include "dev/events.h"
-#include "utils/utils.h"
+#include "utils/console.h"
 
 SDL_Surface *screen;
 static struct itimerval it;

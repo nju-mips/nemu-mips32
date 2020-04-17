@@ -15,7 +15,6 @@
 #include "dev/device.h"
 #include "monitor.h"
 #include "utils/elfsym.h"
-#include "utils/utils.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 

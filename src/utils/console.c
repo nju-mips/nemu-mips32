@@ -1,10 +1,10 @@
-#include <sys/ioctl.h>
 #include <stdarg.h>
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <termios.h>
 
 #include "debug.h"
-#include "utils/utils.h"
+#include "utils/console.h"
 
 #define STDIN_FILENO 0
 
@@ -61,7 +61,9 @@ void echo_on() {
   wrap_set_term_attr(&tbuf);
 }
 
-void set_cursor(uint32_t x, uint32_t y) { printf("\033[%d;%df", y + 1, x + 1); }
+void set_cursor(uint32_t x, uint32_t y) {
+  printf("\033[%d;%df", y + 1, x + 1);
+}
 
 void hide_cursor() { printf("\033[?25l"); }
 

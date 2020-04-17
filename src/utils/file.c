@@ -43,3 +43,13 @@ ssize_t write_s(int fd, const void *buf, size_t count) {
   }
   return count;
 }
+
+ssize_t read_s(int fd, void *buf, size_t count) {
+  size_t off = 0;
+  while (off < count) {
+    int ret = read(fd, buf + off, count - off);
+    if (ret < 0) return -1;
+    off += ret;
+  }
+  return count;
+}

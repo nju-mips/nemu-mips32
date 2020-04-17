@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "utils/utils.h"
+#include "utils/file.h"
 
 #define KiB 1024
 
@@ -1179,8 +1179,7 @@ static void flash_set_blkio_file(
   if (!file) { return; }
 
   int fd = open(file, O_RDONLY);
-  int len = read(fd, s->storage, s->size);
-  (void)len;
+  read_s(fd, s->storage, s->size);
 
   s->img_file = file;
 }

@@ -7,7 +7,8 @@
 #include "dev/device.h"
 #include "monitor.h"
 #include "utils/elfsym.h"
-#include "utils/utils.h"
+#include "utils/file.h"
+#include "utils/console.h"
 
 elfsym_t elfsym;
 const char *elf_file = NULL;
