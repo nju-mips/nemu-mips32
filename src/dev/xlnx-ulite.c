@@ -3,6 +3,8 @@
 
 #include "dev/device.h"
 #include "dev/events.h"
+#include "utils/console.h"
+#include "utils/file.h"
 #include "utils/fifo.h"
 
 // UART
@@ -17,10 +19,13 @@
 #define SR_CTRL_INTR_BIT (1 << 4)
 
 /* status */
-#define SR_TX_FIFO_FULL (1 << 3)       /* transmit FIFO full */
-#define SR_TX_FIFO_EMPTY (1 << 2)      /* transmit FIFO empty  */
-#define SR_RX_FIFO_VALID_DATA (1 << 0) /* data in receive FIFO */
-#define SR_RX_FIFO_FULL (1 << 1)       /* receive FIFO full */
+#define SR_TX_FIFO_FULL (1 << 3) /* transmit FIFO full */
+#define SR_TX_FIFO_EMPTY          \
+  (1 << 2) /* transmit FIFO empty \
+            */
+#define SR_RX_FIFO_VALID_DATA \
+  (1 << 0)                       /* data in receive FIFO */
+#define SR_RX_FIFO_FULL (1 << 1) /* receive FIFO full */
 
 /* ctrl */
 #define ULITE_CONTROL_RST_TX 0x01
@@ -41,7 +46,9 @@ static const char *xlnx_ulite_stop_string_ptr = NULL;
 
 void xlnx_ulite_set_irq() {
 #if CONFIG_INTR
-  if (xlnx_ulite_intr_enabled) { nemu_set_irq(XLNX_ULITE_IRQ_NO, 1); }
+  if (xlnx_ulite_intr_enabled) {
+    nemu_set_irq(XLNX_ULITE_IRQ_NO, 1);
+  }
 #endif
 }
 
@@ -56,7 +63,8 @@ static void stop_cpu_check(char ch) {
   if (*xlnx_ulite_stop_string_ptr == ch) {
     xlnx_ulite_stop_string_ptr++;
     if (*xlnx_ulite_stop_string_ptr == 0) {
-      eprintf("ulite recv '%s', stop the cpu\n", xlnx_ulite_stop_string);
+      eprintf("ulite recv '%s', stop the cpu\n",
+          xlnx_ulite_stop_string);
       print_frames();
       print_backtrace();
       nemu_state = NEMU_STOP;
@@ -71,14 +79,17 @@ static uint32_t xlnx_ulite_peek(paddr_t addr, int len) {
   case Rx: return fifo_top(ulite_q);
   case STAT: {
     uint32_t status = 0;
-    if (!fifo_is_empty(ulite_q)) status |= SR_RX_FIFO_VALID_DATA;
+    if (!fifo_is_empty(ulite_q))
+      status |= SR_RX_FIFO_VALID_DATA;
     if (xlnx_ulite_intr_enabled) status |= SR_CTRL_INTR_BIT;
-    if (xlnx_ulite_tx_fifo_empty) status |= SR_TX_FIFO_EMPTY;
+    if (xlnx_ulite_tx_fifo_empty)
+      status |= SR_TX_FIFO_EMPTY;
     return status;
   } break;
   case CTRL: return 0;
   default:
-    CPUAssert(false, "uart: address(0x%08x) is not readable", addr);
+    CPUAssert(false,
+        "uart: address(0x%08x) is not readable", addr);
     break;
   }
   return 0;
@@ -93,7 +104,8 @@ static uint32_t xlnx_ulite_read(paddr_t addr, int len) {
   return xlnx_ulite_peek(addr, len);
 }
 
-static void xlnx_ulite_write(paddr_t addr, int len, uint32_t data) {
+static void xlnx_ulite_write(
+    paddr_t addr, int len, uint32_t data) {
   check_ioaddr(addr, len, XLNX_ULITE_SIZE, "ulite.write");
   switch (addr) {
   case Tx:
@@ -113,15 +125,25 @@ static void xlnx_ulite_write(paddr_t addr, int len, uint32_t data) {
     }
     break;
   default:
-    CPUAssert(false, "uart: address(0x%08x) is not writable", addr);
+    CPUAssert(false,
+        "uart: address(0x%08x) is not writable", addr);
     break;
   }
 }
 
-static int xlnx_ulite_on_data(const void *data, int len) {
-  for (int i = 0; i < len; i++) { xlnx_ulite_enqueue(((char *)data)[i]); }
+static bool xlnx_ulite_update_irq() {
+  int n = nchars_stdin();
+  if (n <= 0) return false;
+
+  char *data = malloc(n);
+  read_s(0, data, n);
+  for (int i = 0; i < n; i++) {
+    xlnx_ulite_enqueue(data[i]);
+  }
+  free(data);
+
   xlnx_ulite_set_irq();
-  return len;
+  return true;
 }
 
 void xlnx_ulite_set_fifo_data(const void *data, int len) {
@@ -130,10 +152,10 @@ void xlnx_ulite_set_fifo_data(const void *data, int len) {
   for (int i = 0; i < len; i++) xlnx_ulite_enqueue(buf[i]);
 }
 
-static void xlnx_ulite_init();
+static void xlnx_ulite_init() { fifo_init(ulite_q); }
 
 DEF_DEV(xlnx_ulite_dev) = {
-    .name = "xilinx-uartlite",
+    .name = "xlnx-ulite",
     .init = xlnx_ulite_init,
     .start = CONFIG_XLNX_ULITE_BASE,
     .size = XLNX_ULITE_SIZE,
@@ -142,11 +164,5 @@ DEF_DEV(xlnx_ulite_dev) = {
     .write = xlnx_ulite_write,
     .set_fifo_data = xlnx_ulite_set_fifo_data,
     .map = NULL,
+    .update_irq = xlnx_ulite_update_irq,
 };
-
-static void xlnx_ulite_init() {
-  fifo_init(ulite_q);
-  event_bind_handler(EVENT_CTRL_C, xlnx_ulite_on_data);
-  event_bind_handler(EVENT_CTRL_Z, xlnx_ulite_on_data);
-  event_bind_handler(EVENT_STDIN_DATA, xlnx_ulite_on_data);
-}

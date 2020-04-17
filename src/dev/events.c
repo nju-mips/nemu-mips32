@@ -11,73 +11,11 @@
 SDL_Surface *screen;
 static struct itimerval it;
 
-static event_t events[NR_EVENTS];
-
-void event_bind_handler(int event_type, event_handler_t handler) {
-  assert(handler);
-  assert(0 <= event_type && event_type < NR_EVENTS);
-
-  event_t *evt = &events[event_type];
-  assert(!evt->handler);
-  evt->handler = handler;
-}
-
-int notify_event(int event_type, void *data, int len) {
-  assert(0 <= event_type && event_type < NR_EVENTS);
-
-  event_t *evt = &events[event_type];
-  if (!evt->handler) return -1;
-  return evt->handler(data, len);
-}
-
-bool detect_sdl_event() {
-  SDL_Event event = {0};
-  if (!SDL_PollEvent(&event)) return false;
-
-  int sdlk_data[2] = {event.type, event.key.keysym.sym};
-  switch (event.type) {
-  /* If a key was pressed */
-  case SDL_KEYUP:
-    notify_event(EVENT_SDL_KEY_UP, sdlk_data, sizeof(sdlk_data));
-    break;
-  case SDL_KEYDOWN:
-    notify_event(EVENT_SDL_KEY_DOWN, sdlk_data, sizeof(sdlk_data));
-    break;
-  case SDL_QUIT: nemu_exit();
-  default:
-    /* do nothing */
-    break;
+void update_irq(int signum) {
+  for (device_t *dev = get_device_list_head(); dev;
+       dev = dev->next) {
+    if (dev->update_irq) { dev->update_irq(); }
   }
-  return true;
-}
-
-bool detect_stdin() {
-  /* read stdin */
-  int n = nchars_stdin();
-  if (n > 0) {
-    char *buf = malloc(n);
-    int ret = read(0, buf, n);
-    assert(ret == n);
-
-    notify_event(EVENT_STDIN_DATA, buf, n);
-
-    free(buf);
-  }
-  return n > 0;
-}
-
-void update_timer() {
-  /* TIMER */
-  int ret = setitimer(ITIMER_VIRTUAL, &it, NULL);
-  Assert(ret == 0, "Can not set timer");
-
-  notify_event(EVENT_TIMER, NULL, 0);
-}
-
-void detect_event(int signum) {
-  detect_sdl_event();
-  detect_stdin();
-  update_timer();
 }
 
 #if 0
@@ -97,7 +35,7 @@ static void ctrl_code_handler(int no) {
 void init_timer() {
   struct sigaction s;
   memset(&s, 0, sizeof(s));
-  s.sa_handler = detect_event;
+  s.sa_handler = update_irq;
   int ret = sigaction(SIGVTALRM, &s, NULL);
   Assert(ret == 0, "Can not set signal handler");
 
@@ -113,10 +51,11 @@ void init_sdl() {
   /* sdl */
   int ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
   Assert(ret == 0, "SDL_Init failed");
-  screen =
-      SDL_SetVideoMode(WINDOW_W, WINDOW_H, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
+  screen = SDL_SetVideoMode(WINDOW_W, WINDOW_H, 32,
+      SDL_HWSURFACE | SDL_DOUBLEBUF);
   SDL_WM_SetCaption("NEMU-MIPS32", NULL);
-  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,
+      SDL_DEFAULT_REPEAT_INTERVAL);
 }
 
 void init_events() {

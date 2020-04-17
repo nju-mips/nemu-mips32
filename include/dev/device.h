@@ -45,6 +45,8 @@ typedef struct device_t {
   void (*set_block_data)(
       uint32_t addr, const void *data, int len);
   void (*set_blkio_file)(const char *file);
+
+  bool (*update_irq)();
 } device_t;
 
 static inline uint32_t mr_index(uint32_t addr) {

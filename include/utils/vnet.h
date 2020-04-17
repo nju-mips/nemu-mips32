@@ -3,17 +3,22 @@
 
 #include <net/if.h>
 #include <netinet/ether.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 /* tap */
 int tap_create(char dev[IFNAMSIZ]);
-int tap_set_hwaddr(
-    int sockfd, const char *dev, const uint8_t ether_addr[ETHER_ADDR_LEN]);
-int tap_set_netmask(int sockfd, const char *dev, const uint32_t netmask);
-int tap_set_ipaddr(int sockfd, const char *dev, const uint32_t ipaddr);
+int tap_set_hwaddr(int sockfd, const char *dev,
+    const uint8_t ether_addr[ETHER_ADDR_LEN]);
+int tap_set_netmask(
+    int sockfd, const char *dev, const uint32_t netmask);
+int tap_set_ipaddr(
+    int sockfd, const char *dev, const uint32_t ipaddr);
 int tap_set_mtu(int sockfd, const char *dev, int mtu);
 int tap_set_up(int sockfd, const char *dev);
 int tap_set_down(int sockfd, const char *dev);
-int tap_set_attribute(const char *dev, const uint32_t ipaddr,
+int tap_set_attribute(const char *dev,
+    const uint32_t ipaddr,
     const uint8_t ether_addr[ETHER_ADDR_LEN], int mtu);
 
 /* pcap */
@@ -44,15 +49,18 @@ typedef FILE *pcap_handler;
 void hexdump(const uint8_t *data, int len);
 
 pcap_handler pcap_open(const char *filename);
-int pcap_write(pcap_handler h, const void *data, const int len);
+int pcap_write(
+    pcap_handler h, const void *data, const int len);
 void pcap_flush(pcap_handler h);
-int pcap_write_and_flush(pcap_handler h, const void *data, const int len);
+int pcap_write_and_flush(
+    pcap_handler h, const void *data, const int len);
 void pcap_close(pcap_handler h);
 
 /* nat */
 void init_network();
 bool net_poll_packet();
-void net_bind_mac_addr(const uint8_t mac_addr[ETHER_ADDR_LEN]);
+void net_bind_mac_addr(
+    const uint8_t mac_addr[ETHER_ADDR_LEN]);
 void net_send_data(const uint8_t *data, const int len);
 int net_recv_data(uint8_t *to, const int maxlen);
 

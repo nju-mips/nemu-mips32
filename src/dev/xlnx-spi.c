@@ -68,26 +68,8 @@ static void xlnx_spi_update_cs() {
   }
 }
 
-static void xlnx_spi_update_irq() {
-#if 0
-  uint32_t pending;
-
-  xlnx_spi_regs[R_IPISR] |=
-      (!fifo_is_empty(spi_rx_fifo) ? IRQ_DRR_NOT_EMPTY : 0) |
-      (fifo_is_full(spi_rx_fifo) ? IRQ_DRR_FULL : 0);
-
-  pending = xlnx_spi_regs[R_IPISR] & xlnx_spi_regs[R_IPIER];
-
-  pending = pending && (xlnx_spi_regs[R_DGIER] & R_DGIER_IE);
-  pending = !!pending;
-
-  /* This call lies right in the data paths so don't call the
-     irq chain unless things really changed.  */
-  if (pending != s->irqline) {
-    s->irqline = pending;
-    qemu_set_irq(s->irq, pending);
-  }
-#endif
+static bool xlnx_spi_update_irq() {
+  return false;
 }
 
 static void xlnx_spi_do_reset() {
@@ -231,4 +213,5 @@ DEF_DEV(xlnx_spi_dev) = {
     .read = xlnx_spi_read,
     .write = xlnx_spi_write,
     .set_blkio_file = xlnx_spi_set_blkio_file,
+    .update_irq = xlnx_spi_update_irq,
 };
