@@ -17,42 +17,21 @@
 static int nemu_keyboard_queue[KEYBOARD_QUEUE_LEN];
 static int nemu_keyboard_f = 0, nemu_keyboard_r = 0;
 
-#if 0
-bool detect_sdl_event() {
-  SDL_Event event = {0};
-  if (!SDL_PollEvent(&event)) return false;
-
-  int sdlk_data[2] = {event.type, event.key.keysym.sym};
-  switch (event.type) {
-  /* If a key was pressed */
-  case SDL_KEYUP:
-    notify_event(EVENT_SDL_KEY_UP, sdlk_data, sizeof(sdlk_data));
-    break;
-  case SDL_KEYDOWN:
-    notify_event(EVENT_SDL_KEY_DOWN, sdlk_data, sizeof(sdlk_data));
-    break;
-  case SDL_QUIT: nemu_exit();
-  default:
-    /* do nothing */
-    break;
-  }
-  return true;
-}
-#endif
-
 static bool nemu_keyboard_update_irq() {
-#if 0
-  assert(len == 2 * sizeof(int));
-  const int *sdlk_data = data;
+  SDL_Event evt = {0};
+  int cnt = SDL_PeepEvents(&evt, 1, SDL_GETEVENT,
+      SDL_EVENTMASK(SDL_KEYDOWN) |
+          SDL_EVENTMASK(SDL_KEYUP));
+  if (cnt <= 0) return false;
+
   uint32_t scancode =
-      SDLKey_to_scancode(sdlk_data[0], sdlk_data[1]);
+      SDLKey_to_scancode(evt.type, evt.key.keysym.sym);
   int next = (nemu_keyboard_r + 1) % KEYBOARD_QUEUE_LEN;
   if (next != nemu_keyboard_f) { // if not full
     nemu_keyboard_queue[nemu_keyboard_r] = scancode;
     nemu_keyboard_r = next;
     /* no irq */
   }
-#endif
   return false;
 }
 

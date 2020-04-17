@@ -1,11 +1,12 @@
 #include <SDL/SDL.h>
+#include <signal.h>
 #include <stdbool.h>
 
 #include "dev/device.h"
 #include "dev/events.h"
 #include "utils/console.h"
-#include "utils/file.h"
 #include "utils/fifo.h"
+#include "utils/file.h"
 
 // UART
 #define Rx 0x0
@@ -152,7 +153,27 @@ void xlnx_ulite_set_fifo_data(const void *data, int len) {
   for (int i = 0; i < len; i++) xlnx_ulite_enqueue(buf[i]);
 }
 
-static void xlnx_ulite_init() { fifo_init(ulite_q); }
+void ulite_ctrl_code_handler(int no) {
+  if (no == SIGINT) {
+    /* https://en.wikipedia.org/wiki/Control-C */
+    xlnx_ulite_enqueue('\x03');
+  } else if (no == SIGTSTP) {
+    /* https://en.wikipedia.org/wiki/Substitute_character */
+    xlnx_ulite_enqueue('\x1a');
+  }
+}
+
+static void xlnx_ulite_init() {
+  fifo_init(ulite_q);
+
+#if CONFIG_CAPTURE_CTRL_C
+  signal(SIGINT, ulite_ctrl_code_handler);
+#endif
+
+#if CONFIG_CAPTURE_CTRL_Z
+  signal(SIGTSTP, ulite_ctrl_code_handler);
+#endif
+}
 
 DEF_DEV(xlnx_ulite_dev) = {
     .name = "xlnx-ulite",

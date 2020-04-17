@@ -12,25 +12,16 @@ SDL_Surface *screen;
 static struct itimerval it;
 
 void update_irq(int signum) {
+  SDL_Event evt = {0};
+  int cnt = SDL_PeepEvents(
+      &evt, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_QUIT));
+  if (cnt > 0) nemu_exit();
+
   for (device_t *dev = get_device_list_head(); dev;
        dev = dev->next) {
     if (dev->update_irq) { dev->update_irq(); }
   }
 }
-
-#if 0
-static void ctrl_code_handler(int no) {
-  if (no == SIGINT) {
-    /* https://en.wikipedia.org/wiki/Control-C */
-    char data = '\x03';
-    notify_event(EVENT_CTRL_C, &data, 1);
-  } else if (no == SIGTSTP) {
-    /* https://en.wikipedia.org/wiki/Substitute_character */
-    char data = '\x1a';
-    notify_event(EVENT_CTRL_Z, &data, 1);
-  }
-}
-#endif
 
 void init_timer() {
   struct sigaction s;
@@ -65,9 +56,4 @@ void init_events() {
   init_console();
 
   init_timer();
-
-#if 0
-  signal(SIGINT, ctrl_code_handler);
-  signal(SIGTSTP, ctrl_code_handler);
-#endif
 }
