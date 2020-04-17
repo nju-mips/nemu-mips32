@@ -9,6 +9,7 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netpacket/packet.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -29,7 +30,6 @@
 // struct udphdr
 
 #include "debug.h"
-#include "dev/events.h"
 #include "utils/fifo.h"
 #include "utils/vnet.h"
 

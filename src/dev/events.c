@@ -4,8 +4,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "dev/device.h"
-#include "dev/events.h"
+#include "device.h"
 #include "utils/console.h"
 
 SDL_Surface *screen;
@@ -21,6 +20,10 @@ void update_irq(int signum) {
        dev = dev->next) {
     if (dev->update_irq) { dev->update_irq(); }
   }
+
+  /* TIMER */
+  int ret = setitimer(ITIMER_VIRTUAL, &it, NULL);
+  Assert(ret == 0, "Can not set timer");
 }
 
 void init_timer() {

@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "cpu/memory.h"
-#include "dev/device.h"
 
 static inline void check_ioaddr(uint32_t addr, uint32_t len,
     uint32_t size, const char *msg) {

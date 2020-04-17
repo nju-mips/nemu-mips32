@@ -1,4 +1,4 @@
-#include "dev/device.h"
+#include "device.h"
 
 static device_t *device_list_head = NULL;
 

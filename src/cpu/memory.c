@@ -1,4 +1,4 @@
-#include "dev/device.h"
+#include "device.h"
 #include "cpu/memory.h"
 
 #include <SDL/SDL.h>

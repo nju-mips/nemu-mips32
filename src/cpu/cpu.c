@@ -12,7 +12,7 @@
 #include "cpu/memory.h"
 #include "cpu/mmu.h"
 #include "debug.h"
-#include "dev/device.h"
+#include "device.h"
 #include "monitor.h"
 #include "utils/elfsym.h"
 

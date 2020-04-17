@@ -1,4 +1,4 @@
-#include "dev/device.h"
+#include "device.h"
 
 // bad phsical address
 #define BLACKHOLE_ADDR 0x1fe96000

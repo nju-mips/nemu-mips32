@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #include "cpu/memory.h"
-#include "dev/device.h"
+#include "device.h"
 #include "monitor.h"
 #include "utils/elfsym.h"
 #include "utils/file.h"

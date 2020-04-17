@@ -1,7 +1,7 @@
 #include <SDL/SDL.h>
 #include <stdio.h>
 
-#include "dev/device.h"
+#include "device.h"
 
 #define NEMU_VGA_SIZE 0x100000
 #define VMEM_SIZE (WINDOW_H * WINDOW_W)

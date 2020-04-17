@@ -1,4 +1,4 @@
-#include "dev/device.h"
+#include "device.h"
 
 // block ram
 #define BRAM_SIZE (1024 * 1024)

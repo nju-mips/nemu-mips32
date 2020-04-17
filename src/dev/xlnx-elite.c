@@ -7,7 +7,7 @@
 #include <sys/types.h>
 
 #include "debug.h"
-#include "dev/device.h"
+#include "device.h"
 #include "dev/events.h"
 
 // emaclite

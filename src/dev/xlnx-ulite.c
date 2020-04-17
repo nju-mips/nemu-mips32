@@ -2,8 +2,7 @@
 #include <signal.h>
 #include <stdbool.h>
 
-#include "dev/device.h"
-#include "dev/events.h"
+#include "device.h"
 #include "utils/console.h"
 #include "utils/fifo.h"
 #include "utils/file.h"

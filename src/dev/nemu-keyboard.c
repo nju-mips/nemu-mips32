@@ -1,8 +1,7 @@
 #include <SDL/SDL.h>
 #include <stdbool.h>
 
-#include "dev/device.h"
-#include "dev/events.h"
+#include "device.h"
 #include "utils/file.h"
 
 #define NEMU_KEYBOARD_CODE 0x0

@@ -2,7 +2,7 @@
 #include "cpu/mmu.h"
 #include "cpu/reg.h"
 #include "debug.h"
-#include "dev/device.h"
+#include "device.h"
 #include "monitor.h"
 #include "napis.h"
 

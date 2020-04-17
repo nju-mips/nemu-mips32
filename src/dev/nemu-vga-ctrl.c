@@ -1,6 +1,6 @@
 #include <SDL/SDL.h>
 
-#include "dev/device.h"
+#include "device.h"
 
 extern SDL_Surface *screen;
 

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "dev/device.h"
+#include "device.h"
 #include "cpu/memory.h"
 #include "utils/syscalls.h"
 
