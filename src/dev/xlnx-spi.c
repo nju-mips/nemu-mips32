@@ -16,6 +16,8 @@
 #define IRQ_DTR_UNDERRUN (1 << 3)
 #define IRQ_DTR_EMPTY (1 << (31 - 29))
 
+#define XLNX_SPI_IRQ_NO 5
+
 #define R_IPIER (0x28 / 4)
 #define R_SRR (0x40 / 4)
 #define R_SPICR (0x60 / 4)
@@ -65,7 +67,22 @@ static void xlnx_spi_update_cs() {
 }
 
 static bool xlnx_spi_update_irq() {
-  return false;
+  uint32_t pending;
+
+  nemu_set_irq(XLNX_SPI_IRQ_NO, 0);
+
+  xlnx_spi_regs[R_IPISR] |=
+      (!fifo_is_empty(spi_rx_fifo) ? IRQ_DRR_NOT_EMPTY
+                                   : 0) |
+      (fifo_is_full(spi_rx_fifo) ? IRQ_DRR_FULL : 0);
+
+  pending = xlnx_spi_regs[R_IPISR] & xlnx_spi_regs[R_IPIER];
+
+  pending = pending && xlnx_spi_regs[R_DGIER] & R_DGIER_IE;
+  pending = !!pending;
+
+  if (pending) nemu_set_irq(XLNX_SPI_IRQ_NO, 1);
+  return pending;
 }
 
 static void xlnx_spi_do_reset() {

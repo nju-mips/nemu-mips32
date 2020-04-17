@@ -13,7 +13,7 @@
 
 #define KiB 1024
 
-#define M25P80_ERR_DEBUG 1
+#define M25P80_ERR_DEBUG 0
 
 #define DB_PRINT_L(fmt, ...)                          \
   do {                                                \
@@ -160,8 +160,8 @@ typedef struct FlashPartInfo {
 #define WINBOND_CONTINUOUS_READ_MODE_CMD_LEN 1
 
 static const FlashPartInfo known_devices[] = {
-    {INFO("nemu512M", 0xc22640, 0, 64 << 10, 8192, ER_4K)},
-    {INFO("nemu1G", 0xc22641, 0, 64 << 10, 16384, ER_4K)},
+    {INFO("nemu512M", 0xc84040, 0, 64 << 10, 8192, ER_4K)},
+    {INFO("nemu1G", 0xc84041, 0, 64 << 10, 16384, ER_4K)},
 
     /* Atmel -- some are (confusingly) marketed as
        "DataFlash" */
@@ -1161,6 +1161,16 @@ static void flash_init(Flash *s) {
   s->pi = &known_devices[0];
   s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;
+
+  const int nr_devices =
+      sizeof(known_devices) / sizeof(*known_devices);
+  for (int i = 0; i < nr_devices; i++) {
+    if (strcmp(known_devices[i].part_name, "gd25q64") ==
+        0) {
+      s->pi = &known_devices[i];
+      s->size = s->pi->sector_size * s->pi->n_sectors;
+    }
+  }
 
   s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
