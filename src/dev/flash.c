@@ -162,6 +162,7 @@ typedef struct FlashPartInfo {
 static const FlashPartInfo known_devices[] = {
     {INFO("nemu512M", 0x20bb23, 0, 64 << 10, 8192, ER_4K)},
     {INFO("nemu1G", 0x20bb24, 0, 64 << 10, 16384, ER_4K)},
+    {INFO("nemu2G", 0x20bb25, 0, 64 << 10, 32768, ER_4K)},
 
     /* Atmel -- some are (confusingly) marketed as
        "DataFlash" */
