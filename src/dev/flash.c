@@ -1159,25 +1159,36 @@ static void flash_init(Flash *s) {
   /* FIXME:
    *   drivers/spi/xilinx_spi.c: xilinx_spi_startup_block
    * */
-  s->pi = &known_devices[0];
-  s->size = s->pi->sector_size * s->pi->n_sectors;
   s->dirty_page = -1;
 
-#if 0
+  if (s->blkio_file && access(s->blkio_file, F_OK) != 0) {
+    panic("file %s does not exist\n", s->blkio_file);
+  }
+
+  uint64_t blkio_size = 0;
+  if (s->blkio_file) {
+    blkio_size = get_file_size(s->blkio_file);
+  }
+
+  bool found = false;
   const int nr_devices =
       sizeof(known_devices) / sizeof(*known_devices);
   for (int i = 0; i < nr_devices; i++) {
-    if (strcmp(known_devices[i].part_name, "gd25q64") ==
-        0) {
-      s->pi = &known_devices[i];
-      s->size = s->pi->sector_size * s->pi->n_sectors;
+    s->pi = &known_devices[i];
+    s->size = s->pi->sector_size * s->pi->n_sectors;
+    if (s->size >= blkio_size) {
+      found = true;
+      break;
     }
   }
-#endif
+
+  if (!found) {
+    panic("blkio file %s is too large\n", s->blkio_file);
+    return;
+  }
 
   s->storage = malloc(s->size);
   memset(s->storage, 0xFF, s->size);
-
   if (s->blkio_file) {
     int fd = open(s->blkio_file, O_RDONLY);
     int size = get_file_size(s->blkio_file);
