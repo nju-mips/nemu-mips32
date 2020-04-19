@@ -51,13 +51,13 @@ enum {
 #endif
 
 #if CONFIG_EXCEPTION
-#  define InstAssert(cond)                               \
-    do {                                                 \
-      if (!(cond)) {                                     \
-        cpu.cp0.badvaddr = cpu.pc;                       \
-        launch_exception(EXC_RI);                        \
-        goto exit;                                       \
-      }                                                  \
+#  define InstAssert(cond)         \
+    do {                           \
+      if (!(cond)) {               \
+        cpu.cp0.badvaddr = cpu.pc; \
+        launch_exception(EXC_RI);  \
+        goto exit;                 \
+      }                            \
     } while (0)
 #else
 #  define InstAssert(cond) assert(cond)
@@ -1474,9 +1474,9 @@ make_exec_handler(add_s) {
       *(float *)&cpu.fpr[operands->ft];
 }
 make_exec_handler(add_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs] +
-      *(double *)&cpu.fpr[operands->ft];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      *(double *)&cpu.fpr[operands->fs & ~1] +
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 make_exec_handler(sub_s) {
   *(float *)&cpu.fpr[operands->fd] =
@@ -1484,9 +1484,9 @@ make_exec_handler(sub_s) {
       *(float *)&cpu.fpr[operands->ft];
 }
 make_exec_handler(sub_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs] -
-      *(double *)&cpu.fpr[operands->ft];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      *(double *)&cpu.fpr[operands->fs & ~1] -
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 make_exec_handler(mul_s) {
   *(float *)&cpu.fpr[operands->fd] =
@@ -1494,9 +1494,9 @@ make_exec_handler(mul_s) {
       *(float *)&cpu.fpr[operands->ft];
 }
 make_exec_handler(mul_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs] *
-      *(double *)&cpu.fpr[operands->ft];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      *(double *)&cpu.fpr[operands->fs & ~1] *
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 make_exec_handler(div_s) {
   *(float *)&cpu.fpr[operands->fd] =
@@ -1504,9 +1504,9 @@ make_exec_handler(div_s) {
       *(float *)&cpu.fpr[operands->ft];
 }
 make_exec_handler(div_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs] /
-      *(double *)&cpu.fpr[operands->ft];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      *(double *)&cpu.fpr[operands->fs & ~1] /
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 
 make_exec_handler(sqrt_s) {
@@ -1514,8 +1514,8 @@ make_exec_handler(sqrt_s) {
       sqrtf(*(float *)&cpu.fpr[operands->fs]);
 }
 make_exec_handler(sqrt_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      sqrt(*(double *)&cpu.fpr[operands->fs]);
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      sqrt(*(double *)&cpu.fpr[operands->fs & ~1]);
 }
 
 make_exec_handler(abs_s) {
@@ -1523,8 +1523,8 @@ make_exec_handler(abs_s) {
       fabsf(*(float *)&cpu.fpr[operands->fs]);
 }
 make_exec_handler(abs_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      fabs(*(double *)&cpu.fpr[operands->fs]);
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      fabs(*(double *)&cpu.fpr[operands->fs & ~1]);
 }
 
 make_exec_handler(mov_s) {
@@ -1532,8 +1532,8 @@ make_exec_handler(mov_s) {
       *(float *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(mov_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      *(double *)&cpu.fpr[operands->fs & ~1];
 }
 
 make_exec_handler(neg_s) {
@@ -1541,8 +1541,8 @@ make_exec_handler(neg_s) {
       -*(float *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(neg_d) {
-  *(double *)&cpu.fpr[operands->fd] =
-      -*(double *)&cpu.fpr[operands->fs];
+  *(double *)&cpu.fpr[operands->fd & ~1] =
+      -*(double *)&cpu.fpr[operands->fs & ~1];
 }
 
 make_exec_handler(trunc_w_s) {
@@ -1551,7 +1551,7 @@ make_exec_handler(trunc_w_s) {
 }
 make_exec_handler(trunc_w_d) {
   cpu.fpr[operands->fd] =
-      (int32_t) * (double *)&cpu.fpr[operands->fs];
+      (int32_t) * (double *)&cpu.fpr[operands->fs & ~1];
 }
 
 make_exec_handler(movcf_s) {
@@ -1568,12 +1568,12 @@ make_exec_handler(movcf_s) {
 make_exec_handler(movcf_d) {
   if (operands->tf == 0) {
     if (cpu.fcc[operands->cc2] == 0)
-      *(double *)&cpu.fpr[operands->fd] =
-          *(double *)&cpu.fpr[operands->fs];
+      *(double *)&cpu.fpr[operands->fd & ~1] =
+          *(double *)&cpu.fpr[operands->fs & ~1];
   } else {
     if (cpu.fcc[operands->cc2] == 1)
-      *(double *)&cpu.fpr[operands->fd] =
-          *(double *)&cpu.fpr[operands->fs];
+      *(double *)&cpu.fpr[operands->fd & ~1] =
+          *(double *)&cpu.fpr[operands->fs & ~1];
   }
 }
 
@@ -1586,8 +1586,8 @@ make_exec_handler(movz_s) {
 
 make_exec_handler(movz_d) {
   if (cpu.gpr[operands->rt] == 0) {
-    *(double *)&cpu.fpr[operands->fd] =
-        *(double *)&cpu.fpr[operands->fs];
+    *(double *)&cpu.fpr[operands->fd & ~1] =
+        *(double *)&cpu.fpr[operands->fs & ~1];
   }
 }
 make_exec_handler(movn_s) {
@@ -1598,12 +1598,12 @@ make_exec_handler(movn_s) {
 }
 make_exec_handler(movn_d) {
   if (cpu.gpr[operands->rt] != 0) {
-    *(double *)&cpu.fpr[operands->fd] =
-        *(double *)&cpu.fpr[operands->fs];
+    *(double *)&cpu.fpr[operands->fd & ~1] =
+        *(double *)&cpu.fpr[operands->fs & ~1];
   }
 }
 make_exec_handler(cvt_d_s) {
-  *(double *)&cpu.fpr[operands->fd] =
+  *(double *)&cpu.fpr[operands->fd & ~1] =
       *(float *)&cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_w_s) {
@@ -1612,18 +1612,18 @@ make_exec_handler(cvt_w_s) {
 }
 make_exec_handler(cvt_s_d) {
   *(float *)&cpu.fpr[operands->fd] =
-      *(double *)&cpu.fpr[operands->fs];
+      *(double *)&cpu.fpr[operands->fs & ~1];
 }
 make_exec_handler(cvt_w_d) {
   cpu.fpr[operands->fd] =
-      (int32_t) * (double *)&cpu.fpr[operands->fs];
+      (int32_t) * (double *)&cpu.fpr[operands->fs & ~1];
 }
 make_exec_handler(cvt_s_w) {
   *(float *)&cpu.fpr[operands->fd] =
       (int32_t)cpu.fpr[operands->fs];
 }
 make_exec_handler(cvt_d_w) {
-  *(double *)&cpu.fpr[operands->fd] =
+  *(double *)&cpu.fpr[operands->fd & ~1] =
       (int32_t)cpu.fpr[operands->fs];
 }
 make_exec_handler(c_un_s) { InstAssert(0); }
@@ -1647,8 +1647,8 @@ make_exec_handler(c_lt_s) {
 }
 make_exec_handler(c_lt_d) {
   cpu.fcc[operands->cc1] =
-      *(double *)&cpu.fpr[operands->fs] <
-      *(double *)&cpu.fpr[operands->ft];
+      *(double *)&cpu.fpr[operands->fs & ~1] <
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 make_exec_handler(c_le_s) {
   cpu.fcc[operands->cc1] =
@@ -1657,8 +1657,8 @@ make_exec_handler(c_le_s) {
 }
 make_exec_handler(c_le_d) {
   cpu.fcc[operands->cc1] =
-      *(double *)&cpu.fpr[operands->fs] <=
-      *(double *)&cpu.fpr[operands->ft];
+      *(double *)&cpu.fpr[operands->fs & ~1] <=
+      *(double *)&cpu.fpr[operands->ft & ~1];
 }
 
 make_exec_handler(lwc1) {
@@ -1682,15 +1682,15 @@ make_exec_handler(ldc1) {
   uint32_t rdata_h = vaddr_read(
       cpu.gpr[operands->rs] + operands->simm + 4, 4);
   if (!cpu.has_exception) {
-    cpu.fpr[operands->rt] = rdata_l;
-    cpu.fpr[operands->rt + 1] = rdata_h;
+    cpu.fpr[operands->rt & ~1] = rdata_l;
+    cpu.fpr[operands->rt | 1] = rdata_h;
   }
 }
 
 make_exec_handler(sdc1) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
-  vaddr_write(waddr, 4, cpu.fpr[operands->ft]);
-  vaddr_write(waddr + 4, 4, cpu.fpr[operands->ft + 1]);
+  vaddr_write(waddr, 4, cpu.fpr[operands->ft & ~1]);
+  vaddr_write(waddr + 4, 4, cpu.fpr[operands->ft | 1]);
 }
 
 #if CONFIG_DELAYSLOT

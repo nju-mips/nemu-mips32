@@ -1,4 +1,4 @@
-mainmenu "This is an configure for nemu-mips32"
+mainmenu "This is a configure for nemu-mips32"
 
 choice
   prompt "Machine selection"
