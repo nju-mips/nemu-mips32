@@ -101,7 +101,7 @@ static const void *special2_table[64] = {
     /* 0x14 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x18 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x1c */ &&inv, &&inv, &&inv, &&inv,
-    /* 0x20 */ &&clz, &&inv, &&inv, &&inv,
+    /* 0x20 */ &&clz, &&clo, &&inv, &&inv,
     /* 0x24 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x28 */ &&inv, &&inv, &&inv, &&inv,
     /* 0x2c */ &&inv, &&inv, &&inv, &&inv,
@@ -823,6 +823,17 @@ make_exec_handler(clz) {
     cpu.gpr[operands->rd] =
         __builtin_clz(cpu.gpr[operands->rs]);
   }
+}
+
+make_exec_handler(clo) {
+  uint32_t in = cpu.gpr[operands->rs];
+  uint32_t cnt = 0;
+  uint32_t b = 0x80000000;
+  while ((in & b) != 0) {
+    cnt++;
+    b >>= 1;
+  }
+  cpu.gpr[operands->rd] = cnt;
 }
 
 make_exec_handler(madd) {

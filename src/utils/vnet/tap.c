@@ -27,7 +27,7 @@ int tap_create(char dev[IFNAMSIZ]) {
   ifr.ifr_flags =
       IFF_TAP | IFF_NO_PI | IFF_VNET_HDR | IFF_MULTI_QUEUE;
 
-  if (*dev) { strncpy(ifr.ifr_name, dev, IFNAMSIZ); }
+  if (dev && *dev) { memcpy(ifr.ifr_name, dev, IFNAMSIZ); }
 
   if ((err = ioctl(fd, TUNSETIFF, (void *)&ifr)) < 0) {
     close(fd);
