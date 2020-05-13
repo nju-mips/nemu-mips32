@@ -433,12 +433,12 @@ void cpu_exec(uint64_t n) {
 
 #include "instr.h"
 
+  check_exception:;
 #if CONFIG_INSTR_LOG
     if (nemu_needs_commit) print_registers();
 #endif
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
-  check_exception:;
     if (!cpu.has_exception) check_intrs(); /* soft intr */
 
     if (cpu.has_exception) {
