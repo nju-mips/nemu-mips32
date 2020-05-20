@@ -6,9 +6,9 @@
 #include "cpu/memory.h"
 #include "device.h"
 #include "monitor.h"
+#include "utils/console.h"
 #include "utils/elfsym.h"
 #include "utils/file.h"
-#include "utils/console.h"
 
 elfsym_t elfsym;
 const char *elf_file = NULL;
@@ -36,8 +36,9 @@ void load_elf() {
   /* set symbol file to elf_file */
   const uint32_t elf_magic = 0x464c457f;
 
+  int size = get_file_size(elf_file);
   void *buf = read_file(elf_file);
-  Assert(buf, "elf file '%s' cannot be opened for read\n",
+  Assert(buf, "file '%s' cannot be opened for read\n",
       elf_file);
 
   Elf32_Ehdr *elf = buf;
@@ -45,11 +46,18 @@ void load_elf() {
   elf_entry = elf->e_entry;
 
   uint32_t *p_magic = buf;
-  assert(*p_magic == elf_magic);
+  Assert(*p_magic == elf_magic, "wrong file format");
+  Assert(elf->e_ident[EI_CLASS] == ELFCLASS32,
+      "not a 32-bit elf file");
+  Assert(elf->e_ident[EI_DATA] == ELFDATA2LSB,
+      "not a little endian elf file");
+  Assert(elf->e_machine == EM_MIPS, "not a mips elf file");
 
   for (int i = 0; i < elf->e_phnum; i++) {
-    Elf32_Phdr *ph =
-        (void *)buf + i * elf->e_phentsize + elf->e_phoff;
+    int phdr_off = i * elf->e_phentsize + elf->e_phoff;
+    Elf32_Phdr *ph = (void *)buf + phdr_off;
+    Assert(phdr_off < size, "ELF32_Phdr out of file");
+    Assert(ph->p_offset < size, "ELF32_Ph out of file");
     if (ph->p_type != PT_LOAD) { continue; }
 
     void *ptr = vaddr_map(ph->p_vaddr, ph->p_memsz);
