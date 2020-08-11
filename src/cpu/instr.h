@@ -570,7 +570,7 @@ make_exec_handler(mtc0) {
       clear_decode_cache();
       clear_mmu_cache();
     }
-    cpu.cp0.status.CU = newVal->CU;
+    cpu.cp0.status.CU = newVal->CU & 0x3;
     cpu.cp0.status.RP = newVal->RP;
     cpu.cp0.status.RE = newVal->RE;
     cpu.cp0.status.BEV = newVal->BEV;
