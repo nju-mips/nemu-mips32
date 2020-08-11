@@ -99,6 +99,7 @@ enum {
   OPT_FIFO_DATA,
   OPT_DIFF_TEST,
   OPT_BOOT_CMDLINE,
+  OPT_PRINT_DEVICES,
 };
 
 const struct option long_options[] = {
@@ -115,6 +116,7 @@ const struct option long_options[] = {
     {"fifo-data", 1, NULL, OPT_FIFO_DATA},
     {"diff-test", 0, NULL, OPT_DIFF_TEST},
     {"cmdline", 1, NULL, OPT_BOOT_CMDLINE},
+    {"print-devices", 0, NULL, OPT_PRINT_DEVICES},
     {NULL, 0, NULL, 0},
 };
 
@@ -124,12 +126,15 @@ static void print_help(const char *file) {
       "\n\
   -b, --batch                run with batch mode\n\
   -c, --commit               commit all executed instructions\n\
-  -d, --diff                 diff with qemu\n\
   -e, --elf=FILE             run with this elf file\n\
   -i, --image=FILE           run with this image file\n\
-  -s, --symbol=FILE          file to provide symbols, default elf\n\
-  --fifo-data dev:FILE       initialize fifo dev data with FILE\n\
+  -S, --symbol=FILE          file to provide symbols, default elf\n\
+  --blkio-file dev:FILE      map given file to corresponding device\n\
   --block-data dev:addr:FILE initialize block dev data with FILE\n\
+  --fifo-data dev:FILE       initialize fifo dev data with FILE\n\
+  --diff-test                differential testing with QEMU\n\
+  --cmdline                  pass cmdline to linux kernel\n\
+  --print-devices            print available devices\n\
   \n\
   -h, --help                 print program help info\n\
 \n\
@@ -258,6 +263,23 @@ void parse_args(int argc, char *argv[]) {
     case OPT_DIFF_TEST: work_mode |= MODE_DIFF; break;
 #endif
     case OPT_BOOT_CMDLINE: boot_cmdline = optarg; break;
+    case OPT_PRINT_DEVICES:
+      for (const device_t *dev = get_device_list_head();
+           dev; dev = dev->next) {
+        printf(
+            "name: %15s, addr space: [0x%08x, 0x%08x] "
+            "%s%s%s%s%s%s%s%s\n",
+            dev->name, dev->start,
+            dev->start + dev->size, dev->read ? "+R" : "",
+            dev->write ? "+W" : "", dev->map ? "+M" : "",
+            dev->peek ? "+P" : "",
+            dev->set_fifo_data ? "+Sf" : "",
+            dev->set_block_data ? "+Sb" : "",
+            dev->set_blkio_file ? "+Bf" : "",
+            dev->update_irq ? "+Uirq" : "");
+      }
+      exit(0);
+      break;
     case 'h':
     default: print_help(argv[0]); exit(0);
     }
