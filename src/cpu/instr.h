@@ -1688,10 +1688,11 @@ make_exec_handler(swc1) {
 make_exec_handler(ldc1) {
   CHECK_ALIGNED_ADDR_AdEL(
       4, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata_l =
-      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
-  uint32_t rdata_h = vaddr_read(
-      cpu.gpr[operands->rs] + operands->simm + 4, 4);
+  uint32_t raddr = cpu.gpr[operands->rs] + operands->simm;
+  CHECK_ALIGNED_ADDR_AdEL(8, raddr);
+
+  uint32_t rdata_l = vaddr_read(raddr, 4);
+  uint32_t rdata_h = vaddr_read(raddr + 4, 4);
   if (!cpu.has_exception) {
     cpu.fpr[operands->rt & ~1] = rdata_l;
     cpu.fpr[operands->rt | 1] = rdata_h;
@@ -1700,6 +1701,7 @@ make_exec_handler(ldc1) {
 
 make_exec_handler(sdc1) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
+  CHECK_ALIGNED_ADDR_AdES(8, waddr);
   vaddr_write(waddr, 4, cpu.fpr[operands->ft & ~1]);
   vaddr_write(waddr + 4, 4, cpu.fpr[operands->ft | 1]);
 }
