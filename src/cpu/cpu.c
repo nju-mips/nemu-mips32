@@ -15,6 +15,7 @@
 #include "device.h"
 #include "monitor.h"
 #include "utils/elfsym.h"
+#include "softfloat/softfloat.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 

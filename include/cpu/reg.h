@@ -279,7 +279,10 @@ typedef struct {
   bool is_syscall;
 #endif
 
-  uint32_t fpr[32];
+  union {
+    uint32_t fpr32[32];
+    uint64_t fpr64[16];
+  };
   uint32_t fcc[8];
 } CPU_state;
 
