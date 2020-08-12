@@ -261,6 +261,42 @@ enum {
 };
 /* clang-format on */
 
+/* ref:http://www.jaist.ac.jp/iscenter-new/mpc/old-machines/altix3700/opt/toolworks/totalview.6.3.0-1/doc/html/ref_guide/MIPSFCSRRegister.html,
+ * shit MIPS_Volume 3 */
+typedef union {
+  struct {
+    uint32_t RM : 2;      /* rounding mode
+                           * 0: round to nearest
+                           * 1: round toward zero
+                           * 2: round toward positive infinity
+                           * 2: round toward negative infinity */
+    uint32_t flags : 5;   /* flags
+                           * 1 << 0, inexact result
+                           * 1 << 1, underflow
+                           * 1 << 2, overflow
+                           * 1 << 3, divide by zero
+                           * 1 << 4, invalid operation */
+    uint32_t enables : 5; /* enables
+                           * 1 << 0, inexact result
+                           * 1 << 1, underflow
+                           * 1 << 2, overflow
+                           * 1 << 3, divide by zero
+                           * 1 << 4, invalid operation */
+    uint32_t causes : 6;  /* causes
+                           * 1 << 0, inexact result
+                           * 1 << 1, underflow
+                           * 1 << 2, overflow
+                           * 1 << 3, divide by zero
+                           * 1 << 4, invalid operation
+                           * 1 << 5, unimplemented */
+    uint32_t : 5;
+    uint32_t fcc0 : 1;   /* FPU condition code 0 */
+    uint32_t fs : 1;     /* flush to zero */
+    uint32_t fcc1_7 : 7; /* FPU condition code 1..7 */
+  };
+  uint32_t val;
+} fcsr_t;
+
 typedef struct {
   uint32_t gpr[32];
   uint32_t hi, lo;
@@ -284,6 +320,7 @@ typedef struct {
     uint64_t fpr64[16];
   };
   uint32_t fcc[8];
+  fcsr_t fcsr;
 } CPU_state;
 
 #define CAUSE_IP_TIMER 0x80
