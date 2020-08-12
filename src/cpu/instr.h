@@ -1451,26 +1451,26 @@ make_exec_handler(mfc1) {
 }
 make_exec_handler(cfc1) { InstAssert(0); }
 make_exec_handler(mfhc1) {
-  cpu.gpr[operands->rt] = cpu.fpr32[operands->fs + 1];
+  cpu.gpr[operands->rt] = cpu.fpr32[operands->fs | 1];
 }
 make_exec_handler(mtc1) {
   cpu.fpr32[operands->fs] = cpu.gpr[operands->rt];
 }
 make_exec_handler(ctc1) { InstAssert(0); }
 make_exec_handler(mthc1) {
-  cpu.fpr32[operands->fs + 1] = cpu.gpr[operands->rt];
+  cpu.fpr32[operands->fs | 1] = cpu.gpr[operands->rt];
 }
 make_exec_handler(bc1) {
   InstAssert(operands->nd == 0);
   if (operands->tf == 0) {
     /* bc1f */
-    if (cpu.fcc[operands->cc2] == 0)
+    if (getFPCondCode(operands->cc2) == 0)
       cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
     else
       cpu.br_target = cpu.pc + 8;
   } else if (operands->tf == 1) {
     /* bc1t */
-    if (cpu.fcc[operands->cc2] == 1)
+    if (getFPCondCode(operands->cc2) == 1)
       cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
     else
       cpu.br_target = cpu.pc + 8;
@@ -1577,39 +1577,25 @@ make_exec_handler(trunc_w_d) {
 }
 
 make_exec_handler(movcf_s) {
-  if (operands->tf == 0) {
-    if (cpu.fcc[operands->cc2] == 0)
-      *(float *)&cpu.fpr32[operands->fd] =
-          *(float *)&cpu.fpr32[operands->fs];
-  } else {
-    if (cpu.fcc[operands->cc2] == 1)
-      *(float *)&cpu.fpr32[operands->fd] =
-          *(float *)&cpu.fpr32[operands->fs];
+  if (getFPCondCode(operands->cc2) == 0) {
+    cpu.fpr32[operands->fd] = cpu.fpr32[operands->fs];
   }
 }
 make_exec_handler(movcf_d) {
-  if (operands->tf == 0) {
-    if (cpu.fcc[operands->cc2] == 0)
-      *(double *)&cpu.fpr32[operands->fd & ~1] =
-          *(double *)&cpu.fpr32[operands->fs & ~1];
-  } else {
-    if (cpu.fcc[operands->cc2] == 1)
-      *(double *)&cpu.fpr32[operands->fd & ~1] =
-          *(double *)&cpu.fpr32[operands->fs & ~1];
+  if (getFPCondCode(operands->cc2) == 0) {
+    cpu.fpr64[operands->fd64] = cpu.fpr32[operands->fs64];
   }
 }
 
 make_exec_handler(movz_s) {
   if (cpu.gpr[operands->rt] == 0) {
-    *(float *)&cpu.fpr32[operands->fd] =
-        *(float *)&cpu.fpr32[operands->fs];
+    cpu.fpr32[operands->fd] = cpu.fpr32[operands->fs];
   }
 }
 
 make_exec_handler(movz_d) {
   if (cpu.gpr[operands->rt] == 0) {
-    *(double *)&cpu.fpr32[operands->fd & ~1] =
-        *(double *)&cpu.fpr32[operands->fs & ~1];
+    cpu.fpr64[operands->fd64] = cpu.fpr64[operands->fs64];
   }
 }
 make_exec_handler(movn_s) {
@@ -1663,24 +1649,24 @@ make_exec_handler(c_ole_d) { InstAssert(0); }
 make_exec_handler(c_ule_s) { InstAssert(0); }
 make_exec_handler(c_ule_d) { InstAssert(0); }
 make_exec_handler(c_lt_s) {
-  cpu.fcc[operands->cc1] =
+  setFPCondCode(operands->cc1,
       *(float *)&cpu.fpr32[operands->fs] <
-      *(float *)&cpu.fpr32[operands->ft];
+          *(float *)&cpu.fpr32[operands->ft]);
 }
 make_exec_handler(c_lt_d) {
-  cpu.fcc[operands->cc1] =
+  setFPCondCode(operands->cc1,
       *(double *)&cpu.fpr32[operands->fs & ~1] <
-      *(double *)&cpu.fpr32[operands->ft & ~1];
+          *(double *)&cpu.fpr32[operands->ft & ~1]);
 }
 make_exec_handler(c_le_s) {
-  cpu.fcc[operands->cc1] =
+  setFPCondCode(operands->cc1,
       *(float *)&cpu.fpr32[operands->fs] <=
-      *(float *)&cpu.fpr32[operands->ft];
+          *(float *)&cpu.fpr32[operands->ft]);
 }
 make_exec_handler(c_le_d) {
-  cpu.fcc[operands->cc1] =
+  setFPCondCode(operands->cc1,
       *(double *)&cpu.fpr32[operands->fs & ~1] <=
-      *(double *)&cpu.fpr32[operands->ft & ~1];
+          *(double *)&cpu.fpr32[operands->ft & ~1]);
 }
 
 make_exec_handler(lwc1) {

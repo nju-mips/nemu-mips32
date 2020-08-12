@@ -58,8 +58,6 @@
  *   Cache Size:   I:128-64B-direct, D:256-64B-direct
  */
 
-#define __ glue(__, __LINE__)
-
 typedef struct {
   uint32_t IE : 1;
   uint32_t EXL : 1;
@@ -74,7 +72,7 @@ typedef struct {
   uint32_t IM : 8;
 
   uint32_t Impl : 2;
-  uint32_t __ : 1;
+  uint32_t : 1;
   uint32_t NMI : 1;
   uint32_t SR : 1;
   uint32_t TS : 1;
@@ -90,16 +88,16 @@ typedef struct {
 } cp0_status_t;
 
 typedef struct {
-  uint32_t __ : 2;
+  uint32_t : 2;
   uint32_t ExcCode : 5;
-  uint32_t __ : 1;
+  uint32_t : 1;
   uint32_t IP : 8;
 
-  uint32_t __ : 6;
+  uint32_t : 6;
   uint32_t WP : 1;
   uint32_t IV : 1;
 
-  uint32_t __ : 2;
+  uint32_t : 2;
   uint32_t PCI : 1;
   uint32_t DC : 1;
   uint32_t CE : 2;
@@ -116,7 +114,7 @@ typedef struct {
 
 typedef struct {
   uint32_t K0 : 3; // kseg0 coherency algorithms
-  uint32_t __ : 4; // must be zero
+  uint32_t : 4;    // must be zero
   uint32_t MT : 3; // MMU type
                    // 0 for none
                    // 1 for standard TLB
@@ -170,9 +168,9 @@ typedef struct {
 } cp0_config1_t;
 
 typedef struct {
-  uint32_t __ : 13;
+  uint32_t : 13;
   uint32_t mask : 16;
-  uint32_t __ : 3;
+  uint32_t : 3;
 } cp0_pagemask_t;
 
 #define PABITS 32
@@ -180,7 +178,7 @@ typedef struct {
 // only 4KB page is supported
 typedef struct {
   uint32_t asid : 8;
-  uint32_t __ : 5;
+  uint32_t : 5;
   uint32_t vpn : 19;
 } cp0_entry_hi_t;
 
@@ -191,14 +189,14 @@ typedef struct {
   uint32_t c : 3;
   /* uint32_t pfn : 24; */
   uint32_t pfn : (PABITS - 12);
-  uint32_t __ : (36 - PABITS);
-  uint32_t __ : 2;
+  uint32_t : (36 - PABITS);
+  uint32_t : 2;
 } cp0_entry_lo_t;
 
 typedef struct {
-  uint32_t __ : 13;
+  uint32_t : 13;
   uint32_t mask : 16;
-  uint32_t __ : 3;
+  uint32_t : 3;
 } cp0_page_mask_t;
 
 typedef uint32_t cp0_wired_t;
@@ -207,20 +205,21 @@ typedef uint32_t cp0_wired_t;
 #define NR_TLB_ENTRY (1 << TLB_BITS)
 
 typedef struct {
-  uint32_t __ : 4;
+  uint32_t : 4;
   uint32_t BadVPN2 : 19;
   uint32_t PTEBase : 9;
 } cp0_context_t;
 
 typedef struct {
   uint32_t idx : TLB_BITS;
-  uint32_t __ : (32 - 1 - TLB_BITS);
+  uint32_t : (32 - 1 - TLB_BITS);
   uint32_t p : 1;
 } cp0_index_t;
 
 typedef union {
   uint32_t cpr[32][8];
 
+#define __ glue(__, __LINE__)
   /* clang-format off */
   struct {
 	struct { cp0_index_t index;         uint32_t __[7]; };
@@ -243,10 +242,9 @@ typedef union {
 	struct { cp0_config_t config;
 	         cp0_config1_t config1;     uint32_t __[6]; };
   };
+#undef __
   /* clang-format on */
 } cp0_t;
-
-#undef __
 
 /* clang-format off */
 enum {
@@ -319,9 +317,28 @@ typedef struct {
     uint32_t fpr32[32];
     uint64_t fpr64[16];
   };
-  uint32_t fcc[8];
   fcsr_t fcsr;
 } CPU_state;
+
+static inline bool getFPCondCode(uint8_t cc) {
+  extern CPU_state cpu;
+  if (cc == 0)
+    return cpu.fcsr.fcc0;
+  else if (cc < 8)
+    return (cpu.fcsr.fcc1_7 >> (cc - 1)) & 1;
+  abort();
+}
+
+static inline void setFPCondCode(uint8_t cc, bool v) {
+  extern CPU_state cpu;
+  if (cc == 0)
+    cpu.fcsr.fcc0 = v;
+  else if (cc < 8) {
+    uint8_t mask = ~(1 << (cc - 1));
+    cpu.fcsr.fcc1_7 =
+        (cpu.fcsr.fcc1_7 & mask) | (v << (cc - 1));
+  }
+}
 
 #define CAUSE_IP_TIMER 0x80
 
@@ -385,24 +402,36 @@ typedef struct {
 
     // FPU
     struct {
-      uint32_t _1 : 6;
+      uint32_t : 6;
       uint32_t fd : 5;
       uint32_t fs : 5;
       uint32_t ft : 5;
       uint32_t fmt : 5;
-      uint32_t _2 : 6;
+      uint32_t : 6;
+    };
+
+    struct {
+      uint32_t : 6;
+      uint32_t : 1;
+      uint32_t fd64 : 4;
+      uint32_t : 1;
+      uint32_t fs64 : 4;
+      uint32_t : 1;
+      uint32_t ft64 : 4;
+      uint32_t : 5;
+      uint32_t : 6;
     };
 
     struct {
       uint32_t cond : 4;
       uint32_t fc : 2;
       uint32_t A0 : 1;
-      uint32_t _3 : 1;
+      uint32_t : 1;
       uint32_t cc1 : 3;
     };
 
     struct {
-      uint32_t _4 : 16;
+      uint32_t : 16;
       uint32_t tf : 1;
       uint32_t nd : 1;
       uint32_t cc2 : 3;
