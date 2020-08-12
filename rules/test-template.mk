@@ -33,7 +33,10 @@ $$($(2)_ORIG_APP): $$($(2)_DEPS)
 compile-$(2): $$($(2)_ORIG_APP)
 
 run-$(2): $$($(2)_ORIG_APP)
-	@build/nemu -b -e $<
+	@build/nemu -b -e $$<
+
+diff-$(2): $$($(2)_ORIG_APP)
+	@build/nemu --diff-test -b -e $$<
 
 clean-$(2):
 	make -s -C $(1) ARCH=$(ARCH) $(5) clean
