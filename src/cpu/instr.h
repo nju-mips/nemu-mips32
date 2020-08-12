@@ -1540,8 +1540,8 @@ make_exec_handler(sqrt_d) {
 }
 
 make_exec_handler(abs_s) {
-  cpu.fpr32[operands->fd] = float32_val(float32_abs(
-      make_float32(cpu.fpr32[operands->fs])));
+  cpu.fpr32[operands->fd] = float32_val(
+      float32_abs(make_float32(cpu.fpr32[operands->fs])));
 }
 make_exec_handler(abs_d) {
   cpu.fpr64[operands->fd >> 1] = float64_val(float64_abs(
@@ -1552,23 +1552,28 @@ make_exec_handler(mov_s) {
   cpu.fpr32[operands->fd] = cpu.fpr32[operands->fs];
 }
 make_exec_handler(mov_d) {
-  cpu.fpr64[operands->fd >> 1] = cpu.fpr64[operands->fs >> 1];
+  cpu.fpr64[operands->fd >> 1] =
+      cpu.fpr64[operands->fs >> 1];
 }
 
 make_exec_handler(neg_s) {
-  cpu.fpr32[operands->fd] = cpu.fpr32[operands->fs] ^ (1u << 31);
+  cpu.fpr32[operands->fd] =
+      cpu.fpr32[operands->fs] ^ (1u << 31);
 }
 make_exec_handler(neg_d) {
-  cpu.fpr64[operands->fd >> 1] = cpu.fpr64[operands->fs >> 1] ^ (1ull << 63);
+  cpu.fpr64[operands->fd >> 1] =
+      cpu.fpr64[operands->fs >> 1] ^ (1ull << 63);
 }
 
 make_exec_handler(trunc_w_s) {
-  cpu.fpr32[operands->fd] =
-      (int32_t) * (float *)&cpu.fpr32[operands->fs];
+  float_status status = {};
+  cpu.fpr32[operands->fd] = float32_val(float32_to_int32(
+      make_float32(cpu.fpr32[operands->fs]), &status));
 }
 make_exec_handler(trunc_w_d) {
-  cpu.fpr32[operands->fd] =
-      (int32_t) * (double *)&cpu.fpr32[operands->fs & ~1];
+  float_status status = {};
+  cpu.fpr32[operands->fd] = float32_val(float64_to_int32(
+      make_float64(cpu.fpr64[operands->fs >> 1]), &status));
 }
 
 make_exec_handler(movcf_s) {
