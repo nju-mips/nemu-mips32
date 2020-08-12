@@ -53,6 +53,14 @@ $(OBJ_DIR)/%.o: src/%.c Makefile
 # Depencies
 -include $(OBJS:.o=.d)
 
+# for testing
+export AM_HOME        = $(PWD)/../nexus-am
+export LINUX_HOME     = $(PWD)/../linux
+export U_BOOT_HOME    = $(PWD)/../u-boot
+export MIPS_TEST_HOME = $(PWD)/../mipstest
+export ARCH = mips32-npc
+include rules/testcases.mk
+
 # Some convinient rules
 
 .PHONY: app clean

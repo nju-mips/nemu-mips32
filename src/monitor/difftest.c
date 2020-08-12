@@ -153,7 +153,7 @@ void difftest_start_qemu(int port, int ppid) {
 
 void __attribute__((noinline))
 difftest_finish_qemu(qemu_conn_t *conn) {
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < 2; i++) {
     qemu_regs_t regs = {0};
     qemu_single_step(conn);
     qemu_getregs(conn, &regs);
