@@ -315,8 +315,10 @@ typedef struct {
 #endif
 
   union {
-    uint32_t fpr32[32];
-    uint64_t fpr64[16];
+    uint32_t fpr32i[32];
+    float fpr32f[32];
+    uint64_t fpr64i[16];
+    double fpr64f[16];
   };
   fcsr_t fcsr;
 } CPU_state;
