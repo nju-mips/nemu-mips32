@@ -74,7 +74,7 @@ typedef union {
 /* clang-format off */
 /* R-type */
 static const void *special_table[64] = {
-    /* 0x00 */ &&sll, &&inv, &&srl, &&sra,
+    /* 0x00 */ &&sll, &&movci, &&srl, &&sra,
     /* 0x04 */ &&sllv, &&inv, &&srlv, &&srav,
     /* 0x08 */ &&jr, &&jalr, &&movz, &&movn,
     /* 0x0c */ &&syscall, &&breakpoint, &&inv, &&sync,
@@ -1592,6 +1592,18 @@ make_exec_handler(trunc_w_d) {
   float_status status = {};
   cpu.fpr32[operands->fd] = float32_val(float64_to_int32(
       make_float64(cpu.fpr64[operands->fs >> 1]), &status));
+}
+
+make_exec_handler(movci) {
+  if (operands->tf == 0) {
+    /* movf */
+    if (getFPCondCode(operands->cc2) == 0)
+      cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+  } else if (operands->tf == 1) {
+    /* movt */
+    if (getFPCondCode(operands->cc2) == 1)
+      cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+  }
 }
 
 make_exec_handler(movcf_s) {
