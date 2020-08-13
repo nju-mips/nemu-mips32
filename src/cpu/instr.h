@@ -1456,7 +1456,25 @@ make_exec_handler(mfhc1) {
 make_exec_handler(mtc1) {
   cpu.fpr32[operands->fs] = cpu.gpr[operands->rt];
 }
-make_exec_handler(ctc1) { InstAssert(0); }
+make_exec_handler(ctc1) {
+  /* copy a word to fpu control register */
+  uint32_t fs = operands->fs;
+  uint32_t rt_val = cpu.gpr[operands->rt];
+  fcsr_t *rt = (fcsr_t *)&rt_val;
+  if (fs == 25) {
+    cpu.fcsr.fcc0 = rt_val & 0x1;
+    cpu.fcsr.fcc1_7 = (rt_val >> 1) & 0x7F;
+  } else if (fs == 26) {
+    cpu.fcsr.flags = rt->flags;
+    cpu.fcsr.causes = rt->causes;
+  } else if (fs == 28) {
+    cpu.fcsr.RM = rt->RM;
+    cpu.fcsr.enables = rt->enables;
+    cpu.fcsr.fs = (rt_val & 0x4) >> 2;
+  } else if (fs == 31) {
+    cpu.fcsr.val = rt_val;
+  }
+}
 make_exec_handler(mthc1) {
   cpu.fpr32[operands->fs | 1] = cpu.gpr[operands->rt];
 }
