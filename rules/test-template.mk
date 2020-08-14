@@ -20,7 +20,7 @@ endif
 ifeq ($(4),!)
 $(2)_DEPS :=
 else
-$(2)_DEPS != find $(1) -regex ".*\.\(c\|h\|cc\|cpp\|S\)"
+$(2)_DEPS != find $(1) -regex ".*\.\(c\|h\|cc\|cpp\|S\)" &> /dev/null
 endif
 
 $(2)_ELF  := $$($(2)_OBJDIR)/$(2).elf

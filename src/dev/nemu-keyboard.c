@@ -3,6 +3,7 @@
 
 #include "device.h"
 #include "utils/file.h"
+#include "utils/sdlkey.h"
 
 #define NEMU_KEYBOARD_CODE 0x0
 #define NEMU_KEYBOARD_STAT 0x4

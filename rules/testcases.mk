@@ -7,11 +7,11 @@ else
 export INPUT ?= TEST
 endif
 
-AM_TESTS   != ls $(AM_HOME)/tests
+AM_TESTS   != ls $(AM_HOME)/tests 2> /dev/null
 AM_TESTS   := $(filter-out cputest,$(AM_TESTS))
-AM_APPS    != ls $(AM_HOME)/apps
-MIPS_TESTS != ls $(MIPS_TEST_HOME)
-CPUTESTS   != find $(AM_HOME)/tests/cputest -name "*.c"
+AM_APPS    != ls $(AM_HOME)/apps 2> /dev/null
+MIPS_TESTS != ls $(MIPS_TEST_HOME) 2> /dev/null
+CPUTESTS   != find $(AM_HOME)/tests/cputest -name "*.c" 2> /dev/null
 CPUTESTS   := $(basename $(notdir $(CPUTESTS)))
 
 # AM apps

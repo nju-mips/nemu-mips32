@@ -1,4 +1,3 @@
-#include <SDL/SDL.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -7,14 +6,21 @@
 #include "device.h"
 #include "utils/console.h"
 
+#if CONFIG_GRAPHICS
+#include <SDL/SDL.h>
+
 SDL_Surface *screen;
+#endif
+
 static struct itimerval it;
 
 void update_irq(int signum) {
+#if CONFIG_GRAPHICS
   SDL_Event evt = {0};
   int cnt = SDL_PeepEvents(
       &evt, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_QUIT));
   if (cnt > 0) nemu_exit();
+#endif
 
 #if CONFIG_INTR
   for (device_t *dev = get_device_list_head(); dev;
@@ -44,6 +50,7 @@ void init_timer() {
 }
 
 void init_sdl() {
+#if CONFIG_GRAPHICS
   /* sdl */
   int ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
   Assert(ret == 0, "SDL_Init failed");
@@ -52,12 +59,12 @@ void init_sdl() {
   SDL_WM_SetCaption("NEMU-MIPS32", NULL);
   SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY,
       SDL_DEFAULT_REPEAT_INTERVAL);
+#endif
 }
 
 void init_events() {
-#if CONFIG_GRAPHICS
   init_sdl();
-#endif
+
   init_console();
 
   init_timer();

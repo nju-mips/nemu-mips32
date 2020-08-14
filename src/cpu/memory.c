@@ -1,7 +1,6 @@
 #include "device.h"
 #include "cpu/memory.h"
 
-#include <SDL/SDL.h>
 #include <stdlib.h>
 
 void clear_decode_cache();

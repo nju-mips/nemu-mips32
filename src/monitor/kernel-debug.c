@@ -501,6 +501,7 @@ void dump_syscall(uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2) {
   fflush(stdout);
 }
 
+#if 0
 static void *handler = NULL;
 
 static CPU_state(*s_cpu);
@@ -561,3 +562,4 @@ void diff_with_nemu() {
       assert(0);
     }
 }
+#endif

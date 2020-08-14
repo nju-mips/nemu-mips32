@@ -22,11 +22,12 @@ CFLAGS   += -include include/generated/autoconf.h
 # Files to be compiled
 SRCS = $(shell find src/ -name "*.c")
 
-libs-y += src/cpu/
-libs-y += src/monitor/
-libs-y += src/utils/
+dirs-y += src/cpu/
+dirs-y += src/monitor/
+dirs-y += src/utils/
+sdl-cfiles += src/utils/sdlkey.c
 
-cfiles-y += $(shell find $(libs-y) -name "*.c")
+cfiles-y += $(filter-out $(sdl-cfiles),$(shell find $(dirs-y) -name "*.c"))
 cfiles-y += src/main.c
 cfiles-y += src/dev/events.c
 cfiles-y += src/dev/register.c
@@ -42,6 +43,9 @@ cfiles-$(CONFIG_NEMU_VGA) += src/dev/nemu-vga.c
 cfiles-$(CONFIG_XLNX_ULITE) += src/dev/xlnx-ulite.c
 cfiles-$(CONFIG_XLNX_SPI) += src/dev/xlnx-spi.c
 
+cfiles-$(CONFIG_GRAPHICS) += $(sdl-cfiles)
+libs-$(CONFIG_GRAPHICS) += -lSDL
+
 OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 
 # Compilation patterns
@@ -53,14 +57,6 @@ $(OBJ_DIR)/%.o: src/%.c Makefile
 # Depencies
 -include $(OBJS:.o=.d)
 
-# for testing
-export AM_HOME        = $(PWD)/../nexus-am
-export LINUX_HOME     = $(PWD)/../linux
-export U_BOOT_HOME    = $(PWD)/../u-boot
-export MIPS_TEST_HOME = $(PWD)/../mipstest
-export ARCH = mips32-npc
-include rules/testcases.mk
-
 # Some convinient rules
 
 .PHONY: app clean
@@ -68,7 +64,7 @@ app: $(BINARY) $(SHARED)
 
 $(BINARY): $(OBJS)
 	@echo + LD $@
-	@$(LD) -O2 -o $@ $^ -lSDL -lreadline -ldl -lm
+	@$(LD) -O2 -o $@ $^ $(libs-y)
 
 $(SHARED): $(OBJS)
 	@echo + AR $@
@@ -77,3 +73,12 @@ $(SHARED): $(OBJS)
 clean: 
 	rm -rf $(BUILD_DIR) perf.*
 	rm -rf include/generated include/config
+	make -s -C kconfig clean
+
+# for testing
+export AM_HOME        = $(PWD)/../nexus-am
+export LINUX_HOME     = $(PWD)/../linux
+export U_BOOT_HOME    = $(PWD)/../u-boot
+export MIPS_TEST_HOME = $(PWD)/../mipstest
+export ARCH = mips32-npc
+include rules/testcases.mk

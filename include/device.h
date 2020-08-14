@@ -1,7 +1,6 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-#include <SDL/SDL.h>
 #include <stdbool.h>
 #include <stdint.h>
 
