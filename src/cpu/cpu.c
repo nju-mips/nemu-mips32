@@ -202,9 +202,10 @@ void launch_exception(uint32_t exception) {
   int code = exception & 0xFFFF;
   int extra = exception >> 16;
 
-  if (code == EXC_RI && get_current_instr() != 0x7c03e83b) {
+#if CONFIG_INSTR_LOG
+  if (code == EXC_RI && get_current_instr() != 0x7c03e83b)
     printf ("RI %08x %08x\n", cpu.pc, get_current_instr());
-  }
+#endif
 
   if (code == EXC_TRAP) {
     panic("HIT BAD TRAP @%08x\n", get_current_pc());

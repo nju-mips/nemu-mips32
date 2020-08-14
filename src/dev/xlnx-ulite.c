@@ -128,6 +128,22 @@ static void xlnx_ulite_write(
   }
 }
 
+static void check_ctrl_x_commands(char ch) {
+  if (ch == 0x18) {
+    /* ^X */
+    printf("^X [q:quit]: ");
+    fflush(stdout);
+    switch (getchar()) {
+    case 'q':
+      resume_console();
+      nemu_exit();
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 static bool xlnx_ulite_update_irq() {
   int n = nchars_stdin();
   if (n <= 0) return false;
@@ -135,6 +151,7 @@ static bool xlnx_ulite_update_irq() {
   char *data = malloc(n);
   read_s(0, data, n);
   for (int i = 0; i < n; i++) {
+    check_ctrl_x_commands(data[i]);
     xlnx_ulite_enqueue(data[i]);
   }
   free(data);
@@ -153,20 +170,19 @@ void ulite_ctrl_code_handler(int no) {
   if (no == SIGINT) {
     /* https://en.wikipedia.org/wiki/Control-C */
     xlnx_ulite_enqueue('\x03');
+    xlnx_ulite_set_irq();
   } else if (no == SIGTSTP) {
     /* https://en.wikipedia.org/wiki/Substitute_character */
     xlnx_ulite_enqueue('\x1a');
+    xlnx_ulite_set_irq();
   }
 }
 
 static void xlnx_ulite_init() {
   fifo_init(ulite_q);
 
-#if CONFIG_CAPTURE_CTRL_C
+#if CONFIG_INTR
   signal(SIGINT, ulite_ctrl_code_handler);
-#endif
-
-#if CONFIG_CAPTURE_CTRL_Z
   signal(SIGTSTP, ulite_ctrl_code_handler);
 #endif
 }

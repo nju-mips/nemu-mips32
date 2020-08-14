@@ -292,11 +292,6 @@ static void gdb_sigint_handler(int sig) {
   nemu_state = NEMU_STOP;
 }
 
-static void batch_sigint_handler(int sig) {
-  resume_console();
-  nemu_exit();
-}
-
 work_mode_t init_monitor(void) {
   /* Load the image to memory. */
   if (elf_file) {
@@ -313,8 +308,6 @@ work_mode_t init_monitor(void) {
 
   if (!(work_mode & MODE_BATCH))
     signal(SIGINT, gdb_sigint_handler);
-  else
-    signal(SIGINT, batch_sigint_handler);
 
   /* Initialize this virtual computer system. */
   init_cpu(CPU_INIT_PC);
