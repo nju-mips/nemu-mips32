@@ -30,7 +30,7 @@ void frames_enqueue_ret(vaddr_t pc, vaddr_t target) {
   pc_ptr = (pc_ptr + 1) % NR_FRAMES;
 }
 
-void print_frames(void) {
+void kdbg_print_frames(void) {
   int i = pc_ptr;
   do {
     if (frames[i].property == CALL)
@@ -53,7 +53,7 @@ void print_frames(void) {
   } while (i != pc_ptr);
 }
 
-void print_backtrace() {
+void kdbg_print_backtraces() {
 #define NR_BACKTRACE 100
   static uint32_t backtraces[NR_BACKTRACE];
   uint32_t top = 0;

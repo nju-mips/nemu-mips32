@@ -20,8 +20,8 @@ void diff_with_nemu();
 
 extern void instr_enqueue_pc(uint32_t pc);
 extern void instr_enqueue_instr(uint32_t pc);
-extern void print_instr_queue(void);
-extern void print_registers(void);
+extern void kdbg_print_instr_queue(void);
+extern void kdbg_print_registers(void);
 
 extern void nemu_epilogue();
 
@@ -30,8 +30,8 @@ extern uint32_t get_current_pc();
 extern uint32_t get_current_instr();
 
 /* frame recorder */
-void print_frames();
-void print_backtrace();
+void kdbg_print_frames();
+void kdbg_print_backtraces();
 void frames_enqueue_call(uint32_t pc, uint32_t target);
 void frames_enqueue_ret(uint32_t pc, uint32_t target);
 

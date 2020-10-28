@@ -653,12 +653,12 @@ make_exec_handler(mtc0) {
   }
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_REGISTERS): {
 #if CONFIG_INSTR_LOG
-    // print_registers();
+    // kdbg_print_registers();
 #endif
   } break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
 #if CONFIG_INSTR_LOG
-    // print_instr_queue();
+    // kdbg_print_instr_queue();
 #endif
   } break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_TOGGLE_COMMITS): {

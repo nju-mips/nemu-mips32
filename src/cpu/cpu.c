@@ -79,7 +79,7 @@ uint64_t get_current_time() { // in us
 #endif
 }
 
-void print_registers(void) {
+void kdbg_print_registers(void) {
   static unsigned int ninstr = 0;
 #if CONFIG_INSTR_LOG
   eprintf("$pc:    0x%08x", get_current_pc());
@@ -350,25 +350,25 @@ void nemu_epilogue() {
 
 #if CONFIG_INSTR_LOG
   eprintf(">>>>>> last executed instructions\n");
-  print_instr_queue();
+  kdbg_print_instr_queue();
   eprintf("\n");
 #endif
 
 #if CONFIG_FUNCTION_TRACE_LOG
   eprintf(">>>>>> function invocations\n");
-  print_frames();
+  kdbg_print_frames();
   eprintf("\n");
 #endif
 
 #if CONFIG_BACKTRACE_LOG
   eprintf(">>>>>> functions in stack\n");
-  print_backtrace();
+  kdbg_print_backtraces();
   eprintf("\n");
 #endif
 
 #if CONFIG_INSTR_LOG
   eprintf(">>>>>> current registers\n");
-  print_registers();
+  kdbg_print_registers();
   eprintf("\n");
 #endif
 
@@ -425,7 +425,7 @@ void cpu_exec(uint64_t n) {
 #if CONFIG_WARN_PC_EQUALS_ZERO
     if (cpu.pc == 0x0) {
       printf("[NEMU] warning: cpu.pc == 0\n");
-      print_instr_queue();
+      kdbg_print_instr_queue();
     }
 #endif
 
@@ -441,7 +441,7 @@ void cpu_exec(uint64_t n) {
 
   check_exception:;
 #if CONFIG_INSTR_LOG
-    if (nemu_needs_commit) print_registers();
+    if (nemu_needs_commit) kdbg_print_registers();
 #endif
 
 #if CONFIG_EXCEPTION || CONFIG_INTR

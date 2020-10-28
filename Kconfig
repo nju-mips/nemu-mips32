@@ -228,6 +228,13 @@ config NEMU_VGA_CTRL_BASE
   depends on NEMU_VGA_CTRL=y
   default 0x10003000
 
+config NEMU_DISK
+  bool "nemu disk controller"
+
+config NEMU_DISK_BASE
+  hex "base addr of nemu disk controller"
+  default 0x1fe97000
+
 menuconfig XLNX_ULITE
   bool "Xilinx Uartlite device"
 

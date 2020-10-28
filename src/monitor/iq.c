@@ -40,7 +40,7 @@ uint32_t get_current_instr() {
   return 0;
 }
 
-void print_instr_queue(void) {
+void kdbg_print_instr_queue(void) {
   int i = pc_ptr;
   do {
     if (iq[i].instr_enq)

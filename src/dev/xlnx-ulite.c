@@ -62,8 +62,8 @@ static void stop_cpu_check(char ch) {
     if (*xlnx_ulite_stop_string_ptr == 0) {
       eprintf("ulite recv '%s', stop the cpu\n",
           xlnx_ulite_stop_string);
-      print_frames();
-      print_backtrace();
+      kdbg_print_frames();
+      kdbg_print_backtraces();
       nemu_state = NEMU_STOP;
     }
   } else {

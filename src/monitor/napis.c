@@ -52,9 +52,9 @@ void napi_set_irq(int irqno, bool val) {
 
 void napi_dump_states() {
   eprintf(">>>>>> nemu instrs\n");
-  print_instr_queue();
+  kdbg_print_instr_queue();
   eprintf(">>>>>> nemu registers\n");
-  print_registers();
+  kdbg_print_registers();
   eprintf("====== nemu states end ======\n");
 }
 

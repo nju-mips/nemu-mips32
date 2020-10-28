@@ -543,20 +543,20 @@ void diff_with_nemu() {
   s_cpu_exec(1);
 
   if (cpu.cp0.epc != s_cpu->cp0.epc) {
-    print_instr_queue();
+    kdbg_print_instr_queue();
     printf("PC %08x: epc %08x <> %08x\n", cpu.pc, cpu.cp0.epc, s_cpu->cp0.epc);
     assert(0);
   }
 
   if (cpu.pc != s_cpu->pc) {
-    print_instr_queue();
+    kdbg_print_instr_queue();
     printf("PC %08x <> %08x\n", cpu.pc, s_cpu->pc);
     assert(0);
   }
 
   for (int i = 0; i < 32; i++)
     if (cpu.gpr[i] != s_cpu->gpr[i]) {
-      print_instr_queue();
+      kdbg_print_instr_queue();
       printf(
           "PC %08x: reg %d: %08x <> %08x\n", cpu.pc, i, cpu.gpr[i], s_cpu->gpr[i]);
       assert(0);
