@@ -9,6 +9,34 @@
 #define make_entry()
 #define make_exit() make_label(exit)
 
+#if CONFIG_EXCEPTION
+
+#  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
+    if (((addr) & (align - 1)) != 0) {         \
+      cpu.cp0.badvaddr = addr;                 \
+      launch_exception(EXC_AdEL);              \
+      goto exit;                               \
+    }
+
+#  define CHECK_ALIGNED_ADDR_AdES(align, addr) \
+    if (((addr) & (align - 1)) != 0) {         \
+      cpu.cp0.badvaddr = addr;                 \
+      launch_exception(EXC_AdES);              \
+      goto exit;                               \
+    }
+
+#else
+
+#  define CHECK_ALIGNED_ADDR(align, addr)                  \
+    CPUAssert(((addr) & (align - 1)) == 0,                 \
+        "address(0x%08x) is unaligned, pc=%08x\n", (addr), \
+        cpu.pc)
+
+#  define CHECK_ALIGNED_ADDR_AdEL CHECK_ALIGNED_ADDR
+#  define CHECK_ALIGNED_ADDR_AdES CHECK_ALIGNED_ADDR
+
+#endif
+
 enum {
   FPU_FMT_S = 16,
   FPU_FMT_D = 17,
@@ -465,335 +493,6 @@ make_exec_handler(exec_cop1) {
 }
 #endif
 
-make_exec_handler(inv) {
-// the pc corresponding to this inst
-// pc has been updated by instr_fetch
-#if CONFIG_EXCEPTION
-  launch_exception(EXC_RI);
-#else
-  uint32_t instr = vaddr_read(cpu.pc, 4);
-  uint8_t *p = (uint8_t *)&instr;
-  printf(
-      "invalid opcode(pc = 0x%08x): %02x %02x %02x %02x "
-      "...\n",
-      cpu.pc, p[0], p[1], p[2], p[3]);
-  nemu_state = NEMU_END;
-#endif
-}
-
-/* tlb strategy */
-make_exec_handler(tlbp) { tlb_present(); }
-
-make_exec_handler(tlbr) {
-  uint32_t i = cpu.cp0.index.idx;
-  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
-  tlb_read(i);
-}
-
-make_exec_handler(tlbwi) {
-  uint32_t i = cpu.cp0.index.idx;
-  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n",
-      i, NR_TLB_ENTRY);
-  tlb_write(i);
-  clear_mmu_cache();
-  clear_decode_cache();
-}
-
-make_exec_handler(tlbwr) {
-#if CONFIG_MARCH_NOOP
-  tlb_write(cpu.cp0.random);
-  cpu.cp0.random = (cpu.cp0.random + 1) % NR_TLB_ENTRY;
-#else
-  cpu.cp0.random = rand() % NR_TLB_ENTRY;
-  tlb_write(cpu.cp0.random);
-#endif
-  clear_mmu_cache();
-  clear_decode_cache();
-}
-
-/* temporary strategy: store timer registers in C0 */
-make_exec_handler(syscall) {
-  launch_exception(EXC_SYSCALL);
-#if CONFIG_DUMP_SYSCALL
-  cpu.is_syscall = true;
-  void dump_syscall(
-      uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
-  dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1],
-      cpu.gpr[R_a2]);
-#endif
-}
-
-make_exec_handler(breakpoint) {
-  if (work_mode == MODE_GDB) {
-    nemu_state = NEMU_STOP;
-  } else {
-    launch_exception(EXC_BP);
-  }
-}
-
-make_exec_handler(wait) { /* didn't +4 for pc */
-  usleep(1);
-}
-
-make_exec_handler(eret) {
-  cpu.has_exception = true;
-
-  if (cpu.cp0.status.ERL == 1) {
-    cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
-    cpu.cp0.status.ERL = 0;
-  } else {
-    cpu.br_target = cpu.cp0.epc;
-    cpu.cp0.status.EXL = 0;
-  }
-
-#if 0
-  eprintf("%08x: ERET to %08x: ERL %d, EXL %d\n", cpu.pc, cpu.br_target,
-      cpu.cp0.status.ERL, cpu.cp0.status.EXL);
-#endif
-
-#if CONFIG_DUMP_SYSCALL
-  if (cpu.is_syscall) {
-    printf("==> v0: %08x & %d\n", cpu.gpr[R_v0],
-        cpu.gpr[R_v0]);
-    cpu.is_syscall = false;
-  }
-#endif
-
-#if CONFIG_CAE_CHECK
-  check_usual_registers();
-#endif
-
-#if CONFIG_SEGMENT
-  cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
-#endif
-
-  clear_mmu_cache();
-  clear_decode_cache();
-}
-
-#define CPRS(reg, sel) (((reg) << 3) | (sel))
-
-make_exec_handler(mfc0) {
-  /* used for nanos: pal and litenes */
-  if (operands->rd == CP0_COUNT) {
-    cpu.gpr[operands->rt] = cpu.cp0.count[0];
-  } else {
-    cpu.gpr[operands->rt] =
-        cpu.cp0.cpr[operands->rd][operands->sel];
-  }
-}
-
-make_exec_handler(mtc0) {
-  switch (CPRS(operands->rd, operands->sel)) {
-  case CPRS(CP0_EBASE, CP0_EBASE_SEL):
-  case CPRS(CP0_COUNT, 0):
-  case CPRS(CP0_EPC, 0):
-    cpu.cp0.cpr[operands->rd][operands->sel] =
-        cpu.gpr[operands->rt];
-    break;
-  case CPRS(CP0_BADVADDR, 0): break;
-  case CPRS(CP0_CONTEXT, 0): {
-    cp0_context_t *newVal =
-        (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.context.PTEBase = newVal->PTEBase;
-  } break;
-  case CPRS(CP0_CONFIG, 0): {
-    cp0_config_t *newVal = (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.config.K0 = newVal->K0;
-  } break;
-  case CPRS(CP0_STATUS, 0): {
-    cp0_status_t *newVal = (void *)&(cpu.gpr[operands->rt]);
-    if (cpu.cp0.status.ERL != newVal->ERL) {
-      clear_decode_cache();
-      clear_mmu_cache();
-    }
-    cpu.cp0.status.CU = newVal->CU & 0x3;
-    cpu.cp0.status.RP = newVal->RP;
-    cpu.cp0.status.RE = newVal->RE;
-    cpu.cp0.status.BEV = newVal->BEV;
-    cpu.cp0.status.TS = newVal->TS;
-    cpu.cp0.status.SR = newVal->SR;
-    cpu.cp0.status.NMI = newVal->NMI;
-    cpu.cp0.status.IM = newVal->IM;
-    cpu.cp0.status.UM = newVal->UM;
-    cpu.cp0.status.ERL = newVal->ERL;
-    cpu.cp0.status.EXL = newVal->EXL;
-    cpu.cp0.status.IE = newVal->IE;
-  } break;
-  case CPRS(CP0_COMPARE, 0):
-    cpu.cp0.compare = cpu.gpr[operands->rt];
-    nemu_set_irq(7, 0);
-    break;
-  case CPRS(CP0_CAUSE, 0): {
-    cp0_cause_t *newVal = (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.cause.IV = newVal->IV;
-    cpu.cp0.cause.WP = newVal->WP;
-
-    nemu_set_irq(0, newVal->IP & (1 << 0));
-    nemu_set_irq(1, newVal->IP & (1 << 1));
-  } break;
-  case CPRS(CP0_PAGEMASK, 0): {
-    cp0_pagemask_t *newVal =
-        (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.pagemask.mask = newVal->mask;
-    break;
-  }
-  case CPRS(CP0_ENTRY_LO0, 0): {
-    cp0_entry_lo_t *newVal =
-        (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.entry_lo0.g = newVal->g;
-    cpu.cp0.entry_lo0.v = newVal->v;
-    cpu.cp0.entry_lo0.d = newVal->d;
-    cpu.cp0.entry_lo0.c = newVal->c;
-    cpu.cp0.entry_lo0.pfn = newVal->pfn;
-  } break;
-  case CPRS(CP0_ENTRY_LO1, 0): {
-    cp0_entry_lo_t *newVal =
-        (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.entry_lo1.g = newVal->g;
-    cpu.cp0.entry_lo1.v = newVal->v;
-    cpu.cp0.entry_lo1.d = newVal->d;
-    cpu.cp0.entry_lo1.c = newVal->c;
-    cpu.cp0.entry_lo1.pfn = newVal->pfn;
-  } break;
-  case CPRS(CP0_ENTRY_HI, 0): {
-    cp0_entry_hi_t *newVal =
-        (void *)&(cpu.gpr[operands->rt]);
-    cpu.cp0.entry_hi.asid = newVal->asid;
-    cpu.cp0.entry_hi.vpn = newVal->vpn;
-    clear_mmu_cache();
-    clear_decode_cache();
-  } break;
-  case CPRS(CP0_INDEX, 0): {
-    cpu.cp0.index.idx = cpu.gpr[operands->rt];
-  } break;
-  // this serial is for debugging,
-  // please don't use it in real codes
-  case CPRS(CP0_RESERVED, CP0_RESERVED_BASE):
-#if CONFIG_SEGMENT
-    cpu.cp0.cpr[operands->rd][operands->sel] =
-        cpu.gpr[operands->rt];
-#endif
-    break;
-  case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
-#if CONFIG_KERNEL_DEBUG_SERIAL
-    putchar(cpu.gpr[operands->rt]);
-#endif
-    break;
-  }
-  case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
-#if CONFIG_CHECK_IMAGE
-    extern const char *symbol_file;
-    check_kernel_image(symbol_file);
-#endif
-    break;
-  }
-  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_REGISTERS): {
-#if CONFIG_INSTR_LOG
-    // kdbg_print_registers();
-#endif
-  } break;
-  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
-#if CONFIG_INSTR_LOG
-    // kdbg_print_instr_queue();
-#endif
-  } break;
-  case CPRS(CP0_RESERVED, CP0_RESERVED_TOGGLE_COMMITS): {
-#if CONFIG_INSTR_LOG
-    // nemu_needs_commit = !nemu_needs_commit;
-#endif
-  } break;
-  case CPRS(CP0_RESERVED, CP0_RESERVED_HIT_TRAP): {
-    if (cpu.gpr[operands->rt] == 0)
-      printf("\e[1;32mHIT GOOD TRAP\e[0m\n");
-    else
-      printf("\e[1;31mHIT BAD TRAP %d\e[0m\n",
-          cpu.gpr[operands->rt]);
-    nemu_exit(0);
-  } break;
-  default:
-    printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc,
-        regs[operands->rt], operands->rd, operands->sel);
-    break;
-  }
-}
-
-make_exec_handler(teq) {
-  if ((int32_t)cpu.gpr[operands->rs] ==
-      (int32_t)cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(teqi) {
-  if ((int32_t)cpu.gpr[operands->rs] == operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tge) {
-  if ((int32_t)cpu.gpr[operands->rs] >=
-      (int32_t)cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tgei) {
-  if ((int32_t)cpu.gpr[operands->rs] >= operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tgeiu) {
-  if (cpu.gpr[operands->rs] >= operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tgeu) {
-  if (cpu.gpr[operands->rs] >= cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tlt) {
-  if ((int32_t)cpu.gpr[operands->rs] <
-      (int32_t)cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tlti) {
-  if ((int32_t)cpu.gpr[operands->rs] < operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tltiu) {
-  if (cpu.gpr[operands->rs] < operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tltu) {
-  if (cpu.gpr[operands->rs] < cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tne) {
-  if ((int32_t)cpu.gpr[operands->rs] !=
-      (int32_t)cpu.gpr[operands->rt]) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
-make_exec_handler(tnei) {
-  if ((int32_t)cpu.gpr[operands->rs] != operands->simm) {
-    launch_exception(EXC_TRAP);
-  }
-}
-
 #define R_SIMPLE(name, op, t)          \
   make_exec_handler(name) {            \
     InstAssert(operands->shamt == 0);  \
@@ -810,6 +509,59 @@ R_SIMPLE(subu, -, uint32_t)
 R_SIMPLE(mul, *, uint32_t)
 R_SIMPLE(slt, <, int32_t)
 R_SIMPLE(sltu, <, uint32_t)
+
+make_exec_handler(lui) {
+  InstAssert(operands->rs == 0);
+  cpu.gpr[operands->rt] = operands->uimm << 16;
+}
+
+make_exec_handler(addi) {
+  // should throw exception
+  L64_t ret;
+  ret.val = (int64_t)(int32_t)cpu.gpr[operands->rs] +
+            (int64_t)(int32_t)operands->simm;
+  if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
+#if CONFIG_EXCEPTION
+    launch_exception(EXC_OV);
+#else
+    CPUAssert(0, "addi overflow, %08x + %08x\n",
+        cpu.gpr[operands->rs], operands->simm);
+#endif
+  } else {
+    cpu.gpr[operands->rt] = ret.lo;
+  }
+}
+
+make_exec_handler(addiu) {
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] + operands->simm;
+}
+
+make_exec_handler(andi) {
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] & operands->uimm;
+}
+
+make_exec_handler(ori) {
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] | operands->uimm;
+}
+
+make_exec_handler(xori) {
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] ^ operands->uimm;
+}
+
+make_exec_handler(sltiu) {
+  cpu.gpr[operands->rt] =
+      cpu.gpr[operands->rs] < operands->simm;
+}
+
+make_exec_handler(slti) {
+  cpu.gpr[operands->rt] =
+      (int32_t)cpu.gpr[operands->rs] < operands->simm;
+}
+
 
 make_exec_handler(add) {
   InstAssert(operands->shamt == 0);
@@ -852,6 +604,237 @@ make_exec_handler(nor) {
 }
 
 #undef R_SIMPLE
+
+make_exec_handler(sll) {
+  InstAssert(operands->rs == 0);
+  cpu.gpr[operands->rd] = cpu.gpr[operands->rt]
+                          << operands->shamt;
+}
+
+make_exec_handler(sllv) {
+  InstAssert(operands->shamt == 0);
+  cpu.gpr[operands->rd] = cpu.gpr[operands->rt]
+                          << (cpu.gpr[operands->rs] & 0x1f);
+}
+
+make_exec_handler(sra) {
+  InstAssert(operands->rs == 0);
+  cpu.gpr[operands->rd] =
+      (int32_t)cpu.gpr[operands->rt] >> operands->shamt;
+}
+
+make_exec_handler(srav) {
+  InstAssert(operands->shamt == 0);
+  cpu.gpr[operands->rd] = (int32_t)cpu.gpr[operands->rt] >>
+                          (cpu.gpr[operands->rs] & 0x1f);
+}
+
+make_exec_handler(srl) {
+  if ((operands->rs & 0x1) == 0x1) {
+    /* rotr */
+    uint32_t rt_val = cpu.gpr[operands->rt];
+    uint32_t sa = operands->shamt;
+    cpu.gpr[operands->rd] =
+        (rt_val >> sa) | (rt_val << (32 - sa));
+  } else {
+    InstAssert(operands->rs == 0);
+    cpu.gpr[operands->rd] =
+        cpu.gpr[operands->rt] >> operands->shamt;
+  }
+}
+
+make_exec_handler(srlv) {
+  if ((operands->shamt & 0x1) == 0x1) {
+    /* rotrv */
+    uint32_t rt_val = cpu.gpr[operands->rt];
+    uint32_t sa = cpu.gpr[operands->rs] & 0x1f;
+    cpu.gpr[operands->rd] =
+        (rt_val >> sa) | (rt_val << (32 - sa));
+  } else {
+    InstAssert(operands->shamt == 0);
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rt] >>
+                            (cpu.gpr[operands->rs] & 0x1f);
+  }
+}
+
+make_exec_handler(lw) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
+  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
+}
+
+make_exec_handler(lb) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata = (int32_t)(int8_t)vaddr_read(
+      cpu.gpr[operands->rs] + operands->simm, 1);
+  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
+}
+
+make_exec_handler(lbu) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
+  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
+}
+
+make_exec_handler(lh) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata = (int32_t)(int16_t)vaddr_read(
+      cpu.gpr[operands->rs] + operands->simm, 2);
+  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
+}
+
+make_exec_handler(lhu) {
+  CHECK_ALIGNED_ADDR_AdEL(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  uint32_t rdata =
+      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
+  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
+}
+
+make_exec_handler(sw) {
+  CHECK_ALIGNED_ADDR_AdES(
+      4, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4,
+      cpu.gpr[operands->rt]);
+}
+
+make_exec_handler(sh) {
+  CHECK_ALIGNED_ADDR_AdES(
+      2, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 2,
+      cpu.gpr[operands->rt]);
+}
+
+make_exec_handler(sb) {
+  CHECK_ALIGNED_ADDR_AdES(
+      1, cpu.gpr[operands->rs] + operands->simm);
+  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 1,
+      cpu.gpr[operands->rt]);
+}
+
+make_exec_handler(movn) {
+  InstAssert(operands->shamt == 0);
+  if (cpu.gpr[operands->rt] != 0)
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+}
+
+make_exec_handler(movz) {
+  InstAssert(operands->shamt == 0);
+  if (cpu.gpr[operands->rt] == 0)
+    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+}
+
+//////////////////////////////////////////////////////////////
+//                      unlikely branch //
+//////////////////////////////////////////////////////////////
+make_exec_handler(beq) {
+  if (cpu.gpr[operands->rs] == cpu.gpr[operands->rt])
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bne) {
+  if (cpu.gpr[operands->rs] != cpu.gpr[operands->rt])
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(blez) {
+  InstAssert(operands->rt == 0);
+  if ((int32_t)cpu.gpr[operands->rs] <= 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bgtz) {
+  if ((int32_t)cpu.gpr[operands->rs] > 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bltz) {
+  if ((int32_t)cpu.gpr[operands->rs] < 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bgez) {
+  if ((int32_t)cpu.gpr[operands->rs] >= 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bgezal) {
+  cpu.gpr[31] = cpu.pc + 8;
+  if ((int32_t)cpu.gpr[operands->rs] >= 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(bltzal) {
+  cpu.gpr[31] = cpu.pc + 8;
+  if ((int32_t)cpu.gpr[operands->rs] < 0)
+    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  else
+    cpu.br_target = cpu.pc + 8;
+  prepare_delayslot();
+}
+
+make_exec_handler(jal) {
+  cpu.gpr[31] = cpu.pc + 8;
+  cpu.br_target =
+      (cpu.pc & 0xf0000000) | (operands->addr << 2);
+#if CONFIG_FUNCTION_TRACE_LOG
+  frames_enqueue_call(cpu.pc, cpu.br_target);
+#endif
+  prepare_delayslot();
+}
+
+make_exec_handler(jalr) {
+  InstAssert(operands->rt == 0 && operands->shamt == 0);
+  cpu.gpr[operands->rd] = cpu.pc + 8;
+  cpu.br_target = cpu.gpr[operands->rs];
+#if CONFIG_FUNCTION_TRACE_LOG
+  frames_enqueue_call(cpu.pc, cpu.br_target);
+#endif
+  prepare_delayslot();
+}
+
+make_exec_handler(j) {
+  cpu.br_target =
+      (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  prepare_delayslot();
+}
+
+make_exec_handler(jr) {
+  InstAssert(operands->rt == 0 && operands->rd == 0);
+  cpu.br_target = cpu.gpr[operands->rs];
+#if CONFIG_FUNCTION_TRACE_LOG
+  if (operands->rs == R_ra)
+    frames_enqueue_ret(cpu.pc, cpu.br_target);
+#endif
+  prepare_delayslot();
+}
 
 make_exec_handler(clz) {
   if (cpu.gpr[operands->rs] == 0) {
@@ -947,70 +930,6 @@ make_exec_handler(divu) {
   cpu.hi = cpu.gpr[operands->rs] % cpu.gpr[operands->rt];
 }
 
-make_exec_handler(sll) {
-  InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rd] = cpu.gpr[operands->rt]
-                          << operands->shamt;
-}
-
-make_exec_handler(sllv) {
-  InstAssert(operands->shamt == 0);
-  cpu.gpr[operands->rd] = cpu.gpr[operands->rt]
-                          << (cpu.gpr[operands->rs] & 0x1f);
-}
-
-make_exec_handler(sra) {
-  InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rd] =
-      (int32_t)cpu.gpr[operands->rt] >> operands->shamt;
-}
-
-make_exec_handler(srav) {
-  InstAssert(operands->shamt == 0);
-  cpu.gpr[operands->rd] = (int32_t)cpu.gpr[operands->rt] >>
-                          (cpu.gpr[operands->rs] & 0x1f);
-}
-
-make_exec_handler(srl) {
-  if ((operands->rs & 0x1) == 0x1) {
-    /* rotr */
-    uint32_t rt_val = cpu.gpr[operands->rt];
-    uint32_t sa = operands->shamt;
-    cpu.gpr[operands->rd] =
-        (rt_val >> sa) | (rt_val << (32 - sa));
-  } else {
-    InstAssert(operands->rs == 0);
-    cpu.gpr[operands->rd] =
-        cpu.gpr[operands->rt] >> operands->shamt;
-  }
-}
-
-make_exec_handler(srlv) {
-  if ((operands->shamt & 0x1) == 0x1) {
-    /* rotrv */
-    uint32_t rt_val = cpu.gpr[operands->rt];
-    uint32_t sa = cpu.gpr[operands->rs] & 0x1f;
-    cpu.gpr[operands->rd] =
-        (rt_val >> sa) | (rt_val << (32 - sa));
-  } else {
-    InstAssert(operands->shamt == 0);
-    cpu.gpr[operands->rd] = cpu.gpr[operands->rt] >>
-                            (cpu.gpr[operands->rs] & 0x1f);
-  }
-}
-
-make_exec_handler(movn) {
-  InstAssert(operands->shamt == 0);
-  if (cpu.gpr[operands->rt] != 0)
-    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
-}
-
-make_exec_handler(movz) {
-  InstAssert(operands->shamt == 0);
-  if (cpu.gpr[operands->rt] == 0)
-    cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
-}
-
 make_exec_handler(mfhi) {
   InstAssert(operands->rs == 0 && operands->rt == 0 &&
              operands->shamt == 0);
@@ -1035,86 +954,6 @@ make_exec_handler(mtlo) {
   cpu.lo = cpu.gpr[operands->rs];
 }
 
-make_exec_handler(lui) {
-  InstAssert(operands->rs == 0);
-  cpu.gpr[operands->rt] = operands->uimm << 16;
-}
-
-make_exec_handler(addi) {
-  // should throw exception
-  L64_t ret;
-  ret.val = (int64_t)(int32_t)cpu.gpr[operands->rs] +
-            (int64_t)(int32_t)operands->simm;
-  if ((ret.hi & 0x1) != ((ret.lo >> 31) & 1)) {
-#if CONFIG_EXCEPTION
-    launch_exception(EXC_OV);
-#else
-    CPUAssert(0, "addi overflow, %08x + %08x\n",
-        cpu.gpr[operands->rs], operands->simm);
-#endif
-  } else {
-    cpu.gpr[operands->rt] = ret.lo;
-  }
-}
-
-make_exec_handler(addiu) {
-  cpu.gpr[operands->rt] =
-      cpu.gpr[operands->rs] + operands->simm;
-}
-
-make_exec_handler(andi) {
-  cpu.gpr[operands->rt] =
-      cpu.gpr[operands->rs] & operands->uimm;
-}
-
-make_exec_handler(ori) {
-  cpu.gpr[operands->rt] =
-      cpu.gpr[operands->rs] | operands->uimm;
-}
-
-make_exec_handler(xori) {
-  cpu.gpr[operands->rt] =
-      cpu.gpr[operands->rs] ^ operands->uimm;
-}
-
-make_exec_handler(sltiu) {
-  cpu.gpr[operands->rt] =
-      cpu.gpr[operands->rs] < operands->simm;
-}
-
-make_exec_handler(slti) {
-  cpu.gpr[operands->rt] =
-      (int32_t)cpu.gpr[operands->rs] < operands->simm;
-}
-
-#if CONFIG_EXCEPTION
-
-#  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
-    if (((addr) & (align - 1)) != 0) {         \
-      cpu.cp0.badvaddr = addr;                 \
-      launch_exception(EXC_AdEL);              \
-      goto exit;                               \
-    }
-
-#  define CHECK_ALIGNED_ADDR_AdES(align, addr) \
-    if (((addr) & (align - 1)) != 0) {         \
-      cpu.cp0.badvaddr = addr;                 \
-      launch_exception(EXC_AdES);              \
-      goto exit;                               \
-    }
-
-#else
-
-#  define CHECK_ALIGNED_ADDR(align, addr)                  \
-    CPUAssert(((addr) & (align - 1)) == 0,                 \
-        "address(0x%08x) is unaligned, pc=%08x\n", (addr), \
-        cpu.pc)
-
-#  define CHECK_ALIGNED_ADDR_AdEL CHECK_ALIGNED_ADDR
-#  define CHECK_ALIGNED_ADDR_AdES CHECK_ALIGNED_ADDR
-
-#endif
-
 make_exec_handler(swl) {
   uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
   int idx = waddr & 0x3;
@@ -1131,27 +970,6 @@ make_exec_handler(swr) {
   uint32_t wdata = cpu.gpr[operands->rt];
 
   vaddr_write(waddr, len, wdata);
-}
-
-make_exec_handler(sw) {
-  CHECK_ALIGNED_ADDR_AdES(
-      4, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 4,
-      cpu.gpr[operands->rt]);
-}
-
-make_exec_handler(sh) {
-  CHECK_ALIGNED_ADDR_AdES(
-      2, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 2,
-      cpu.gpr[operands->rt]);
-}
-
-make_exec_handler(sb) {
-  CHECK_ALIGNED_ADDR_AdES(
-      1, cpu.gpr[operands->rs] + operands->simm);
-  vaddr_write(cpu.gpr[operands->rs] + operands->simm, 1,
-      cpu.gpr[operands->rt]);
 }
 
 make_exec_handler(lwl) {
@@ -1187,46 +1005,6 @@ make_exec_handler(lwr) {
       cpu.gpr[operands->rt] =
           (rdata << idx * 8) >> (idx * 8);
   }
-}
-
-make_exec_handler(lw) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      4, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
-  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
-}
-
-make_exec_handler(lb) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      1, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = (int32_t)(int8_t)vaddr_read(
-      cpu.gpr[operands->rs] + operands->simm, 1);
-  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
-}
-
-make_exec_handler(lbu) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      1, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 1);
-  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
-}
-
-make_exec_handler(lh) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      2, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata = (int32_t)(int16_t)vaddr_read(
-      cpu.gpr[operands->rs] + operands->simm, 2);
-  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
-}
-
-make_exec_handler(lhu) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      2, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 2);
-  if (!cpu.has_exception) { cpu.gpr[operands->rt] = rdata; }
 }
 
 make_exec_handler(pref) {}
@@ -1335,112 +1113,6 @@ make_exec_handler(bltzall) {
     cpu.br_target = cpu.pc + 8;
     cpu.pc += 4;
   }
-}
-
-//////////////////////////////////////////////////////////////
-//                      unlikely branch //
-//////////////////////////////////////////////////////////////
-make_exec_handler(beq) {
-  if (cpu.gpr[operands->rs] == cpu.gpr[operands->rt])
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bne) {
-  if (cpu.gpr[operands->rs] != cpu.gpr[operands->rt])
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(blez) {
-  InstAssert(operands->rt == 0);
-  if ((int32_t)cpu.gpr[operands->rs] <= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bgtz) {
-  if ((int32_t)cpu.gpr[operands->rs] > 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bltz) {
-  if ((int32_t)cpu.gpr[operands->rs] < 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bgez) {
-  if ((int32_t)cpu.gpr[operands->rs] >= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bgezal) {
-  cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] >= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(bltzal) {
-  cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] < 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
-  else
-    cpu.br_target = cpu.pc + 8;
-  prepare_delayslot();
-}
-
-make_exec_handler(jal) {
-  cpu.gpr[31] = cpu.pc + 8;
-  cpu.br_target =
-      (cpu.pc & 0xf0000000) | (operands->addr << 2);
-#if CONFIG_FUNCTION_TRACE_LOG
-  frames_enqueue_call(cpu.pc, cpu.br_target);
-#endif
-  prepare_delayslot();
-}
-
-make_exec_handler(jalr) {
-  InstAssert(operands->rt == 0 && operands->shamt == 0);
-  cpu.gpr[operands->rd] = cpu.pc + 8;
-  cpu.br_target = cpu.gpr[operands->rs];
-#if CONFIG_FUNCTION_TRACE_LOG
-  frames_enqueue_call(cpu.pc, cpu.br_target);
-#endif
-  prepare_delayslot();
-}
-
-make_exec_handler(j) {
-  cpu.br_target =
-      (cpu.pc & 0xf0000000) | (operands->addr << 2);
-  prepare_delayslot();
-}
-
-make_exec_handler(jr) {
-  InstAssert(operands->rt == 0 && operands->rd == 0);
-  cpu.br_target = cpu.gpr[operands->rs];
-#if CONFIG_FUNCTION_TRACE_LOG
-  if (operands->rs == R_ra)
-    frames_enqueue_ret(cpu.pc, cpu.br_target);
-#endif
-  prepare_delayslot();
 }
 
 make_exec_handler(seb) {
@@ -1837,6 +1509,335 @@ make_exec_handler(sdc1) {
   CHECK_ALIGNED_ADDR_AdES(8, waddr);
   vaddr_write(waddr, 4, cpu.fpr32i[operands->ft & ~1]);
   vaddr_write(waddr + 4, 4, cpu.fpr32i[operands->ft | 1]);
+}
+
+/* tlb strategy */
+make_exec_handler(tlbp) { tlb_present(); }
+
+make_exec_handler(tlbr) {
+  uint32_t i = cpu.cp0.index.idx;
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index\n");
+  tlb_read(i);
+}
+
+make_exec_handler(tlbwi) {
+  uint32_t i = cpu.cp0.index.idx;
+  CPUAssert(i < NR_TLB_ENTRY, "invalid tlb index %d (%d)\n",
+      i, NR_TLB_ENTRY);
+  tlb_write(i);
+  clear_mmu_cache();
+  clear_decode_cache();
+}
+
+make_exec_handler(tlbwr) {
+#if CONFIG_MARCH_NOOP
+  tlb_write(cpu.cp0.random);
+  cpu.cp0.random = (cpu.cp0.random + 1) % NR_TLB_ENTRY;
+#else
+  cpu.cp0.random = rand() % NR_TLB_ENTRY;
+  tlb_write(cpu.cp0.random);
+#endif
+  clear_mmu_cache();
+  clear_decode_cache();
+}
+
+/* temporary strategy: store timer registers in C0 */
+make_exec_handler(syscall) {
+  launch_exception(EXC_SYSCALL);
+#if CONFIG_DUMP_SYSCALL
+  cpu.is_syscall = true;
+  void dump_syscall(
+      uint32_t v0, uint32_t a0, uint32_t a1, uint32_t a2);
+  dump_syscall(cpu.gpr[R_v0], cpu.gpr[R_a0], cpu.gpr[R_a1],
+      cpu.gpr[R_a2]);
+#endif
+}
+
+make_exec_handler(breakpoint) {
+  if (work_mode == MODE_GDB) {
+    nemu_state = NEMU_STOP;
+  } else {
+    launch_exception(EXC_BP);
+  }
+}
+
+make_exec_handler(wait) { /* didn't +4 for pc */
+  usleep(1);
+}
+
+make_exec_handler(eret) {
+  cpu.has_exception = true;
+
+  if (cpu.cp0.status.ERL == 1) {
+    cpu.br_target = cpu.cp0.cpr[CP0_ErrorEPC][0];
+    cpu.cp0.status.ERL = 0;
+  } else {
+    cpu.br_target = cpu.cp0.epc;
+    cpu.cp0.status.EXL = 0;
+  }
+
+#if 0
+  eprintf("%08x: ERET to %08x: ERL %d, EXL %d\n", cpu.pc, cpu.br_target,
+      cpu.cp0.status.ERL, cpu.cp0.status.EXL);
+#endif
+
+#if CONFIG_DUMP_SYSCALL
+  if (cpu.is_syscall) {
+    printf("==> v0: %08x & %d\n", cpu.gpr[R_v0],
+        cpu.gpr[R_v0]);
+    cpu.is_syscall = false;
+  }
+#endif
+
+#if CONFIG_CAE_CHECK
+  check_usual_registers();
+#endif
+
+#if CONFIG_SEGMENT
+  cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
+#endif
+
+  clear_mmu_cache();
+  clear_decode_cache();
+}
+
+#define CPRS(reg, sel) (((reg) << 3) | (sel))
+
+make_exec_handler(mfc0) {
+  /* used for nanos: pal and litenes */
+  if (operands->rd == CP0_COUNT) {
+    cpu.gpr[operands->rt] = cpu.cp0.count[0];
+  } else {
+    cpu.gpr[operands->rt] =
+        cpu.cp0.cpr[operands->rd][operands->sel];
+  }
+}
+
+make_exec_handler(mtc0) {
+  switch (CPRS(operands->rd, operands->sel)) {
+  case CPRS(CP0_EBASE, CP0_EBASE_SEL):
+  case CPRS(CP0_COUNT, 0):
+  case CPRS(CP0_EPC, 0):
+    cpu.cp0.cpr[operands->rd][operands->sel] =
+        cpu.gpr[operands->rt];
+    break;
+  case CPRS(CP0_BADVADDR, 0): break;
+  case CPRS(CP0_CONTEXT, 0): {
+    cp0_context_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.context.PTEBase = newVal->PTEBase;
+  } break;
+  case CPRS(CP0_CONFIG, 0): {
+    cp0_config_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.config.K0 = newVal->K0;
+  } break;
+  case CPRS(CP0_STATUS, 0): {
+    cp0_status_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    if (cpu.cp0.status.ERL != newVal->ERL) {
+      clear_decode_cache();
+      clear_mmu_cache();
+    }
+    cpu.cp0.status.CU = newVal->CU & 0x3;
+    cpu.cp0.status.RP = newVal->RP;
+    cpu.cp0.status.RE = newVal->RE;
+    cpu.cp0.status.BEV = newVal->BEV;
+    cpu.cp0.status.TS = newVal->TS;
+    cpu.cp0.status.SR = newVal->SR;
+    cpu.cp0.status.NMI = newVal->NMI;
+    cpu.cp0.status.IM = newVal->IM;
+    cpu.cp0.status.UM = newVal->UM;
+    cpu.cp0.status.ERL = newVal->ERL;
+    cpu.cp0.status.EXL = newVal->EXL;
+    cpu.cp0.status.IE = newVal->IE;
+  } break;
+  case CPRS(CP0_COMPARE, 0):
+    cpu.cp0.compare = cpu.gpr[operands->rt];
+    nemu_set_irq(7, 0);
+    break;
+  case CPRS(CP0_CAUSE, 0): {
+    cp0_cause_t *newVal = (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.cause.IV = newVal->IV;
+    cpu.cp0.cause.WP = newVal->WP;
+
+    nemu_set_irq(0, newVal->IP & (1 << 0));
+    nemu_set_irq(1, newVal->IP & (1 << 1));
+  } break;
+  case CPRS(CP0_PAGEMASK, 0): {
+    cp0_pagemask_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.pagemask.mask = newVal->mask;
+    break;
+  }
+  case CPRS(CP0_ENTRY_LO0, 0): {
+    cp0_entry_lo_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.entry_lo0.g = newVal->g;
+    cpu.cp0.entry_lo0.v = newVal->v;
+    cpu.cp0.entry_lo0.d = newVal->d;
+    cpu.cp0.entry_lo0.c = newVal->c;
+    cpu.cp0.entry_lo0.pfn = newVal->pfn;
+  } break;
+  case CPRS(CP0_ENTRY_LO1, 0): {
+    cp0_entry_lo_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.entry_lo1.g = newVal->g;
+    cpu.cp0.entry_lo1.v = newVal->v;
+    cpu.cp0.entry_lo1.d = newVal->d;
+    cpu.cp0.entry_lo1.c = newVal->c;
+    cpu.cp0.entry_lo1.pfn = newVal->pfn;
+  } break;
+  case CPRS(CP0_ENTRY_HI, 0): {
+    cp0_entry_hi_t *newVal =
+        (void *)&(cpu.gpr[operands->rt]);
+    cpu.cp0.entry_hi.asid = newVal->asid;
+    cpu.cp0.entry_hi.vpn = newVal->vpn;
+    clear_mmu_cache();
+    clear_decode_cache();
+  } break;
+  case CPRS(CP0_INDEX, 0): {
+    cpu.cp0.index.idx = cpu.gpr[operands->rt];
+  } break;
+  // this serial is for debugging,
+  // please don't use it in real codes
+  case CPRS(CP0_RESERVED, CP0_RESERVED_BASE):
+#if CONFIG_SEGMENT
+    cpu.cp0.cpr[operands->rd][operands->sel] =
+        cpu.gpr[operands->rt];
+#endif
+    break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
+#if CONFIG_KERNEL_DEBUG_SERIAL
+    putchar(cpu.gpr[operands->rt]);
+#endif
+    break;
+  }
+  case CPRS(CP0_RESERVED, CP0_RESERVED_CHECK): {
+#if CONFIG_CHECK_IMAGE
+    extern const char *symbol_file;
+    check_kernel_image(symbol_file);
+#endif
+    break;
+  }
+  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_REGISTERS): {
+#if CONFIG_INSTR_LOG
+    // kdbg_print_registers();
+#endif
+  } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_PRINT_INSTR_QUEUE): {
+#if CONFIG_INSTR_LOG
+    // kdbg_print_instr_queue();
+#endif
+  } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_TOGGLE_COMMITS): {
+#if CONFIG_INSTR_LOG
+    // nemu_needs_commit = !nemu_needs_commit;
+#endif
+  } break;
+  case CPRS(CP0_RESERVED, CP0_RESERVED_HIT_TRAP): {
+    if (cpu.gpr[operands->rt] == 0)
+      printf("\e[1;32mHIT GOOD TRAP\e[0m\n");
+    else
+      printf("\e[1;31mHIT BAD TRAP %d\e[0m\n",
+          cpu.gpr[operands->rt]);
+    nemu_exit(0);
+  } break;
+  default:
+    printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc,
+        regs[operands->rt], operands->rd, operands->sel);
+    break;
+  }
+}
+
+make_exec_handler(teq) {
+  if ((int32_t)cpu.gpr[operands->rs] ==
+      (int32_t)cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(teqi) {
+  if ((int32_t)cpu.gpr[operands->rs] == operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tge) {
+  if ((int32_t)cpu.gpr[operands->rs] >=
+      (int32_t)cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tgei) {
+  if ((int32_t)cpu.gpr[operands->rs] >= operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tgeiu) {
+  if (cpu.gpr[operands->rs] >= operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tgeu) {
+  if (cpu.gpr[operands->rs] >= cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tlt) {
+  if ((int32_t)cpu.gpr[operands->rs] <
+      (int32_t)cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tlti) {
+  if ((int32_t)cpu.gpr[operands->rs] < operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tltiu) {
+  if (cpu.gpr[operands->rs] < operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tltu) {
+  if (cpu.gpr[operands->rs] < cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tne) {
+  if ((int32_t)cpu.gpr[operands->rs] !=
+      (int32_t)cpu.gpr[operands->rt]) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(tnei) {
+  if ((int32_t)cpu.gpr[operands->rs] != operands->simm) {
+    launch_exception(EXC_TRAP);
+  }
+}
+
+make_exec_handler(inv) {
+// the pc corresponding to this inst
+// pc has been updated by instr_fetch
+#if CONFIG_EXCEPTION
+  launch_exception(EXC_RI);
+#else
+  uint32_t instr = vaddr_read(cpu.pc, 4);
+  uint8_t *p = (uint8_t *)&instr;
+  printf(
+      "invalid opcode(pc = 0x%08x): %02x %02x %02x %02x "
+      "...\n",
+      cpu.pc, p[0], p[1], p[2], p[3]);
+  nemu_state = NEMU_END;
+#endif
 }
 
 #if CONFIG_DELAYSLOT
