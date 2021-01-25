@@ -198,7 +198,7 @@ static ALWAYS_INLINE void vaddr_write(
   }
 }
 
-void launch_exception(uint32_t exception) {
+void raise_exception(uint32_t exception) {
   int code = exception & 0xFFFF;
   int extra = exception >> 16;
 
@@ -328,7 +328,7 @@ static ALWAYS_INLINE void check_intrs() {
   bool ie = !(cpu.cp0.status.ERL) &&
             !(cpu.cp0.status.EXL) && cpu.cp0.status.IE;
   if (ie && (cpu.cp0.status.IM & cpu.cp0.cause.IP)) {
-    launch_exception(EXC_INTR);
+    raise_exception(EXC_INTR);
   }
 }
 #endif
@@ -424,7 +424,7 @@ void cpu_exec(uint64_t n) {
 #if CONFIG_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
       cpu.cp0.badvaddr = cpu.pc;
-      launch_exception(EXC_AdEL);
+      raise_exception(EXC_AdEL);
       goto check_exception;
     }
 #endif

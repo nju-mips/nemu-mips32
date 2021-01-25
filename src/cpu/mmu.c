@@ -8,7 +8,7 @@ extern device_t blackhole_dev;
 
 tlb_entry_t tlb[NR_TLB_ENTRY];
 
-extern void launch_exception(unsigned);
+extern void raise_exception(unsigned);
 
 void tlb_present() {
   for (int i = 0; i < NR_TLB_ENTRY; i++) {
@@ -76,7 +76,7 @@ static void tlb_exception(int ex, int code, vaddr_t vaddr, unsigned asid) {
   cpu.cp0.context.BadVPN2 = vaddr >> 13;
   cpu.cp0.entry_hi.vpn = vaddr >> 13;
   cpu.cp0.entry_hi.asid = asid;
-  launch_exception(MAKE_EX(ex, code));
+  raise_exception(MAKE_EX(ex, code));
 #if 0
   eprintf("%08x: TLB ex %d, code %d, vaddr %08x, ERL %d\n", cpu.pc, ex, code,
       vaddr, cpu.cp0.status.ERL);
