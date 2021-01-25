@@ -1,8 +1,8 @@
 #ifndef HASH_H
 #define HASH_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define HASH_SIZE (4 * 1024)
@@ -35,5 +35,9 @@ void hash_delete(hash_table_t *ht, hash_kv_t key);
 void hash_destroy_element(hash_table_t *ht);
 /*free memory used by hash table*/
 void hash_free(hash_table_t *ht);
+
+#define hash_foreach(ht, he)                  \
+  for (int _i = 0; _i < HASH_SIZE; _i++)      \
+    for (he = ht.pool[_i]; he; he = he->next)
 
 #endif

@@ -30,6 +30,11 @@ void elfperf_start();
 void elfperf_record(uint32_t pc);
 void elfperf_report();
 
+void instrperf_start();
+void instrperf_record(const char *instr, size_t size);
+void instrperf_report();
+void instrperf_end();
+
 extern elfsym_t elfsym;
 
 #endif

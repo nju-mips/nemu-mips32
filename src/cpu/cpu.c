@@ -375,6 +375,10 @@ void nemu_epilogue() {
 #if CONFIG_ELF_PERF
   elfperf_report();
 #endif
+
+#if CONFIG_INSTR_PERF
+  instrperf_report();
+#endif
 }
 
 void nemu_exit() {
@@ -400,6 +404,10 @@ void cpu_exec(uint64_t n) {
 
 #if CONFIG_INSTR_LOG
   bool nemu_needs_commit = work_mode == MODE_LOG;
+#endif
+
+#if CONFIG_INSTR_PERF
+  instrperf_start();
 #endif
 
   nemu_state = NEMU_RUNNING;
