@@ -36,6 +36,9 @@ typedef struct {
 
   int sel; /* put here will improve performance */
 
+  int nd, tf, cc1, cc2;
+  int fs64, fd64, ft64;
+
 #if CONFIG_INSTR_LOG || CONFIG_DECODE_CACHE_CHECK
   Inst inst;
 #endif

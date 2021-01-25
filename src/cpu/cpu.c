@@ -439,7 +439,9 @@ void cpu_exec(uint64_t n) {
 
 #include "instr.h"
 
+#if CONFIG_EXCEPTION
   check_exception:;
+#endif
 #if CONFIG_INSTR_LOG
     if (nemu_needs_commit) kdbg_print_registers();
 #endif
