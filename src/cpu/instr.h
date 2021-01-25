@@ -308,13 +308,59 @@ make_entry() {
 
   unsigned op = inst.op;
   switch (op) {
+  case 0x00:
+    decode->handler = special_table[inst.func];
+    break;
+  case 0x01:
+    decode->handler = regimm_table[inst.rt];
+    break;
+  case 0x10:
+    if (inst.rs & 0x10)
+      decode->handler = cop0_table_func[inst.func];
+    else
+      decode->handler = cop0_table_rs[inst.rs];
+    break;
+  case 0x11:
+    switch (operands->rs) {
+    case FPU_FMT_S:
+      decode->handler = cop1_table_rs_S[operands->func];
+    case FPU_FMT_D:
+      decode->handler = cop1_table_rs_D[operands->func];
+    case FPU_FMT_W:
+      decode->handler = cop1_table_rs_W[operands->func];
+    default:
+      decode->handler = cop1_table_rs[operands->rs];
+    }
+    break;
+  case 0x1c:
+    decode->handler = special2_table[inst.func];
+    break;
+  case 0x1f:
+    if (inst.func == 0x20)
+      decode->handler = bshfl_table[inst.shamt];
+    else
+      decode->handler = special3_table[inst.func];
+    break;
+  default:
+    decode->handler = opcode_table[op];
+    break;
+  }
+
+  assert (decode->handler != &&exec_bshfl);
+  assert (decode->handler != &&exec_special);
+  assert (decode->handler != &&exec_regimm);
+  assert (decode->handler != &&exec_cop0);
+  assert (decode->handler != &&exec_cop1);
+  assert (decode->handler != &&exec_special2);
+  assert (decode->handler != &&exec_special3);
+
+  switch (op) {
   case 0x00: goto Rtype;
   case 0x01: goto Itype;
   case 0x02:
   case 0x03: goto Jtype;
   case 0x10:
     if (inst.rs & 0x10) {
-      decode->handler = cop0_table_func[inst.func];
       goto Handler;
     } else {
       goto Cop0Type;
@@ -325,7 +371,7 @@ make_entry() {
     if (inst.func == 0x20)
       goto bshflType;
     else
-      goto S3Type;
+      goto Handler;
   default: goto Itype;
   }
 
@@ -336,26 +382,22 @@ make_entry() {
     decode->rd = inst.rd;
     decode->shamt = inst.shamt;
     decode->func = inst.func;
-    decode->handler = special_table[inst.func];
     break;
   }
   Itype : {
     decode->rs = inst.rs;
     decode->rt = inst.rt;
     decode->uimm = inst.uimm;
-    decode->handler = opcode_table[op];
     break;
   }
   Jtype : {
     decode->addr = inst.addr;
-    decode->handler = opcode_table[op];
     break;
   }
   Cop0Type : {
     decode->rt = inst.rt;
     decode->rd = inst.rd;
     decode->sel = inst.sel;
-    decode->handler = cop0_table_rs[inst.rs];
     break;
   }
   S2type : {
@@ -363,17 +405,11 @@ make_entry() {
     decode->rt = inst.rt;
     decode->rd = inst.rd;
     decode->shamt = inst.shamt;
-    decode->handler = special2_table[inst.func];
-    break;
-  }
-  S3Type : {
-    decode->handler = special3_table[inst.func];
     break;
   }
   bshflType : {
     decode->rt = inst.rt;
     decode->rd = inst.rd;
-    decode->handler = bshfl_table[inst.shamt];
     break;
   }
   } while (0);
