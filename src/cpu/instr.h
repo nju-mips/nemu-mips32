@@ -1,5 +1,11 @@
-#define make_label(l) \
+#if CONFIG_INSTR_PERF
+#  define make_label(l) \
+  l:                    \
+    instrperf_record(#l, sizeof(#l));
+#else
+#  define make_label(l) \
   l:
+#endif
 #define make_entry()
 #define make_exit() make_label(exit)
 
@@ -311,9 +317,7 @@ make_entry() {
   case 0x00:
     decode->handler = special_table[inst.func];
     break;
-  case 0x01:
-    decode->handler = regimm_table[inst.rt];
-    break;
+  case 0x01: decode->handler = regimm_table[inst.rt]; break;
   case 0x10:
     if (inst.rs & 0x10)
       decode->handler = cop0_table_func[inst.func];
@@ -328,8 +332,7 @@ make_entry() {
       decode->handler = cop1_table_rs_D[operands->func];
     case FPU_FMT_W:
       decode->handler = cop1_table_rs_W[operands->func];
-    default:
-      decode->handler = cop1_table_rs[operands->rs];
+    default: decode->handler = cop1_table_rs[operands->rs];
     }
     break;
   case 0x1c:
@@ -341,18 +344,16 @@ make_entry() {
     else
       decode->handler = special3_table[inst.func];
     break;
-  default:
-    decode->handler = opcode_table[op];
-    break;
+  default: decode->handler = opcode_table[op]; break;
   }
 
-  assert (decode->handler != &&exec_bshfl);
-  assert (decode->handler != &&exec_special);
-  assert (decode->handler != &&exec_regimm);
-  assert (decode->handler != &&exec_cop0);
-  assert (decode->handler != &&exec_cop1);
-  assert (decode->handler != &&exec_special2);
-  assert (decode->handler != &&exec_special3);
+  assert(decode->handler != &&exec_bshfl);
+  assert(decode->handler != &&exec_special);
+  assert(decode->handler != &&exec_regimm);
+  assert(decode->handler != &&exec_cop0);
+  assert(decode->handler != &&exec_cop1);
+  assert(decode->handler != &&exec_special2);
+  assert(decode->handler != &&exec_special3);
 
   switch (op) {
   case 0x00: goto Rtype;

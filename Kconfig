@@ -68,8 +68,11 @@ config DECODE_CACHE
   bool "Cache decode results"
 endmenu
 
-if ! MARCH_BENCH
 menu "NEMU-MIPS32 debug options"
+
+config INSTR_PERF
+  bool "Profile instruction frequency"
+  default n
 
 config MMU_CACHE_PERF
   bool "Profile mmu cache hit rate"
@@ -126,7 +129,6 @@ config DECODE_CACHE_CHECK
   bool "Check the validness of decode cache"
 
 endmenu
-endif
 
 menu "Kernel debug options"
 config CAE_CHECK
