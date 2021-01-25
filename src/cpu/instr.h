@@ -14,14 +14,14 @@
 #  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
     if (((addr) & (align - 1)) != 0) {         \
       cpu.cp0.badvaddr = addr;                 \
-      raise_exception(EXC_AdEL);              \
+      raise_exception(EXC_AdEL);               \
       goto exit;                               \
     }
 
 #  define CHECK_ALIGNED_ADDR_AdES(align, addr) \
     if (((addr) & (align - 1)) != 0) {         \
       cpu.cp0.badvaddr = addr;                 \
-      raise_exception(EXC_AdES);              \
+      raise_exception(EXC_AdES);               \
       goto exit;                               \
     }
 
@@ -89,7 +89,7 @@ enum {
     do {                           \
       if (!(cond)) {               \
         cpu.cp0.badvaddr = cpu.pc; \
-        raise_exception(EXC_RI);  \
+        raise_exception(EXC_RI);   \
         goto exit;                 \
       }                            \
     } while (0)
@@ -356,11 +356,16 @@ make_entry() {
     switch (operands->rs) {
     case FPU_FMT_S:
       decode->handler = cop1_table_rs_S[operands->func];
+      break;
     case FPU_FMT_D:
       decode->handler = cop1_table_rs_D[operands->func];
+      break;
     case FPU_FMT_W:
       decode->handler = cop1_table_rs_W[operands->func];
-    default: decode->handler = cop1_table_rs[operands->rs];
+      break;
+    default:
+      decode->handler = cop1_table_rs[operands->rs];
+      break;
     }
     break;
   case 0x1c:
@@ -375,6 +380,7 @@ make_entry() {
   default: decode->handler = opcode_table[op]; break;
   }
 
+  /* notify compiler decode->handler is terminal handler */
   assert(decode->handler != &&exec_bshfl);
   assert(decode->handler != &&exec_special);
   assert(decode->handler != &&exec_regimm);
@@ -561,7 +567,6 @@ make_exec_handler(slti) {
   cpu.gpr[operands->rt] =
       (int32_t)cpu.gpr[operands->rs] < operands->simm;
 }
-
 
 make_exec_handler(add) {
   InstAssert(operands->shamt == 0);
