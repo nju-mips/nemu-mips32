@@ -15,24 +15,24 @@
     goto inst_end;                \
     make_label(name)
 #  define prepare_delayslot() \
-    local_cpu.is_delayslot = true;  \
-    local_cpu.pc += 4;              \
+    cpu.is_delayslot = true;  \
+    cpu.pc += 4;              \
     goto exit;
 #else
 #  define make_exec_handler(name) \
-    local_cpu.pc += 4;                  \
+    cpu.pc += 4;                  \
     goto exit;                    \
     make_label(name)
 #  define prepare_delayslot() \
     ds = NULL; \
-    local_cpu.pc = local_cpu.br_target;   \
+    cpu.pc = cpu.br_target;   \
     goto exit;
 #endif
 
 #define InstAssert_Ex(cond)      \
   do {                           \
     if (!(cond)) {               \
-      local_cpu.cp0.badvaddr = local_cpu.pc; \
+      cpu.cp0.badvaddr = cpu.pc; \
       raise_exception(EXC_RI);   \
       goto exit;                 \
     }                            \
@@ -42,7 +42,7 @@
 
 #define CHECK_ALIGNED_ADDR_Ex(AdEX, align, addr) \
   if (((addr) & (align - 1)) != 0) {             \
-    local_cpu.cp0.badvaddr = addr;                     \
+    cpu.cp0.badvaddr = addr;                     \
     raise_exception(EXC_##AdEX);                 \
     goto exit;                                   \
   }
@@ -50,7 +50,7 @@
 #define CHECK_ALIGNED_ADDR_Ne(AdEX, align, addr)         \
   CPUAssert(((addr) & (align - 1)) == 0,                 \
       "address(0x%08x) is unaligned, pc=%08x\n", (addr), \
-      local_cpu.pc)
+      cpu.pc)
 
 #if CONFIG_EXCEPTION
 #  define InstAssert InstAssert_Ex
@@ -75,9 +75,9 @@
 #define GR_S ops->rs
 #define GR_T ops->rt
 #define GR_D ops->rd
-#define GR_SV local_cpu.gpr[ops->rs]
-#define GR_TV local_cpu.gpr[ops->rt]
-#define GR_DV local_cpu.gpr[ops->rd]
+#define GR_SV cpu.gpr[ops->rs]
+#define GR_TV cpu.gpr[ops->rt]
+#define GR_DV cpu.gpr[ops->rd]
 #define I_SI ops->simm
 #define I_UI ops->uimm
 #define I_SA ops->shamt

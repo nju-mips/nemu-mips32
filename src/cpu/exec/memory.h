@@ -1,33 +1,33 @@
 make_exec_handler(lw) {
   CHECK_ALIGNED_ADDR_AdEL(4, GR_SV + I_SI);
   uint32_t rdata = vaddr_read(GR_SV + I_SI, 4);
-  if (!local_cpu.has_exception) { GR_TV = rdata; }
+  if (!cpu.has_exception) { GR_TV = rdata; }
 }
 
 make_exec_handler(lb) {
   CHECK_ALIGNED_ADDR_AdEL(1, GR_SV + I_SI);
   uint32_t rdata =
       (int32_t)(int8_t)vaddr_read(GR_SV + I_SI, 1);
-  if (!local_cpu.has_exception) { GR_TV = rdata; }
+  if (!cpu.has_exception) { GR_TV = rdata; }
 }
 
 make_exec_handler(lbu) {
   CHECK_ALIGNED_ADDR_AdEL(1, GR_SV + I_SI);
   uint32_t rdata = vaddr_read(GR_SV + I_SI, 1);
-  if (!local_cpu.has_exception) { GR_TV = rdata; }
+  if (!cpu.has_exception) { GR_TV = rdata; }
 }
 
 make_exec_handler(lh) {
   CHECK_ALIGNED_ADDR_AdEL(2, GR_SV + I_SI);
   uint32_t rdata =
       (int32_t)(int16_t)vaddr_read(GR_SV + I_SI, 2);
-  if (!local_cpu.has_exception) { GR_TV = rdata; }
+  if (!cpu.has_exception) { GR_TV = rdata; }
 }
 
 make_exec_handler(lhu) {
   CHECK_ALIGNED_ADDR_AdEL(2, GR_SV + I_SI);
   uint32_t rdata = vaddr_read(GR_SV + I_SI, 2);
-  if (!local_cpu.has_exception) { GR_TV = rdata; }
+  if (!cpu.has_exception) { GR_TV = rdata; }
 }
 
 make_exec_handler(sw) {
@@ -52,7 +52,7 @@ make_exec_handler(swl) {
   uint32_t wdata = GR_TV >> ((3 - idx) * 8);
 
   vaddr_write((waddr >> 2) << 2, len, wdata);
-  if (local_cpu.has_exception) local_cpu.cp0.badvaddr = waddr;
+  if (cpu.has_exception) cpu.cp0.badvaddr = waddr;
 }
 
 make_exec_handler(swr) {
@@ -68,14 +68,14 @@ make_exec_handler(lwl) {
   int len = (raddr & 0x3) + 1;
   uint32_t rdata = vaddr_read((raddr >> 2) << 2, len);
 
-  if (!local_cpu.has_exception) {
+  if (!cpu.has_exception) {
     if (len < 4)
       GR_TV = rdata << ((4 - len) * 8) |
               ((uint32_t)GR_TV << (len * 8)) >> (len * 8);
     else
       GR_TV = rdata;
   } else {
-    local_cpu.cp0.badvaddr = raddr;
+    cpu.cp0.badvaddr = raddr;
   }
 }
 
@@ -84,7 +84,7 @@ make_exec_handler(lwr) {
   int idx = raddr & 0x3;
   int len = 4 - idx;
   uint32_t rdata = vaddr_read(raddr, len);
-  if (!local_cpu.has_exception) {
+  if (!cpu.has_exception) {
     if (len < 4)
       GR_TV = (rdata << idx * 8) >> (idx * 8) |
               ((uint32_t)GR_TV >> (len * 8)) << (len * 8);
@@ -103,5 +103,5 @@ make_exec_handler(ll) {
 make_exec_handler(sc) {
   CHECK_ALIGNED_ADDR_AdES(4, GR_SV + I_SI);
   vaddr_write(GR_SV + I_SI, 4, GR_TV);
-  if (!local_cpu.has_exception) GR_TV = 1;
+  if (!cpu.has_exception) GR_TV = 1;
 }

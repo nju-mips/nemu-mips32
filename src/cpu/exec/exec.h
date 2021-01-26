@@ -3,7 +3,7 @@
 
 /* clang-format on */
 make_entry() {
-  local_cpu.gpr[0] = 0;
+  cpu.gpr[0] = 0;
 
 #if CONFIG_DECODE_CACHE
   if (ds) {
@@ -20,7 +20,7 @@ make_entry() {
       ds->next = NULL;
     }
   } else {
-    ds = decode_cache_fetch(local_cpu.pc);
+    ds = decode_cache_fetch(cpu.pc);
     if (ds->handler) {
 #  if CONFIG_INSTR_LOG
       instr_enqueue_instr(ds->inst.val);
@@ -30,7 +30,7 @@ make_entry() {
   }
 #endif
 
-  inst.val = vaddr_read(local_cpu.pc, 4);
+  inst.val = vaddr_read(cpu.pc, 4);
 
 #if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
@@ -66,14 +66,14 @@ make_entry() {
 
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
-  if (local_cpu.is_delayslot) {
+  if (cpu.is_delayslot) {
 #if CONFIG_DECODE_CACHE
     ds = NULL;
 #endif
-    local_cpu.pc = local_cpu.br_target;
-    local_cpu.is_delayslot = false;
+    cpu.pc = cpu.br_target;
+    cpu.is_delayslot = false;
   } else {
-    local_cpu.pc += 4;
+    cpu.pc += 4;
   }
   /* fall through */
 }
