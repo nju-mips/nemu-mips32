@@ -1,27 +1,42 @@
 #if 1
 make_exec_handler(exec_special) {
-  goto *special_table[ops->func];
+  panic("should not reach here !");
+  // goto *special_table[ops->func];
 }
 
 make_exec_handler(exec_special2) {
-  goto *special2_table[ops->func];
+  panic("should not reach here !");
+  // goto *special2_table[ops->func];
 }
 
 make_exec_handler(exec_special3) {
-  goto *special3_table[ops->func];
+  panic("should not reach here !");
+  // goto *special3_table[ops->func];
 }
 
-make_exec_handler(exec_bshfl) { goto *bshfl_table[I_SA]; }
-make_exec_handler(exec_regimm) { goto *regimm_table[GR_T]; }
+make_exec_handler(exec_bshfl) {
+  panic("should not reach here !");
+  // goto *bshfl_table[I_SA];
+}
+
+make_exec_handler(exec_regimm) {
+  panic("should not reach here !");
+  // goto *regimm_table[GR_T];
+}
 
 make_exec_handler(exec_cop0) {
+  panic("should not reach here !");
+  /*
   if (GR_S & 0x10)
     goto *cop0_table_func[ops->func];
   else
     goto *cop0_table_rs[GR_S];
+  */
 }
 
 make_exec_handler(exec_cop1) {
+  panic("should not reach here !");
+  /*
   if (GR_S == FPU_FMT_S)
     goto *cop1_table_rs_S[ops->func];
   else if (GR_S == FPU_FMT_D)
@@ -30,6 +45,7 @@ make_exec_handler(exec_cop1) {
     goto *cop1_table_rs_W[ops->func];
   else
     goto *cop1_table_rs[GR_S];
+  */
 }
 #endif
 

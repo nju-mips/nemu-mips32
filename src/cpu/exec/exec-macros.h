@@ -63,3 +63,20 @@
   CHECK_ALIGNED_ADDR(AdEL, align, addr)
 #define CHECK_ALIGNED_ADDR_AdES(align, addr) \
   CHECK_ALIGNED_ADDR(AdES, align, addr)
+
+/* some macros for convenience */
+#if CONFIG_DECODE_CACHE
+#  define ops ds
+#else
+#  define ops (&inst)
+#endif
+
+#define GR_S ops->rs
+#define GR_T ops->rt
+#define GR_D ops->rd
+#define GR_SV cpu.gpr[ops->rs]
+#define GR_TV cpu.gpr[ops->rt]
+#define GR_DV cpu.gpr[ops->rd]
+#define I_SI ops->simm
+#define I_UI ops->uimm
+#define I_SA ops->shamt

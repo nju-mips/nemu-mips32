@@ -49,15 +49,6 @@ make_entry() {
 #  define ops (&inst)
 #endif
 
-#define GR_S ops->rs
-#define GR_T ops->rt
-#define GR_D ops->rd
-#define GR_SV cpu.gpr[ops->rs]
-#define GR_TV cpu.gpr[ops->rt]
-#define GR_DV cpu.gpr[ops->rd]
-#define I_SI ops->simm
-#define I_UI ops->uimm
-#define I_SA ops->shamt
 #include "arith-ex.h"
 #include "arith.h"
 #include "branch.h"
