@@ -81,134 +81,38 @@ make_entry() {
 
 #if CONFIG_DECODE_CACHE
   if (decode->handler) {
-#if CONFIG_INSTR_LOG
+#  if CONFIG_INSTR_LOG
     instr_enqueue_instr(decode->inst.val);
-#endif
+#  endif
 
     goto *(decode->handler);
   }
 #endif
 
-  decode.inst.val = vaddr_read(cpu.pc, 4);
-
+  Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #if CONFIG_INSTR_LOG
-  instr_enqueue_instr(decode->inst.val);
+  instr_enqueue_instr(inst.val);
 #endif
 
-  unsigned op = inst.op;
-  switch (op) {
-  case 0x00:
-    decode->handler = special_table[inst.func];
-    break;
-  case 0x01: decode->handler = regimm_table[inst.rt]; break;
-  case 0x10:
-    if (inst.rs & 0x10)
-      decode->handler = cop0_table_func[inst.func];
-    else
-      decode->handler = cop0_table_rs[inst.rs];
-    break;
-  case 0x11:
-    switch (operands->rs) {
-    case FPU_FMT_S:
-      decode->handler = cop1_table_rs_S[operands->func];
-      break;
-    case FPU_FMT_D:
-      decode->handler = cop1_table_rs_D[operands->func];
-      break;
-    case FPU_FMT_W:
-      decode->handler = cop1_table_rs_W[operands->func];
-      break;
-    default:
-      decode->handler = cop1_table_rs[operands->rs];
-      break;
-    }
-    break;
-  case 0x1c:
-    decode->handler = special2_table[inst.func];
-    break;
-  case 0x1f:
-    if (inst.func == 0x20)
-      decode->handler = bshfl_table[inst.shamt];
-    else
-      decode->handler = special3_table[inst.func];
-    break;
-  default: decode->handler = opcode_table[op]; break;
-  }
+  const void *handler = decoder_get_handler(inst,
+      special_table, special2_table, special3_table,
+      bshfl_table, regimm_table, cop0_table_rs,
+      cop0_table_func, cop1_table_rs, cop1_table_rs_S,
+      cop1_table_rs_D, cop1_table_rs_W, opcode_table);
 
 #if CONFIG_DECODE_CACHE
-  /* notify compiler decode->handler is terminal handler */
-  assert(decode->handler != &&exec_bshfl);
-  assert(decode->handler != &&exec_special);
-  assert(decode->handler != &&exec_regimm);
-  assert(decode->handler != &&exec_cop0);
-  assert(decode->handler != &&exec_cop1);
-  assert(decode->handler != &&exec_special2);
-  assert(decode->handler != &&exec_special3);
-
-  switch (op) {
-  case 0x00: goto Rtype;
-  case 0x01: goto Itype;
-  case 0x02:
-  case 0x03: goto Jtype;
-  case 0x10:
-    if (inst.rs & 0x10) {
-      goto Handler;
-    } else {
-      goto Cop0Type;
-    }
-    break;
-  case 0x1c: goto S2type;
-  case 0x1f:
-    if (inst.func == 0x20)
-      goto bshflType;
-    else
-      goto Handler;
-  default: goto Itype;
-  }
-
-  do {
-  Rtype : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->shamt = inst.shamt;
-    decode->func = inst.func;
-    break;
-  }
-  Itype : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->uimm = inst.uimm;
-    break;
-  }
-  Jtype : {
-    decode->addr = inst.addr;
-    break;
-  }
-  Cop0Type : {
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->sel = inst.sel;
-    break;
-  }
-  S2type : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->shamt = inst.shamt;
-    break;
-  }
-  bshflType : {
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    break;
-  }
-  } while (0);
+  decoder_set_state(decode, inst);
 #endif
 
-Handler:
-  goto *(decode->handler);
+  decode->handler = handler;
+  goto *handler;
 }
+
+#if CONFIG_DECODE_CACHE
+#  define operands decode
+#else
+#  define operands (&inst)
+#endif
 
 #define GR_S operands->rs
 #define GR_T operands->rt

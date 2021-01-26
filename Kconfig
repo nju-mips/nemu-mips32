@@ -110,15 +110,6 @@ config BACKTRACE_LOG
   bool "Log all functions in current stack frame"
   depends on FUNCTION_TRACE_LOG=y
 
-config MMIO_ACCESS_LOG
-  bool "log read and write of mmio"
-  default n
-
-config MMIO_ACCESS_LOG_DEVICE
-  string "device to be logged"
-  depends on MMIO_ACCESS_LOG=y
-  default "xilinx-spi"
-
 endmenu
 
 menu "Kernel debug options"

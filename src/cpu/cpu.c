@@ -9,9 +9,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "cpu/decode.h"
 #include "cpu/memory.h"
 #include "cpu/mmu.h"
-#include "cpu/decode.h"
 #include "debug.h"
 #include "device.h"
 #include "monitor.h"
@@ -45,8 +45,6 @@ const char *regs[32] = {
 
 #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
 #define LIKELY(cond) __builtin_expect(!!(cond), 1)
-
-#define MAX_INSTR_TO_PRINT 10
 
 void nemu_set_irq(int irqno, bool val) {
   assert(0 <= irqno && irqno < 8);
@@ -129,13 +127,6 @@ static ALWAYS_INLINE uint32_t vaddr_read(
     CPUAssert(dev && dev->read, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, attr.dirty);
     uint32_t data = dev->read(paddr - dev->start, len);
-#if CONFIG_MMIO_ACCESS_LOG
-    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) ==
-        0) {
-      eprintf("[NEMU] R(%s, %08x, %d) -> %08x\n", dev->name,
-          paddr - dev->start, len, data);
-    }
-#endif
     return data;
   }
 }
@@ -155,13 +146,6 @@ static ALWAYS_INLINE void vaddr_write(
     device_t *dev = find_device(paddr);
     CPUAssert(dev && dev->write, "bad addr %08x\n", addr);
     update_mmu_cache(addr, paddr, dev, true);
-#if CONFIG_MMIO_ACCESS_LOG
-    if (strcmp(CONFIG_MMIO_ACCESS_LOG_DEVICE, dev->name) ==
-        0) {
-      eprintf("[NEMU] W(%s, %08x, %d) -> %08x\n", dev->name,
-          paddr - dev->start, len, data);
-    }
-#endif
     dev->write(paddr - dev->start, len, data);
   }
 }
@@ -346,6 +330,121 @@ void nemu_exit() {
   exit(0);
 }
 
+ALWAYS_INLINE void *decoder_get_handler(Inst inst,
+    const void *special_table[64],
+    const void *special2_table[64],
+    const void *special3_table[64],
+    const void *bshfl_table[64],
+    const void *regimm_table[64],
+    const void *cop0_table_rs[32],
+    const void *cop0_table_func[64],
+    const void *cop1_table_rs[32],
+    const void *cop1_table_rs_S[64],
+    const void *cop1_table_rs_D[64],
+    const void *cop1_table_rs_W[64],
+    const void *opcode_table[64]) {
+  const void *handler = NULL;
+  switch (inst.op) {
+  case 0x00: handler = special_table[inst.func]; break;
+  case 0x01: handler = regimm_table[inst.rt]; break;
+  case 0x10:
+    if (inst.rs & 0x10)
+      handler = cop0_table_func[inst.func];
+    else
+      handler = cop0_table_rs[inst.rs];
+    break;
+  case 0x11:
+    switch (operands->rs) {
+    case FPU_FMT_S:
+      handler = cop1_table_rs_S[operands->func];
+      break;
+    case FPU_FMT_D:
+      handler = cop1_table_rs_D[operands->func];
+      break;
+    case FPU_FMT_W:
+      handler = cop1_table_rs_W[operands->func];
+      break;
+    default: handler = cop1_table_rs[operands->rs]; break;
+    }
+    break;
+  case 0x1c: handler = special2_table[inst.func]; break;
+  case 0x1f:
+    if (inst.func == 0x20)
+      handler = bshfl_table[inst.shamt];
+    else
+      handler = special3_table[inst.func];
+    break;
+  default: handler = opcode_table[op]; break;
+  }
+  return handler;
+}
+
+ALWAYS_INLINE void decoder_set_state(
+    decode_state_t *ds, Inst inst) {
+  switch (inst.op) {
+  case 0x00: goto Rtype;
+  case 0x01: goto Itype;
+  case 0x02:
+  case 0x03: goto Jtype;
+  case 0x10:
+    if (inst.rs & 0x10) {
+      goto Handler;
+    } else {
+      goto Cop0Type;
+    }
+    break;
+  case 0x1c: goto S2type;
+  case 0x1f:
+    if (inst.func == 0x20)
+      goto bshflType;
+    else
+      goto Handler;
+  default: goto Itype;
+  }
+
+  do {
+  Rtype : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->shamt = inst.shamt;
+    decode->func = inst.func;
+    break;
+  }
+  Itype : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->uimm = inst.uimm;
+    break;
+  }
+  Jtype : {
+    decode->addr = inst.addr;
+    break;
+  }
+  Cop0Type : {
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->sel = inst.sel;
+    break;
+  }
+  S2type : {
+    decode->rs = inst.rs;
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    decode->shamt = inst.shamt;
+    break;
+  }
+  bshflType : {
+    decode->rt = inst.rt;
+    decode->rd = inst.rd;
+    break;
+  }
+  } while (0);
+
+Handler:
+  return;
+}
+
 /* Simulate how the CPU works. */
 void cpu_exec(uint64_t n) {
   if (work_mode == MODE_GDB && nemu_state != NEMU_END) {
@@ -399,11 +498,7 @@ void cpu_exec(uint64_t n) {
 
     decode_state_t decode;
 #if CONFIG_DECODE_CACHE
-#  define operands decode
     decode_state_t *decode = decode_cache_fetch(cpu.pc);
-#else
-#  define operands (&decode->inst)
-    decode.inst.val = vaddr_read(cpu.pc, 4);
 #endif
 
 #include "exec/exec.h"
