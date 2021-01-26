@@ -57,12 +57,12 @@ void clear_decode_cache() {
 
 static ALWAYS_INLINE uint32_t decode_cache_index(
     vaddr_t vaddr) {
-  return vaddr & ((1 << DECODE_CACHE_BITS) - 1);
+  return (vaddr >> 2) & ((1 << DECODE_CACHE_BITS) - 1);
 }
 
 static ALWAYS_INLINE uint32_t decode_cache_id(
     vaddr_t vaddr) {
-  return (vaddr >> DECODE_CACHE_BITS);
+  return vaddr >> (DECODE_CACHE_BITS + 2);
 }
 
 static ALWAYS_INLINE decode_cache_t *decode_cache_fetch(

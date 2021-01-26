@@ -445,11 +445,12 @@ void cpu_exec(uint64_t n) {
     Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #endif
 
-#include "instr.h"
+#include "exec/exec.h"
 
 #if CONFIG_EXCEPTION
   check_exception:;
 #endif
+
 #if CONFIG_INSTR_LOG
     if (nemu_needs_commit) kdbg_print_registers();
 #endif

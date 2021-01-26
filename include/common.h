@@ -20,6 +20,14 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+typedef union {
+  struct {
+    uint32_t lo, hi;
+  };
+  uint64_t val;
+  int64_t sval;
+} L64_t;
+
 #define glue_prim(a, b) a ## b
 #define glue(a, b) glue_prim(a, b)
 
