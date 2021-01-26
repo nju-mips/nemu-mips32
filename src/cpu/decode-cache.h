@@ -16,6 +16,7 @@ void clear_decode_cache() {
        i < sizeof(decode_cache) / sizeof(*decode_cache);
        i++) {
     decode_cache[i].handler = NULL;
+    decode_cache[i].next = NULL;
   }
 }
 
@@ -35,6 +36,7 @@ static ALWAYS_INLINE decode_state_t *decode_cache_fetch(
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
     decode_cache[idx].handler = NULL;
+    decode_cache[idx].next = NULL;
     decode_cache[idx].id = id;
   }
   return &decode_cache[idx];

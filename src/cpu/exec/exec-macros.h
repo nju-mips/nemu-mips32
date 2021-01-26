@@ -24,6 +24,7 @@
     goto exit;                    \
     make_label(name)
 #  define prepare_delayslot() \
+    ds = NULL; \
     local_cpu.pc = local_cpu.br_target;   \
     goto exit;
 #endif

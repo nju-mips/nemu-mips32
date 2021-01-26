@@ -4,8 +4,9 @@
 #include "reg.h"
 
 /* clang-format off */
-typedef struct {
+struct decode_state_t {
   const void *handler;
+  struct decode_state_t *next;
 
   uint32_t id;
   union {
@@ -32,12 +33,17 @@ typedef struct {
 
   int sel; /* put here will improve performance */
 
-  int nd, tf, cc1, cc2;
-  int fs64, fd64, ft64;
+  // FIXME
+  union {
+    int nd, tf, cc1, cc2;
+    int fs64, fd64, ft64;
+  };
 #if CONFIG_INSTR_LOG
   Inst inst;
 #endif
-} decode_state_t;
+};
+
+typedef struct decode_state_t decode_state_t;
 /* clang-format on */
 
 #endif

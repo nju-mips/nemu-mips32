@@ -473,13 +473,13 @@ void cpu_exec(uint64_t n) {
   CPU_state local_cpu = cpu;
 
   nemu_state = NEMU_RUNNING;
+#if CONFIG_DECODE_CACHE
+  decode_state_t *ds = NULL;
+#endif
 
   for (; n > 0; n--) {
     /* local variables */
     Inst inst;
-#if CONFIG_DECODE_CACHE
-    decode_state_t *ds;
-#endif
 
 #if CONFIG_INSTR_LOG
     instr_enqueue_pc(local_cpu.pc);

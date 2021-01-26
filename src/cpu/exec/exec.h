@@ -6,29 +6,36 @@ make_entry() {
   local_cpu.gpr[0] = 0;
 
 #if CONFIG_DECODE_CACHE
-  ds = decode_cache_fetch(local_cpu.pc);
-#endif
-
-#if CONFIG_DECODE_CACHE_PERF
-  decode_cache_hit += !!ds->handler;
-  decode_cache_miss += !ds->handler;
-#endif
-
-#if CONFIG_DECODE_CACHE
-  if (ds->handler) {
+  if (ds) {
+    if (ds->next) {
+      ds = ds->next;
 #  if CONFIG_INSTR_LOG
-    instr_enqueue_instr(ds->inst.val);
+      instr_enqueue_instr(ds->inst.val);
 #  endif
 
-    goto *(ds->handler);
+      goto *(ds->handler);
+    } else {
+      ds->next = malloc(sizeof(decode_state_t));
+      ds = ds->next;
+      ds->next = NULL;
+    }
+  } else {
+    ds = decode_cache_fetch(local_cpu.pc);
+    if (ds->handler) {
+#  if CONFIG_INSTR_LOG
+      instr_enqueue_instr(ds->inst.val);
+#  endif
+      goto *(ds->handler);
+    }
   }
 #endif
 
+  inst.val = vaddr_read(local_cpu.pc, 4);
+
 #if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
+  ds->inst.val = inst.val;
 #endif
-
-  inst.val = vaddr_read(local_cpu.pc, 4);
 
   const void *handler = decoder_get_handler(inst,
       special_table, special2_table, special3_table,
@@ -58,6 +65,7 @@ make_entry() {
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (local_cpu.is_delayslot) {
+    ds = NULL;
     local_cpu.pc = local_cpu.br_target;
     local_cpu.is_delayslot = false;
   } else {
