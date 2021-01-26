@@ -214,10 +214,6 @@ void raise_exception(uint32_t exception) {
     cpu.br_target = 0x80000000 + vecOff;
   }
 
-#if CONFIG_SEGMENT
-  cpu.base = 0; // kernel segment base is zero
-#endif
-
   clear_mmu_cache();
   clear_decode_cache();
 }

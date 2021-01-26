@@ -60,9 +60,6 @@ static inline vaddr_t ioremap(vaddr_t vaddr) { return vaddr & 0x1FFFFFFF; }
 enum { MMU_LOAD, MMU_STORE };
 
 static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t *attr) {
-#if CONFIG_SEGMENT
-  addr += cpu.base;
-#endif
   switch ((addr >> 29) & 0x7) {
   case 4: /* kseg0 */
   case 5: /* kseg1 */

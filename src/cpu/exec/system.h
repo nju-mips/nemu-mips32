@@ -80,10 +80,6 @@ make_exec_handler(eret) {
   }
 #endif
 
-#if CONFIG_SEGMENT
-  cpu.base = cpu.cp0.reserved[CP0_RESERVED_BASE];
-#endif
-
   clear_mmu_cache();
   clear_decode_cache();
 }
@@ -179,11 +175,6 @@ make_exec_handler(mtc0) {
   } break;
   // this serial is for debugging,
   // please don't use it in real codes
-  case CPRS(CP0_RESERVED, CP0_RESERVED_BASE):
-#if CONFIG_SEGMENT
-    cpu.cp0.cpr[GR_D][operands->sel] = GR_TV;
-#endif
-    break;
   case CPRS(CP0_RESERVED, CP0_RESERVED_SERIAL): {
 #if CONFIG_KERNEL_DEBUG_SERIAL
     putchar(GR_TV);

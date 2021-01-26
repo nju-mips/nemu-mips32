@@ -43,9 +43,6 @@ if ! MARCH_BENCH
 config DELAYSLOT
   bool "Delayslot support"
 
-config SEGMENT
-  bool "Segment mode support"
-
 config PAGING
   bool "Paging mode support"
 

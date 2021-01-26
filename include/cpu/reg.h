@@ -301,9 +301,6 @@ typedef struct {
   uint32_t hi, lo;
   cp0_t cp0;
   vaddr_t pc;
-#if CONFIG_SEGMENT
-  vaddr_t base;
-#endif
 
   vaddr_t br_target;
 #if CONFIG_DELAYSLOT
