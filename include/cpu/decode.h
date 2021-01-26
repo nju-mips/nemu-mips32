@@ -1,6 +1,8 @@
 #ifndef CPU_DECODE_CACHE_H
 #define CPU_DECODE_CACHE_H
 
+#include "reg.h"
+
 /* clang-format off */
 typedef struct {
   const void *handler;

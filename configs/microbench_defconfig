@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# This is an configure for nemu-mips32
+# This is a configure for nemu-mips32
 #
 CONFIG_MARCH_BENCH=y
 # CONFIG_MARCH_MIPS32_R1 is not set
@@ -9,14 +9,25 @@ CONFIG_MARCH_BENCH=y
 #
 # NEMU-MIPS32 features
 #
+CONFIG_CMDLINE_ADDR=0xbfc10000
 CONFIG_MMU_CACHE=y
 CONFIG_DECODE_CACHE=y
 # end of NEMU-MIPS32 features
 
 #
+# NEMU-MIPS32 debug options
+#
+# CONFIG_INSTR_PERF is not set
+# CONFIG_MMU_CACHE_PERF is not set
+# CONFIG_DECODE_CACHE_PERF is not set
+# CONFIG_ELF_PERF is not set
+# CONFIG_INSTR_LOG is not set
+# CONFIG_FUNCTION_TRACE_LOG is not set
+# end of NEMU-MIPS32 debug options
+
+#
 # Kernel debug options
 #
-# CONFIG_CAE_CHECK is not set
 # CONFIG_KERNEL_DEBUG_SERIAL is not set
 # CONFIG_CHECK_IMAGE is not set
 # CONFIG_WARN_PC_EQUALS_ZERO is not set
@@ -41,6 +52,8 @@ CONFIG_NEMU_VGA=y
 CONFIG_NEMU_VGA_BASE=0x10400000
 CONFIG_NEMU_VGA_CTRL=y
 CONFIG_NEMU_VGA_CTRL_BASE=0x10003000
+# CONFIG_NEMU_DISK is not set
+CONFIG_NEMU_DISK_BASE=0x1fe97000
 CONFIG_XLNX_ULITE=y
 CONFIG_XLNX_ULITE_BASE=0x1fe50000
 # CONFIG_XLNX_SPI is not set
