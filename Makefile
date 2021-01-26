@@ -53,6 +53,7 @@ OBJS := $(cfiles-y:src/%.c=$(OBJ_DIR)/%.o)
 $(OBJ_DIR)/%.o: src/%.c Makefile
 	@echo + CC $<
 	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -fPIC -S -o $(@:.o=.s) $<
 	@$(CC) $(CFLAGS) -fPIC -c -o $@ $<
 
 # Depencies

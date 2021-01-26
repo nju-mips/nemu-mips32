@@ -55,12 +55,12 @@ make_exec_handler(inv) {
 #if CONFIG_EXCEPTION
   raise_exception(EXC_RI);
 #else
-  uint32_t instr = vaddr_read(cpu.pc, 4);
+  uint32_t instr = vaddr_read(local_cpu.pc, 4);
   uint8_t *p = (uint8_t *)&instr;
   printf(
       "invalid opcode(pc = 0x%08x): %02x %02x %02x %02x "
       "...\n",
-      cpu.pc, p[0], p[1], p[2], p[3]);
+      local_cpu.pc, p[0], p[1], p[2], p[3]);
   nemu_state = NEMU_END;
 #endif
 }

@@ -470,6 +470,8 @@ void cpu_exec(uint64_t n) {
   instrperf_start();
 #endif
 
+  CPU_state local_cpu = cpu;
+
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
@@ -480,16 +482,16 @@ void cpu_exec(uint64_t n) {
 #endif
 
 #if CONFIG_INSTR_LOG
-    instr_enqueue_pc(cpu.pc);
+    instr_enqueue_pc(local_cpu.pc);
 #endif
 
 #if CONFIG_ELF_PERF
-    elfperf_record(cpu.pc);
+    elfperf_record(local_cpu.pc);
 #endif
 
 #if CONFIG_EXCEPTION
-    if ((cpu.pc & 0x3) != 0) {
-      cpu.cp0.badvaddr = cpu.pc;
+    if ((local_cpu.pc & 0x3) != 0) {
+      local_cpu.cp0.badvaddr = local_cpu.pc;
       raise_exception(EXC_AdEL);
       goto check_exception;
     }
@@ -497,8 +499,8 @@ void cpu_exec(uint64_t n) {
 
     /* should be bad state */
 #if CONFIG_WARN_PC_EQUALS_ZERO
-    if (cpu.pc == 0x0) {
-      printf("[NEMU] warning: cpu.pc == 0\n");
+    if (local_cpu.pc == 0x0) {
+      printf("[NEMU] warning: local_cpu.pc == 0\n");
       kdbg_print_instr_queue();
     }
 #endif
@@ -515,16 +517,18 @@ void cpu_exec(uint64_t n) {
 #endif
 
 #if CONFIG_EXCEPTION || CONFIG_INTR
-    if (!cpu.has_exception) check_intrs(); /* soft intr */
+    if (!local_cpu.has_exception) check_intrs(); /* soft intr */
 
-    if (cpu.has_exception) {
-      cpu.has_exception = false;
-      cpu.pc = cpu.br_target;
+    if (local_cpu.has_exception) {
+      local_cpu.has_exception = false;
+      local_cpu.pc = local_cpu.br_target;
     }
 #endif
 
-    if (nemu_state != NEMU_RUNNING) { return; }
+    if (nemu_state != NEMU_RUNNING) { break; }
   }
+
+  local_cpu = cpu;
 
   if (nemu_state == NEMU_RUNNING) {
     nemu_state = NEMU_STOP;

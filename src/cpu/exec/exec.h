@@ -3,10 +3,10 @@
 
 /* clang-format on */
 make_entry() {
-  cpu.gpr[0] = 0;
+  local_cpu.gpr[0] = 0;
 
 #if CONFIG_DECODE_CACHE
-  ds = decode_cache_fetch(cpu.pc);
+  ds = decode_cache_fetch(local_cpu.pc);
 #endif
 
 #if CONFIG_DECODE_CACHE_PERF
@@ -28,7 +28,7 @@ make_entry() {
   instr_enqueue_instr(inst.val);
 #endif
 
-  inst.val = vaddr_read(cpu.pc, 4);
+  inst.val = vaddr_read(local_cpu.pc, 4);
 
   const void *handler = decoder_get_handler(inst,
       special_table, special2_table, special3_table,
@@ -42,12 +42,6 @@ make_entry() {
 #endif
   goto *handler;
 }
-
-#if CONFIG_DECODE_CACHE
-#  define ops ds
-#else
-#  define ops (&inst)
-#endif
 
 #include "arith-ex.h"
 #include "arith.h"
@@ -63,11 +57,11 @@ make_entry() {
 
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
-  if (cpu.is_delayslot) {
-    cpu.pc = cpu.br_target;
-    cpu.is_delayslot = false;
+  if (local_cpu.is_delayslot) {
+    local_cpu.pc = local_cpu.br_target;
+    local_cpu.is_delayslot = false;
   } else {
-    cpu.pc += 4;
+    local_cpu.pc += 4;
   }
   /* fall through */
 }
