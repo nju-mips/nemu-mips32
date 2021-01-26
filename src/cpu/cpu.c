@@ -330,7 +330,7 @@ void nemu_exit() {
   exit(0);
 }
 
-ALWAYS_INLINE void *decoder_get_handler(Inst inst,
+ALWAYS_INLINE const void *decoder_get_handler(Inst inst,
     const void *special_table[64],
     const void *special2_table[64],
     const void *special3_table[64],
@@ -354,17 +354,17 @@ ALWAYS_INLINE void *decoder_get_handler(Inst inst,
       handler = cop0_table_rs[inst.rs];
     break;
   case 0x11:
-    switch (operands->rs) {
+    switch (inst.rs) {
     case FPU_FMT_S:
-      handler = cop1_table_rs_S[operands->func];
+      handler = cop1_table_rs_S[inst.func];
       break;
     case FPU_FMT_D:
-      handler = cop1_table_rs_D[operands->func];
+      handler = cop1_table_rs_D[inst.func];
       break;
     case FPU_FMT_W:
-      handler = cop1_table_rs_W[operands->func];
+      handler = cop1_table_rs_W[inst.func];
       break;
-    default: handler = cop1_table_rs[operands->rs]; break;
+    default: handler = cop1_table_rs[inst.rs]; break;
     }
     break;
   case 0x1c: handler = special2_table[inst.func]; break;
@@ -374,13 +374,14 @@ ALWAYS_INLINE void *decoder_get_handler(Inst inst,
     else
       handler = special3_table[inst.func];
     break;
-  default: handler = opcode_table[op]; break;
+  default: handler = opcode_table[inst.op]; break;
   }
   return handler;
 }
 
 ALWAYS_INLINE void decoder_set_state(
     decode_state_t *ds, Inst inst) {
+  /* legacy code, keep it */
   switch (inst.op) {
   case 0x00: goto Rtype;
   case 0x01: goto Itype;
@@ -404,39 +405,39 @@ ALWAYS_INLINE void decoder_set_state(
 
   do {
   Rtype : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->shamt = inst.shamt;
-    decode->func = inst.func;
+    ds->rs = inst.rs;
+    ds->rt = inst.rt;
+    ds->rd = inst.rd;
+    ds->shamt = inst.shamt;
+    ds->func = inst.func;
     break;
   }
   Itype : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->uimm = inst.uimm;
+    ds->rs = inst.rs;
+    ds->rt = inst.rt;
+    ds->uimm = inst.uimm;
     break;
   }
   Jtype : {
-    decode->addr = inst.addr;
+    ds->addr = inst.addr;
     break;
   }
   Cop0Type : {
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->sel = inst.sel;
+    ds->rt = inst.rt;
+    ds->rd = inst.rd;
+    ds->sel = inst.sel;
     break;
   }
   S2type : {
-    decode->rs = inst.rs;
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
-    decode->shamt = inst.shamt;
+    ds->rs = inst.rs;
+    ds->rt = inst.rt;
+    ds->rd = inst.rd;
+    ds->shamt = inst.shamt;
     break;
   }
   bshflType : {
-    decode->rt = inst.rt;
-    decode->rd = inst.rd;
+    ds->rt = inst.rt;
+    ds->rd = inst.rd;
     break;
   }
   } while (0);
@@ -496,9 +497,10 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-    decode_state_t decode;
 #if CONFIG_DECODE_CACHE
-    decode_state_t *decode = decode_cache_fetch(cpu.pc);
+    decode_state_t *ds = decode_cache_fetch(cpu.pc);
+#else
+    Inst inst = { .val = vaddr_read(cpu.pc, 4) };
 #endif
 
 #include "exec/exec.h"

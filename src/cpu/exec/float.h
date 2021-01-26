@@ -1,18 +1,7 @@
-enum {
-  FPU_FMT_S = 16,
-  FPU_FMT_D = 17,
-  FPU_FMT_W = 20,
-  FPU_FMT_L = 21,
-  FPU_FMT_PS,
-  FPU_FMT_OB,
-  FPU_FMT_QH,
-  FPU_FMT_UW,
-  FPU_FMT_UD,
-};
-
 make_exec_handler(mfc1) {
   GR_TV = cpu.fpr32i[operands->fs];
 }
+
 make_exec_handler(cfc1) {
   uint32_t fs = operands->fs;
   fcsr_t *rt = (fcsr_t *)&GR_TV;

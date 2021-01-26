@@ -380,6 +380,18 @@ static inline void setFPCondCode(uint8_t cc, bool v) {
 
 #define MAKE_EX(EX, CODE) (((EX) << 16) | CODE)
 
+enum {
+  FPU_FMT_S = 16,
+  FPU_FMT_D = 17,
+  FPU_FMT_W = 20,
+  FPU_FMT_L = 21,
+  FPU_FMT_PS,
+  FPU_FMT_OB,
+  FPU_FMT_QH,
+  FPU_FMT_UW,
+  FPU_FMT_UD,
+};
+
 typedef struct {
   union {
     uint32_t val;

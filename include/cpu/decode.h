@@ -5,7 +5,6 @@
 typedef struct {
   const void *handler;
 
-#if CONFIG_DECODE_CACHE
   uint32_t id;
   union {
     struct {
@@ -33,7 +32,7 @@ typedef struct {
 
   int nd, tf, cc1, cc2;
   int fs64, fd64, ft64;
-#else
+#if CONFIG_INSTR_LOG
   Inst inst;
 #endif
 } decode_state_t;

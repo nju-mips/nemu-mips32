@@ -75,21 +75,20 @@ make_entry() {
   cpu.gpr[0] = 0;
 
 #if CONFIG_DECODE_CACHE_PERF
-  decode_cache_hit += !!decode->handler;
-  decode_cache_miss += !decode->handler;
+  decode_cache_hit += !!ds->handler;
+  decode_cache_miss += !ds->handler;
 #endif
 
 #if CONFIG_DECODE_CACHE
-  if (decode->handler) {
+  if (ds->handler) {
 #  if CONFIG_INSTR_LOG
-    instr_enqueue_instr(decode->inst.val);
+    instr_enqueue_instr(ds->inst.val);
 #  endif
 
-    goto *(decode->handler);
+    goto *(ds->handler);
   }
 #endif
 
-  Inst inst = {.val = vaddr_read(cpu.pc, 4)};
 #if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
 #endif
@@ -101,15 +100,14 @@ make_entry() {
       cop1_table_rs_D, cop1_table_rs_W, opcode_table);
 
 #if CONFIG_DECODE_CACHE
-  decoder_set_state(decode, inst);
+  decoder_set_state(ds, inst);
+  ds->handler = handler;
 #endif
-
-  decode->handler = handler;
   goto *handler;
 }
 
 #if CONFIG_DECODE_CACHE
-#  define operands decode
+#  define operands ds
 #else
 #  define operands (&inst)
 #endif
