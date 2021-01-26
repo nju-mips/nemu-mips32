@@ -37,35 +37,6 @@
 
 #endif
 
-enum {
-  FPU_FMT_S = 16,
-  FPU_FMT_D = 17,
-  FPU_FMT_W = 20,
-  FPU_FMT_L = 21,
-  FPU_FMT_PS,
-  FPU_FMT_OB,
-  FPU_FMT_QH,
-  FPU_FMT_UW,
-  FPU_FMT_UD,
-};
-
-/*
- * ABS.D ADD.D ADDIU ADD.S ADDU AND ANDI BC1F BC1T BEQ
- * BGEZ BGEZAL BGTZ BLEZ BLTZ BLTZAL BNE BREAK C.EQ.D
- * C.EQ.S CFC1 C.LE.D C.LE.S C.LT.D C.LT.S CLZ CTC1
- * C.ULE.D C.ULE.S C.ULT.D C.ULT.S C.UN.D C.UN.S
- * CVT.D.S CVT.D.W CVT.S.D CVT.S.W DIV DIV.D DIV.S DIVU
- * EXT INS J JAL JALR JR LB LBU LDC1 LH LHU LL LUI LW
- * LWC1 LWL LWR MADD MADDU MFC1 MFHC1 MFHI MFLO MOV.D
- * MOVF MOVF.D MOVF.S MOVN MOVN.D MOVN.S MOV.S MOVT
- * MOVT.D MOVT.S MOVZ MOVZ.S MSUB MTC1 MTHC1 MTHI MTLO
- * MUL MUL.D MUL.S MULT MULTU NEG.D NOR OR ORI PREF RDHWR
- * ROR RORV SB SC SDC1 SEB SEH SH SLL SLLV SLT SLTI SLTIU
- * SLTU SQRT.D SQRT.S SRA SRAV SRL SRLV SUB.D SUB.S SUBU
- * SW SWC1 SWL SWR SYNC SYSCALL TEQ TRUNC.W.D TRUNC.W.S
- * WSBH XOR XORI
- * */
-
 #if CONFIG_DELAYSLOT
 #  define make_exec_handler(name) \
     goto inst_end;                \
@@ -97,44 +68,32 @@ enum {
 #  define InstAssert(cond) assert(cond)
 #endif
 
-#define R_SIMPLE(name, op, t)          \
-  make_exec_handler(name) {            \
-    InstAssert(operands->shamt == 0);  \
-    cpu.gpr[operands->rd] =            \
-        (t)cpu.gpr[operands->rs] op(t) \
-            cpu.gpr[operands->rt];     \
-  }
-
 #include "exec-handlers.h"
 
 /* clang-format on */
-#if CONFIG_DECODE_CACHE
 make_entry() {
   cpu.gpr[0] = 0;
 
-#  if CONFIG_DECODE_CACHE_PERF
+#if CONFIG_DECODE_CACHE_PERF
   decode_cache_hit += !!decode->handler;
   decode_cache_miss += !decode->handler;
-#  endif
+#endif
 
+#if CONFIG_DECODE_CACHE
   if (decode->handler) {
-#  if CONFIG_INSTR_LOG
+#if CONFIG_INSTR_LOG
     instr_enqueue_instr(decode->inst.val);
-#  endif
+#endif
 
-#  if CONFIG_DECODE_CACHE_CHECK
-    assert(decode->inst.val == dbg_vaddr_read(cpu.pc, 4));
-#  endif
     goto *(decode->handler);
   }
+#endif
 
-  Inst inst = {.val = vaddr_read(cpu.pc, 4)};
-#  if CONFIG_INSTR_LOG || CONFIG_DECODE_CACHE_CHECK
-  decode->inst.val = inst.val;
-#  endif
-#  if CONFIG_INSTR_LOG
+  decode.inst.val = vaddr_read(cpu.pc, 4);
+
+#if CONFIG_INSTR_LOG
   instr_enqueue_instr(decode->inst.val);
-#  endif
+#endif
 
   unsigned op = inst.op;
   switch (op) {
@@ -176,6 +135,7 @@ make_entry() {
   default: decode->handler = opcode_table[op]; break;
   }
 
+#if CONFIG_DECODE_CACHE
   /* notify compiler decode->handler is terminal handler */
   assert(decode->handler != &&exec_bshfl);
   assert(decode->handler != &&exec_special);
@@ -244,31 +204,32 @@ make_entry() {
     break;
   }
   } while (0);
+#endif
 
 Handler:
   goto *(decode->handler);
 }
-#else
-make_entry() {
-  cpu.gpr[0] = 0;
-#  if CONFIG_INSTR_LOG
-  instr_enqueue_instr(inst.val);
-#  endif
-  goto *opcode_table[inst.op];
-}
-#endif
 
+#define GR_S operands->rs
+#define GR_T operands->rt
+#define GR_D operands->rd
+#define GR_SV cpu.gpr[operands->rs]
+#define GR_TV cpu.gpr[operands->rt]
+#define GR_DV cpu.gpr[operands->rd]
+#define I_SI operands->simm
+#define I_UI operands->uimm
+#define I_SA operands->shamt
+#include "arith-ex.h"
 #include "arith.h"
+#include "branch.h"
+#include "float.h"
+#include "mdu.h"
+#include "memory.h"
 #include "setcc.h"
 #include "shift.h"
-#include "branch.h"
-#include "memory.h"
-#include "mdu.h"
-#include "arith-ex.h"
-#include "float.h"
+#include "special.h"
 #include "system.h"
 #include "trap.h"
-#include "special.h"
 
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
@@ -282,9 +243,4 @@ make_label(inst_end) {
 }
 #endif
 
-make_exit() {
-#if 0
-  if (cpu.gpr[0] != 0)
-    eprintf("%08x: set zero to %08x\n", get_current_pc(), cpu.gpr[0]);
-#endif
-}
+make_exit() {}

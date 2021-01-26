@@ -11,33 +11,27 @@ make_exec_handler(exec_special3) {
   goto *special3_table[operands->func];
 }
 
-make_exec_handler(exec_bshfl) {
-  goto *bshfl_table[operands->shamt];
-}
-
-make_exec_handler(exec_regimm) {
-  goto *regimm_table[operands->rt];
-}
+make_exec_handler(exec_bshfl) { goto *bshfl_table[I_SA]; }
+make_exec_handler(exec_regimm) { goto *regimm_table[GR_T]; }
 
 make_exec_handler(exec_cop0) {
-  if (operands->rs & 0x10)
+  if (GR_S & 0x10)
     goto *cop0_table_func[operands->func];
   else
-    goto *cop0_table_rs[operands->rs];
+    goto *cop0_table_rs[GR_S];
 }
 
 make_exec_handler(exec_cop1) {
-  if (operands->rs == FPU_FMT_S)
+  if (GR_S == FPU_FMT_S)
     goto *cop1_table_rs_S[operands->func];
-  else if (operands->rs == FPU_FMT_D)
+  else if (GR_S == FPU_FMT_D)
     goto *cop1_table_rs_D[operands->func];
-  else if (operands->rs == FPU_FMT_W)
+  else if (GR_S == FPU_FMT_W)
     goto *cop1_table_rs_W[operands->func];
   else
-    goto *cop1_table_rs[operands->rs];
+    goto *cop1_table_rs[GR_S];
 }
 #endif
-
 
 make_exec_handler(inv) {
 // the pc corresponding to this inst

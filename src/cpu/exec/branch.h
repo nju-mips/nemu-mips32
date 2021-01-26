@@ -2,49 +2,49 @@
 //                      unlikely branch //
 //////////////////////////////////////////////////////////////
 make_exec_handler(beq) {
-  if (cpu.gpr[operands->rs] == cpu.gpr[operands->rt])
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if (GR_SV == GR_TV)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
 }
 
 make_exec_handler(bne) {
-  if (cpu.gpr[operands->rs] != cpu.gpr[operands->rt])
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if (GR_SV != GR_TV)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
 }
 
 make_exec_handler(blez) {
-  InstAssert(operands->rt == 0);
-  if ((int32_t)cpu.gpr[operands->rs] <= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  InstAssert(GR_T == 0);
+  if ((int32_t)GR_SV <= 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
 }
 
 make_exec_handler(bgtz) {
-  if ((int32_t)cpu.gpr[operands->rs] > 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV > 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
 }
 
 make_exec_handler(bltz) {
-  if ((int32_t)cpu.gpr[operands->rs] < 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV < 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
 }
 
 make_exec_handler(bgez) {
-  if ((int32_t)cpu.gpr[operands->rs] >= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV >= 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
@@ -52,8 +52,8 @@ make_exec_handler(bgez) {
 
 make_exec_handler(bgezal) {
   cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] >= 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV >= 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
@@ -61,8 +61,8 @@ make_exec_handler(bgezal) {
 
 make_exec_handler(bltzal) {
   cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] < 0)
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV < 0)
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
   else
     cpu.br_target = cpu.pc + 8;
   prepare_delayslot();
@@ -79,9 +79,9 @@ make_exec_handler(jal) {
 }
 
 make_exec_handler(jalr) {
-  InstAssert(operands->rt == 0 && operands->shamt == 0);
-  cpu.gpr[operands->rd] = cpu.pc + 8;
-  cpu.br_target = cpu.gpr[operands->rs];
+  InstAssert(GR_T == 0 && I_SA == 0);
+  GR_DV = cpu.pc + 8;
+  cpu.br_target = GR_SV;
 #if CONFIG_FUNCTION_TRACE_LOG
   frames_enqueue_call(cpu.pc, cpu.br_target);
 #endif
@@ -95,10 +95,10 @@ make_exec_handler(j) {
 }
 
 make_exec_handler(jr) {
-  InstAssert(operands->rt == 0 && operands->rd == 0);
-  cpu.br_target = cpu.gpr[operands->rs];
+  InstAssert(GR_T == 0 && GR_D == 0);
+  cpu.br_target = GR_SV;
 #if CONFIG_FUNCTION_TRACE_LOG
-  if (operands->rs == R_ra)
+  if (GR_S == R_ra)
     frames_enqueue_ret(cpu.pc, cpu.br_target);
 #endif
   prepare_delayslot();
@@ -108,8 +108,8 @@ make_exec_handler(jr) {
 //                      likely branch //
 //////////////////////////////////////////////////////////////
 make_exec_handler(beql) {
-  if (cpu.gpr[operands->rs] == cpu.gpr[operands->rt]) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if (GR_SV == GR_TV) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -118,8 +118,8 @@ make_exec_handler(beql) {
 }
 
 make_exec_handler(bnel) {
-  if (cpu.gpr[operands->rs] != cpu.gpr[operands->rt]) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if (GR_SV != GR_TV) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -128,9 +128,9 @@ make_exec_handler(bnel) {
 }
 
 make_exec_handler(blezl) {
-  InstAssert(operands->rt == 0);
-  if ((int32_t)cpu.gpr[operands->rs] <= 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  InstAssert(GR_T == 0);
+  if ((int32_t)GR_SV <= 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -139,8 +139,8 @@ make_exec_handler(blezl) {
 }
 
 make_exec_handler(bgtzl) {
-  if ((int32_t)cpu.gpr[operands->rs] > 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV > 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -149,8 +149,8 @@ make_exec_handler(bgtzl) {
 }
 
 make_exec_handler(bltzl) {
-  if ((int32_t)cpu.gpr[operands->rs] < 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV < 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -159,8 +159,8 @@ make_exec_handler(bltzl) {
 }
 
 make_exec_handler(bgezl) {
-  if ((int32_t)cpu.gpr[operands->rs] >= 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV >= 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -170,8 +170,8 @@ make_exec_handler(bgezl) {
 
 make_exec_handler(bgezall) {
   cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] >= 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV >= 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;
@@ -181,8 +181,8 @@ make_exec_handler(bgezall) {
 
 make_exec_handler(bltzall) {
   cpu.gpr[31] = cpu.pc + 8;
-  if ((int32_t)cpu.gpr[operands->rs] < 0) {
-    cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+  if ((int32_t)GR_SV < 0) {
+    cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     prepare_delayslot();
   } else {
     cpu.br_target = cpu.pc + 8;

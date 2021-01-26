@@ -11,11 +11,12 @@
 
 #include "cpu/memory.h"
 #include "cpu/mmu.h"
+#include "cpu/decode.h"
 #include "debug.h"
 #include "device.h"
 #include "monitor.h"
-#include "utils/elfsym.h"
 #include "softfloat/softfloat.h"
+#include "utils/elfsym.h"
 
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 
@@ -109,27 +110,6 @@ void kdbg_print_registers(void) {
   ninstr++;
 }
 
-/* if you run your os with multiple processes, disable this
- */
-#if CONFIG_CAE_CHECK
-#  define NR_GPR 32
-static uint32_t saved_gprs[NR_GPR];
-
-void save_usual_registers(void) {
-  for (int i = 0; i < NR_GPR; i++)
-    saved_gprs[i] = cpu.gpr[i];
-}
-
-void check_usual_registers(void) {
-  for (int i = 0; i < NR_GPR; i++) {
-    if (i == R_k0 || i == R_k1) continue;
-    CPUAssert(saved_gprs[i] == cpu.gpr[i],
-        "gpr[%d] %08x <> %08x after eret\n", i,
-        saved_gprs[i], cpu.gpr[i]);
-  }
-}
-#endif
-
 static ALWAYS_INLINE uint32_t vaddr_read(
     vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
@@ -141,9 +121,6 @@ static ALWAYS_INLINE uint32_t vaddr_read(
     uint32_t data =
         *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
         (~0u >> ((4 - len) << 3));
-#if CONFIG_MMU_CACHE_CHECK
-    assert(data == dbg_vaddr_read(addr, len));
-#endif
     return data;
   } else {
     mmu_attr_t attr = {.rwbit = MMU_LOAD, .exbit = 1};
@@ -172,15 +149,6 @@ static ALWAYS_INLINE void vaddr_write(
 #if CONFIG_MMU_CACHE_PERF
     mmu_cache_hit++;
 #endif
-#if CONFIG_MMU_CACHE_CHECK
-    extern device_t blackhole_dev;
-    paddr_t paddr = prot_addr(addr, MMU_STORE);
-    assert(paddr != blackhole_dev.start);
-    device_t *dev = find_device(paddr);
-    assert(dev && dev->map);
-    assert(mmu_cache[idx].ptr ==
-           dev->map((paddr & ~0xFFF) - dev->start, 0));
-#endif
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
@@ -204,16 +172,12 @@ void raise_exception(uint32_t exception) {
 
 #if CONFIG_INSTR_LOG
   if (code == EXC_RI && get_current_instr() != 0x7c03e83b)
-    printf ("RI %08x %08x\n", cpu.pc, get_current_instr());
+    printf("RI %08x %08x\n", cpu.pc, get_current_instr());
 #endif
 
   if (code == EXC_TRAP) {
     panic("HIT BAD TRAP @%08x\n", get_current_pc());
   }
-
-#if CONFIG_CAE_CHECK
-  save_usual_registers();
-#endif
 
   cpu.has_exception = true;
 
@@ -437,12 +401,13 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
+    decode_state_t decode;
 #if CONFIG_DECODE_CACHE
 #  define operands decode
-    decode_cache_t *decode = decode_cache_fetch(cpu.pc);
+    decode_state_t *decode = decode_cache_fetch(cpu.pc);
 #else
-#  define operands (&inst)
-    Inst inst = {.val = vaddr_read(cpu.pc, 4)};
+#  define operands (&decode->inst)
+    decode.inst.val = vaddr_read(cpu.pc, 4);
 #endif
 
 #include "exec/exec.h"

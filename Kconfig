@@ -122,17 +122,9 @@ config MMIO_ACCESS_LOG_DEVICE
   depends on MMIO_ACCESS_LOG=y
   default "xilinx-spi"
 
-config MMU_CACHE_CHECK
-  bool "Check the validness of mmu cache"
-
-config DECODE_CACHE_CHECK
-  bool "Check the validness of decode cache"
-
 endmenu
 
 menu "Kernel debug options"
-config CAE_CHECK
-  bool "Check general registers after eret"
 
 config KERNEL_DEBUG_SERIAL
   bool "Kernel debug serial (cpr $7, 1)"

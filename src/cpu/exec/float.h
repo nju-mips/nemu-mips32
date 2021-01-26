@@ -1,9 +1,21 @@
+enum {
+  FPU_FMT_S = 16,
+  FPU_FMT_D = 17,
+  FPU_FMT_W = 20,
+  FPU_FMT_L = 21,
+  FPU_FMT_PS,
+  FPU_FMT_OB,
+  FPU_FMT_QH,
+  FPU_FMT_UW,
+  FPU_FMT_UD,
+};
+
 make_exec_handler(mfc1) {
-  cpu.gpr[operands->rt] = cpu.fpr32i[operands->fs];
+  GR_TV = cpu.fpr32i[operands->fs];
 }
 make_exec_handler(cfc1) {
   uint32_t fs = operands->fs;
-  fcsr_t *rt = (fcsr_t *)&cpu.gpr[operands->rt];
+  fcsr_t *rt = (fcsr_t *)&GR_TV;
   rt->val = 0;
   if (fs == 0) {
     InstAssert(0);
@@ -22,15 +34,15 @@ make_exec_handler(cfc1) {
   }
 }
 make_exec_handler(mfhc1) {
-  cpu.gpr[operands->rt] = cpu.fpr32i[operands->fs | 1];
+  GR_TV = cpu.fpr32i[operands->fs | 1];
 }
 make_exec_handler(mtc1) {
-  cpu.fpr32i[operands->fs] = cpu.gpr[operands->rt];
+  cpu.fpr32i[operands->fs] = GR_TV;
 }
 make_exec_handler(ctc1) {
   /* copy a word to fpu control register */
   uint32_t fs = operands->fs;
-  uint32_t rt_val = cpu.gpr[operands->rt];
+  uint32_t rt_val = GR_TV;
   fcsr_t *rt = (fcsr_t *)&rt_val;
   if (fs == 25) {
     cpu.fcsr.fcc0 = rt_val & 0x1;
@@ -47,20 +59,20 @@ make_exec_handler(ctc1) {
   }
 }
 make_exec_handler(mthc1) {
-  cpu.fpr32i[operands->fs | 1] = cpu.gpr[operands->rt];
+  cpu.fpr32i[operands->fs | 1] = GR_TV;
 }
 make_exec_handler(bc1) {
   InstAssert(operands->nd == 0);
   if (operands->tf == 0) {
     /* bc1f */
     if (getFPCondCode(operands->cc2) == 0)
-      cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+      cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     else
       cpu.br_target = cpu.pc + 8;
   } else if (operands->tf == 1) {
     /* bc1t */
     if (getFPCondCode(operands->cc2) == 1)
-      cpu.br_target = cpu.pc + (operands->simm << 2) + 4;
+      cpu.br_target = cpu.pc + (I_SI << 2) + 4;
     else
       cpu.br_target = cpu.pc + 8;
   }
@@ -174,12 +186,10 @@ make_exec_handler(trunc_w_d) {
 make_exec_handler(movci) {
   if (operands->tf == 0) {
     /* movf */
-    if (getFPCondCode(operands->cc2) == 0)
-      cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+    if (getFPCondCode(operands->cc2) == 0) GR_DV = GR_SV;
   } else if (operands->tf == 1) {
     /* movt */
-    if (getFPCondCode(operands->cc2) == 1)
-      cpu.gpr[operands->rd] = cpu.gpr[operands->rs];
+    if (getFPCondCode(operands->cc2) == 1) GR_DV = GR_SV;
   }
 }
 
@@ -195,24 +205,24 @@ make_exec_handler(movcf_d) {
 }
 
 make_exec_handler(movz_s) {
-  if (cpu.gpr[operands->rt] == 0) {
+  if (GR_TV == 0) {
     cpu.fpr32i[operands->fd] = cpu.fpr32i[operands->fs];
   }
 }
 
 make_exec_handler(movz_d) {
-  if (cpu.gpr[operands->rt] == 0) {
+  if (GR_TV == 0) {
     cpu.fpr64i[operands->fd64] = cpu.fpr64i[operands->fs64];
   }
 }
 make_exec_handler(movn_s) {
-  if (cpu.gpr[operands->rt] != 0) {
+  if (GR_TV != 0) {
     *(float *)&cpu.fpr32i[operands->fd] =
         *(float *)&cpu.fpr32i[operands->fs];
   }
 }
 make_exec_handler(movn_d) {
-  if (cpu.gpr[operands->rt] != 0) {
+  if (GR_TV != 0) {
     *(double *)&cpu.fpr32i[operands->fd & ~1] =
         *(double *)&cpu.fpr32i[operands->fs & ~1];
   }
@@ -321,36 +331,31 @@ make_exec_handler(c_le_d) {
 }
 
 make_exec_handler(lwc1) {
-  CHECK_ALIGNED_ADDR_AdEL(
-      4, cpu.gpr[operands->rs] + operands->simm);
-  uint32_t rdata =
-      vaddr_read(cpu.gpr[operands->rs] + operands->simm, 4);
-  if (!cpu.has_exception) {
-    cpu.fpr32i[operands->rt] = rdata;
-  }
+  CHECK_ALIGNED_ADDR_AdEL(4, GR_SV + I_SI);
+  uint32_t rdata = vaddr_read(GR_SV + I_SI, 4);
+  if (!cpu.has_exception) { cpu.fpr32i[GR_T] = rdata; }
 }
 
 make_exec_handler(swc1) {
-  uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
+  uint32_t waddr = GR_SV + I_SI;
   vaddr_write(waddr, 4, cpu.fpr32i[operands->ft]);
 }
 
 make_exec_handler(ldc1) {
-  uint32_t raddr = cpu.gpr[operands->rs] + operands->simm;
+  uint32_t raddr = GR_SV + I_SI;
   CHECK_ALIGNED_ADDR_AdEL(8, raddr);
 
   uint32_t rdata_l = vaddr_read(raddr, 4);
   uint32_t rdata_h = vaddr_read(raddr + 4, 4);
   if (!cpu.has_exception) {
-    cpu.fpr32i[operands->rt & ~1] = rdata_l;
-    cpu.fpr32i[operands->rt | 1] = rdata_h;
+    cpu.fpr32i[GR_T & ~1] = rdata_l;
+    cpu.fpr32i[GR_T | 1] = rdata_h;
   }
 }
 
 make_exec_handler(sdc1) {
-  uint32_t waddr = cpu.gpr[operands->rs] + operands->simm;
+  uint32_t waddr = GR_SV + I_SI;
   CHECK_ALIGNED_ADDR_AdES(8, waddr);
   vaddr_write(waddr, 4, cpu.fpr32i[operands->ft & ~1]);
   vaddr_write(waddr + 4, 4, cpu.fpr32i[operands->ft | 1]);
 }
-
