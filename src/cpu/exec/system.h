@@ -208,7 +208,7 @@ make_exec_handler(mtc0) {
       printf("\e[1;32mHIT GOOD TRAP\e[0m\n");
     else
       printf("\e[1;31mHIT BAD TRAP %d\e[0m\n", GR_TV);
-    nemu_exit(0);
+    nemu_exit();
   } break;
   default:
     printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[GR_T],
