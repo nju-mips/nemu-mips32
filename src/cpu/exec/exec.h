@@ -34,7 +34,9 @@ make_entry() {
 
 #if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
+#if CONFIG_DECODE_CACHE
   ds->inst.val = inst.val;
+#endif
 #endif
 
   const void *handler = decoder_get_handler(inst,
@@ -65,7 +67,9 @@ make_entry() {
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (local_cpu.is_delayslot) {
+#if CONFIG_DECODE_CACHE
     ds = NULL;
+#endif
     local_cpu.pc = local_cpu.br_target;
     local_cpu.is_delayslot = false;
   } else {
