@@ -1,14 +1,14 @@
 #if 1
 make_exec_handler(exec_special) {
-  goto *special_table[operands->func];
+  goto *special_table[ops->func];
 }
 
 make_exec_handler(exec_special2) {
-  goto *special2_table[operands->func];
+  goto *special2_table[ops->func];
 }
 
 make_exec_handler(exec_special3) {
-  goto *special3_table[operands->func];
+  goto *special3_table[ops->func];
 }
 
 make_exec_handler(exec_bshfl) { goto *bshfl_table[I_SA]; }
@@ -16,18 +16,18 @@ make_exec_handler(exec_regimm) { goto *regimm_table[GR_T]; }
 
 make_exec_handler(exec_cop0) {
   if (GR_S & 0x10)
-    goto *cop0_table_func[operands->func];
+    goto *cop0_table_func[ops->func];
   else
     goto *cop0_table_rs[GR_S];
 }
 
 make_exec_handler(exec_cop1) {
   if (GR_S == FPU_FMT_S)
-    goto *cop1_table_rs_S[operands->func];
+    goto *cop1_table_rs_S[ops->func];
   else if (GR_S == FPU_FMT_D)
-    goto *cop1_table_rs_D[operands->func];
+    goto *cop1_table_rs_D[ops->func];
   else if (GR_S == FPU_FMT_W)
-    goto *cop1_table_rs_W[operands->func];
+    goto *cop1_table_rs_W[ops->func];
   else
     goto *cop1_table_rs[GR_S];
 }

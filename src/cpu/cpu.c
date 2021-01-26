@@ -473,6 +473,12 @@ void cpu_exec(uint64_t n) {
   nemu_state = NEMU_RUNNING;
 
   for (; n > 0; n--) {
+    /* local variables */
+    Inst inst;
+#if CONFIG_DECODE_CACHE
+    decode_state_t *ds;
+#endif
+
 #if CONFIG_INSTR_LOG
     instr_enqueue_pc(cpu.pc);
 #endif
@@ -497,12 +503,7 @@ void cpu_exec(uint64_t n) {
     }
 #endif
 
-#if CONFIG_DECODE_CACHE
-    decode_state_t *ds = decode_cache_fetch(cpu.pc);
-#else
-    Inst inst = { .val = vaddr_read(cpu.pc, 4) };
-#endif
-
+    /* concrete decoding and execution */
 #include "exec/exec.h"
 
 #if CONFIG_EXCEPTION

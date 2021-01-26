@@ -91,16 +91,16 @@ make_exec_handler(mfc0) {
   if (GR_D == CP0_COUNT) {
     GR_TV = cpu.cp0.count[0];
   } else {
-    GR_TV = cpu.cp0.cpr[GR_D][operands->sel];
+    GR_TV = cpu.cp0.cpr[GR_D][ops->sel];
   }
 }
 
 make_exec_handler(mtc0) {
-  switch (CPRS(GR_D, operands->sel)) {
+  switch (CPRS(GR_D, ops->sel)) {
   case CPRS(CP0_EBASE, CP0_EBASE_SEL):
   case CPRS(CP0_COUNT, 0):
   case CPRS(CP0_EPC, 0):
-    cpu.cp0.cpr[GR_D][operands->sel] = GR_TV;
+    cpu.cp0.cpr[GR_D][ops->sel] = GR_TV;
     break;
   case CPRS(CP0_BADVADDR, 0): break;
   case CPRS(CP0_CONTEXT, 0): {
@@ -212,7 +212,7 @@ make_exec_handler(mtc0) {
   } break;
   default:
     printf("%08x: mtc0 $%s, $%d, %d\n", cpu.pc, regs[GR_T],
-        GR_D, operands->sel);
+        GR_D, ops->sel);
     break;
   }
 }

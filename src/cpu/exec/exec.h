@@ -1,78 +1,13 @@
-#if CONFIG_INSTR_PERF
-#  define make_label(l) \
-  l:                    \
-    instrperf_record(#l, sizeof(#l));
-#else
-#  define make_label(l) \
-  l:
-#endif
-#define make_entry()
-#define make_exit() make_label(exit)
-
-#if CONFIG_EXCEPTION
-
-#  define CHECK_ALIGNED_ADDR_AdEL(align, addr) \
-    if (((addr) & (align - 1)) != 0) {         \
-      cpu.cp0.badvaddr = addr;                 \
-      raise_exception(EXC_AdEL);               \
-      goto exit;                               \
-    }
-
-#  define CHECK_ALIGNED_ADDR_AdES(align, addr) \
-    if (((addr) & (align - 1)) != 0) {         \
-      cpu.cp0.badvaddr = addr;                 \
-      raise_exception(EXC_AdES);               \
-      goto exit;                               \
-    }
-
-#else
-
-#  define CHECK_ALIGNED_ADDR(align, addr)                  \
-    CPUAssert(((addr) & (align - 1)) == 0,                 \
-        "address(0x%08x) is unaligned, pc=%08x\n", (addr), \
-        cpu.pc)
-
-#  define CHECK_ALIGNED_ADDR_AdEL CHECK_ALIGNED_ADDR
-#  define CHECK_ALIGNED_ADDR_AdES CHECK_ALIGNED_ADDR
-
-#endif
-
-#if CONFIG_DELAYSLOT
-#  define make_exec_handler(name) \
-    goto inst_end;                \
-    make_label(name)
-#  define prepare_delayslot() \
-    cpu.is_delayslot = true;  \
-    cpu.pc += 4;              \
-    goto exit;
-#else
-#  define make_exec_handler(name) \
-    cpu.pc += 4;                  \
-    goto exit;                    \
-    make_label(name)
-#  define prepare_delayslot() \
-    cpu.pc = cpu.br_target;   \
-    goto exit;
-#endif
-
-#if CONFIG_EXCEPTION
-#  define InstAssert(cond)         \
-    do {                           \
-      if (!(cond)) {               \
-        cpu.cp0.badvaddr = cpu.pc; \
-        raise_exception(EXC_RI);   \
-        goto exit;                 \
-      }                            \
-    } while (0)
-#else
-#  define InstAssert(cond) assert(cond)
-#endif
-
 #include "exec-handlers.h"
+#include "exec-macros.h"
 
 /* clang-format on */
 make_entry() {
   cpu.gpr[0] = 0;
+
+#if CONFIG_DECODE_CACHE
+  ds = decode_cache_fetch(cpu.pc);
+#endif
 
 #if CONFIG_DECODE_CACHE_PERF
   decode_cache_hit += !!ds->handler;
@@ -93,6 +28,8 @@ make_entry() {
   instr_enqueue_instr(inst.val);
 #endif
 
+  inst.val = vaddr_read(cpu.pc, 4);
+
   const void *handler = decoder_get_handler(inst,
       special_table, special2_table, special3_table,
       bshfl_table, regimm_table, cop0_table_rs,
@@ -107,20 +44,20 @@ make_entry() {
 }
 
 #if CONFIG_DECODE_CACHE
-#  define operands ds
+#  define ops ds
 #else
-#  define operands (&inst)
+#  define ops (&inst)
 #endif
 
-#define GR_S operands->rs
-#define GR_T operands->rt
-#define GR_D operands->rd
-#define GR_SV cpu.gpr[operands->rs]
-#define GR_TV cpu.gpr[operands->rt]
-#define GR_DV cpu.gpr[operands->rd]
-#define I_SI operands->simm
-#define I_UI operands->uimm
-#define I_SA operands->shamt
+#define GR_S ops->rs
+#define GR_T ops->rt
+#define GR_D ops->rd
+#define GR_SV cpu.gpr[ops->rs]
+#define GR_TV cpu.gpr[ops->rt]
+#define GR_DV cpu.gpr[ops->rd]
+#define I_SI ops->simm
+#define I_UI ops->uimm
+#define I_SA ops->shamt
 #include "arith-ex.h"
 #include "arith.h"
 #include "branch.h"

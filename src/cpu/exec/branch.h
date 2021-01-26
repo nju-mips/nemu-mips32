@@ -70,8 +70,7 @@ make_exec_handler(bltzal) {
 
 make_exec_handler(jal) {
   cpu.gpr[31] = cpu.pc + 8;
-  cpu.br_target =
-      (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  cpu.br_target = (cpu.pc & 0xf0000000) | (ops->addr << 2);
 #if CONFIG_FUNCTION_TRACE_LOG
   frames_enqueue_call(cpu.pc, cpu.br_target);
 #endif
@@ -89,8 +88,7 @@ make_exec_handler(jalr) {
 }
 
 make_exec_handler(j) {
-  cpu.br_target =
-      (cpu.pc & 0xf0000000) | (operands->addr << 2);
+  cpu.br_target = (cpu.pc & 0xf0000000) | (ops->addr << 2);
   prepare_delayslot();
 }
 
