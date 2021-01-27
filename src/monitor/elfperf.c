@@ -40,7 +40,7 @@ void elfperf_record(uint32_t pc) {
   hash_kv_t key = {(void *)updsym, strlen(updsym) + 1};
   hash_element_t *he = hash_get(&perf_ht, key);
   if (he == NULL) {
-    uint64_t counter = CONFIG_IS_ENABLED(ELF_PERF_INSTR);
+    uint64_t counter = HAS_CONFIG(ELF_PERF_INSTR);
     hash_kv_t value = {&counter, sizeof(counter)};
     hash_push(&perf_ht, key, value);
   } else {

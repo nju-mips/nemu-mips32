@@ -9,12 +9,14 @@ make_entry() {
   if (ds) {
     if (ds->next) {
       ds = ds->next;
-#  if CONFIG_INSTR_LOG
-      instr_enqueue_instr(ds->inst.val);
-#  endif
+      ON_CONFIG(
+          INSTR_LOG, instr_enqueue_instr(ds->inst.val));
+      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_hit++);
 
       goto *(ds->handler);
     } else {
+      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_miss++);
+
       ds->next = malloc(sizeof(decode_state_t));
       ds = ds->next;
       ds->next = NULL;
@@ -22,10 +24,13 @@ make_entry() {
   } else {
     ds = decode_cache_fetch(cpu.pc);
     if (ds->handler) {
-#  if CONFIG_INSTR_LOG
-      instr_enqueue_instr(ds->inst.val);
-#  endif
+      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_hit ++);
+      ON_CONFIG(
+          INSTR_LOG, instr_enqueue_instr(ds->inst.val));
+
       goto *(ds->handler);
+    } else {
+      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_miss ++);
     }
   }
 #endif
@@ -34,9 +39,9 @@ make_entry() {
 
 #if CONFIG_INSTR_LOG
   instr_enqueue_instr(inst.val);
-#if CONFIG_DECODE_CACHE
+#  if CONFIG_DECODE_CACHE
   ds->inst.val = inst.val;
-#endif
+#  endif
 #endif
 
   const void *handler = decoder_get_handler(inst,
@@ -67,9 +72,9 @@ make_entry() {
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (cpu.is_delayslot) {
-#if CONFIG_DECODE_CACHE
+#  if CONFIG_DECODE_CACHE
     ds = NULL;
-#endif
+#  endif
     cpu.pc = cpu.br_target;
     cpu.is_delayslot = false;
   } else {

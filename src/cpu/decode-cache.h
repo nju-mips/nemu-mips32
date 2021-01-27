@@ -30,11 +30,21 @@ static ALWAYS_INLINE uint32_t decode_cache_id(
   return vaddr >> (DECODE_CACHE_BITS + 2);
 }
 
+void free_decode_state_chain(decode_state_t *ds) {
+  while (ds) {
+    decode_state_t *next = ds->next;
+    free(ds);
+    ds = next;
+  }
+}
+
 static ALWAYS_INLINE decode_state_t *decode_cache_fetch(
     vaddr_t pc) {
   uint32_t idx = decode_cache_index(pc);
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
+    free_decode_state_chain(decode_cache[idx].next);
+
     decode_cache[idx].handler = NULL;
     decode_cache[idx].next = NULL;
     decode_cache[idx].id = id;

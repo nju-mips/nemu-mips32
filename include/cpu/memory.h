@@ -67,14 +67,14 @@ static inline vaddr_t prot_addr_with_attr(vaddr_t addr, mmu_attr_t *attr) {
   case 7: /* kseg3 */
     panic("%08x: addr %08x is invalid\n", cpu.pc, addr);
   case 6: /* supervisor */
-    if (!CONFIG_IS_ENABLED(PAGING)) {
+    if (!HAS_CONFIG(PAGING)) {
       return addr;
     } else {
       vaddr_t paddr = page_translate(addr, attr);
       return ioremap(paddr);
     }
   case 0 ... 3: /* kuseg */
-    if (!CONFIG_IS_ENABLED(PAGING) || cpu.cp0.status.ERL) {
+    if (!HAS_CONFIG(PAGING) || cpu.cp0.status.ERL) {
       return addr;
     } else {
       vaddr_t paddr = page_translate(addr, attr);

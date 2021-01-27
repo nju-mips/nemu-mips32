@@ -18,8 +18,6 @@
 #include "softfloat/softfloat.h"
 #include "utils/elfsym.h"
 
-#define ALWAYS_INLINE inline __attribute__((always_inline))
-
 #define IMPL_CPU
 #include "decode-cache.h"
 #include "mmu-cache.h"
@@ -42,9 +40,6 @@ const char *regs[32] = {
   "gp", "sp", "fp", "ra"
 };
 /* clang-format on */
-
-#define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
-#define LIKELY(cond) __builtin_expect(!!(cond), 1)
 
 void nemu_set_irq(int irqno, bool val) {
   assert(0 <= irqno && irqno < 8);
@@ -111,11 +106,9 @@ void kdbg_print_registers(void) {
 static ALWAYS_INLINE uint32_t vaddr_read(
     vaddr_t addr, int len) {
   uint32_t idx = mmu_cache_index(addr);
-  if (CONFIG_IS_ENABLED(MMU_CACHE) &&
+  if (HAS_CONFIG(MMU_CACHE) &&
       mmu_cache[idx].id == mmu_cache_id(addr)) {
-#if CONFIG_MMU_CACHE_PERF
-    mmu_cache_hit++;
-#endif
+    ON_CONFIG(MMU_CACHE_PERF, mmu_cache_hit++);
     uint32_t data =
         *((uint32_t *)&mmu_cache[idx].ptr[addr & 0xFFF]) &
         (~0u >> ((4 - len) << 3));
@@ -134,12 +127,10 @@ static ALWAYS_INLINE uint32_t vaddr_read(
 static ALWAYS_INLINE void vaddr_write(
     vaddr_t addr, int len, uint32_t data) {
   uint32_t idx = mmu_cache_index(addr);
-  if (CONFIG_IS_ENABLED(MMU_CACHE) &&
+  if (HAS_CONFIG(MMU_CACHE) &&
       mmu_cache[idx].id == mmu_cache_id(addr) &&
       mmu_cache[idx].can_write) {
-#if CONFIG_MMU_CACHE_PERF
-    mmu_cache_hit++;
-#endif
+    ON_CONFIG(MMU_CACHE_PERF, mmu_cache_hit++);
     memcpy(&mmu_cache[idx].ptr[addr & 0xFFF], &data, len);
   } else {
     paddr_t paddr = prot_addr(addr, MMU_STORE);
@@ -166,8 +157,7 @@ void raise_exception(uint32_t exception) {
   cpu.has_exception = true;
 
   uint32_t vecOff = 0;
-  if (CONFIG_IS_ENABLED(MARCH_NOOP) ||
-      cpu.cp0.status.EXL == 0) {
+  if (HAS_CONFIG(MARCH_NOOP) || cpu.cp0.status.EXL == 0) {
 #if CONFIG_DELAYSLOT
     if (cpu.is_delayslot) {
       cpu.is_delayslot = false; // !!
@@ -462,30 +452,18 @@ void cpu_exec(uint64_t n) {
     return;
   }
 
-#if CONFIG_INSTR_LOG
-  bool nemu_needs_commit = work_mode == MODE_LOG;
-#endif
-
-#if CONFIG_INSTR_PERF
-  instrperf_start();
-#endif
-
   nemu_state = NEMU_RUNNING;
-#if CONFIG_DECODE_CACHE
-  decode_state_t *ds = NULL;
-#endif
+  ON_CONFIG(INSTR_LOG,
+      bool nemu_needs_commit = work_mode == MODE_LOG);
+  ON_CONFIG(INSTR_PERF, instrperf_start());
+  ON_CONFIG(DECODE_CACHE, decode_state_t *ds = NULL);
 
   for (; n > 0; n--) {
     /* local variables */
     Inst inst;
 
-#if CONFIG_INSTR_LOG
-    instr_enqueue_pc(cpu.pc);
-#endif
-
-#if CONFIG_ELF_PERF
-    elfperf_record(cpu.pc);
-#endif
+    ON_CONFIG(INSTR_LOG, instr_enqueue_pc(cpu.pc));
+    ON_CONFIG(ELF_PERF, elfperf_record(cpu.pc));
 
 #if CONFIG_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {
@@ -506,9 +484,7 @@ void cpu_exec(uint64_t n) {
     /* concrete decoding and execution */
 #include "exec/exec.h"
 
-#if CONFIG_EXCEPTION
-  check_exception:;
-#endif
+    ON_CONFIG(EXCEPTION, check_exception:);
 
 #if CONFIG_INSTR_LOG
     if (nemu_needs_commit) kdbg_print_registers();
