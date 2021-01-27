@@ -276,10 +276,16 @@ void nemu_epilogue() {
 #endif
 
 #if CONFIG_DECODE_CACHE_PERF
-  printf("decode_cache: %lu/%lu = %lf\n", decode_cache_hit,
-      decode_cache_hit + decode_cache_miss,
-      decode_cache_hit /
-          (double)(decode_cache_hit + decode_cache_miss));
+  uint64_t decode_cache_total_hit =
+      decode_cache_hit + decode_cache_fast_hit;
+  uint64_t decode_cache_total =
+      decode_cache_total_hit + decode_cache_miss;
+  printf("decode_cache_hit: %lu/%lu = %lf\n",
+      decode_cache_total_hit, decode_cache_total,
+      decode_cache_total_hit / (double)decode_cache_total);
+  printf("decode_cache_fast_hit: %lu/%lu = %lf\n",
+      decode_cache_fast_hit, decode_cache_total,
+      decode_cache_fast_hit / (double)decode_cache_total);
 #endif
 
 #if CONFIG_INSTR_LOG

@@ -3,6 +3,7 @@
 #endif
 
 #if CONFIG_DECODE_CACHE_PERF
+uint64_t decode_cache_fast_hit = 0;
 uint64_t decode_cache_hit = 0;
 uint64_t decode_cache_miss = 0;
 #endif
