@@ -395,7 +395,7 @@ ALWAYS_INLINE void decoder_set_state(
     if (inst.func == 0x20)
       goto bshflType;
     else
-      goto Handler;
+      goto S3type;
   default: goto Itype;
   }
 
@@ -424,7 +424,8 @@ ALWAYS_INLINE void decoder_set_state(
     ds->sel = inst.sel;
     break;
   }
-  S2type : {
+  S2type :;
+  S3type : {
     ds->rs = inst.rs;
     ds->rt = inst.rt;
     ds->rd = inst.rd;
