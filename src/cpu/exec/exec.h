@@ -6,31 +6,32 @@ make_entry() {
   cpu.gpr[0] = 0;
 
 #if CONFIG_DECODE_CACHE
-  if (ds) {
-    if (ds->next) {
-      ds = ds->next;
-      ON_CONFIG(
-          INSTR_LOG, instr_enqueue_instr(ds->inst.val));
-      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_fast_hit++);
+  if (ds->next) {
+    ds = ds->next;
+    ON_CONFIG(INSTR_LOG, instr_enqueue_instr(ds->inst.val));
+    ON_CONFIG(DECODE_CACHE_PERF, decode_cache_fast_hit++);
 
-      goto *(ds->handler);
-    } else {
-      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_miss++);
+    goto *(ds->handler);
+  } else {
+    ON_CONFIG(DECODE_CACHE_PERF, decode_cache_miss++);
 
-      ds->next = malloc(sizeof(decode_state_t));
+    switch (ds->itype) {
+    case IT_COM:
+      ds->next = decode_cache_fetch(cpu.pc);
       ds = ds->next;
       ds->next = NULL;
+      break;
+    case IT_BR_T: ds = ds->true_next; break;
+    case IT_BR_F: ds = ds->false_next; break;
+    case IT_J: ds = ds->j_next; break;
+    case IT_JR: ds = ds->jr_next; break;
+    default: assert(0); break;
     }
-  } else {
-    ds = decode_cache_fetch(cpu.pc);
+
     if (ds->handler) {
-      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_hit++);
       ON_CONFIG(
           INSTR_LOG, instr_enqueue_instr(ds->inst.val));
-
       goto *(ds->handler);
-    } else {
-      ON_CONFIG(DECODE_CACHE_PERF, decode_cache_miss++);
     }
   }
 #endif
@@ -70,7 +71,6 @@ make_entry() {
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (cpu.is_delayslot) {
-    ON_CONFIG(DECODE_CACHE, ds = NULL);
     cpu.pc = cpu.br_target;
     cpu.is_delayslot = false;
   } else {

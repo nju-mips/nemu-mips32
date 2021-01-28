@@ -8,7 +8,7 @@ struct decode_state_t {
   const void *handler;
   struct decode_state_t *next;
 
-  uint32_t id;
+  uint32_t pc;
   union {
     struct {
       int rs;
@@ -31,7 +31,17 @@ struct decode_state_t {
     uint32_t addr; // J
   };
 
+  union {
+    struct {
+      struct decode_state_t *true_next;
+      struct decode_state_t *false_next;
+    };
+    struct decode_state_t *j_next;
+    struct decode_state_t *jr_next;
+  };
+  enum { IT_COM, IT_BR_T, IT_BR_F, IT_J, IT_JR } itype;
   int sel; /* put here will improve performance */
+  struct decode_state_t *l_next;
 
   // FIXME
   union {
