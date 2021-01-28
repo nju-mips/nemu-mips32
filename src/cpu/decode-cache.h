@@ -10,7 +10,8 @@ uint64_t decode_cache_miss = 0;
 
 #define DECODE_CACHE_BITS 12
 
-static decode_state_t decode_cache[1 << DECODE_CACHE_BITS];
+static decode_state_t
+    decode_cache[(1 << DECODE_CACHE_BITS) + 1];
 
 void clear_decode_cache() {
   for (int i = 0;
@@ -28,7 +29,7 @@ static ALWAYS_INLINE uint32_t decode_cache_index(
 
 static ALWAYS_INLINE uint32_t decode_cache_id(
     vaddr_t vaddr) {
-  return vaddr >> (DECODE_CACHE_BITS + 2);
+  return vaddr;
 }
 
 void free_decode_state_chain(decode_state_t *ds) {
@@ -44,7 +45,7 @@ static ALWAYS_INLINE decode_state_t *decode_cache_fetch(
   uint32_t idx = decode_cache_index(pc);
   uint32_t id = decode_cache_id(pc);
   if (decode_cache[idx].id != id) {
-    free_decode_state_chain(decode_cache[idx].next);
+    // free_decode_state_chain(decode_cache[idx].next);
 
     decode_cache[idx].handler = NULL;
     decode_cache[idx].next = NULL;

@@ -31,6 +31,7 @@ struct decode_state_t {
     uint32_t addr; // J
   };
 
+  struct decode_state_t *j_target;
   int sel; /* put here will improve performance */
 
   // FIXME

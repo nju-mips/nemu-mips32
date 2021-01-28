@@ -424,7 +424,7 @@ ALWAYS_INLINE void decoder_set_state(
     ds->sel = inst.sel;
     break;
   }
-  S2type :;
+  S2type:;
   S3type : {
     ds->rs = inst.rs;
     ds->rt = inst.rt;
@@ -463,7 +463,8 @@ void cpu_exec(uint64_t n) {
   ON_CONFIG(INSTR_LOG,
       bool nemu_needs_commit = work_mode == MODE_LOG);
   ON_CONFIG(INSTR_PERF, instrperf_start());
-  ON_CONFIG(DECODE_CACHE, decode_state_t *ds = NULL);
+  ON_CONFIG(DECODE_CACHE,
+      decode_state_t *ds = decode_cache_fetch(cpu.pc - 4));
 
   for (; n > 0; n--) {
     /* local variables */
