@@ -23,9 +23,9 @@
     cpu.pc += 4;                  \
     goto exit;                    \
     make_label(name)
-#  define prepare_delayslot() \
-    ds = NULL; \
-    cpu.pc = cpu.br_target;   \
+#  define prepare_delayslot()                             \
+    ON_CONFIG(DECODE_CACHE,                               \
+        ds = decode_cache_fetch(cpu.pc = cpu.br_target)); \
     goto exit;
 #endif
 
