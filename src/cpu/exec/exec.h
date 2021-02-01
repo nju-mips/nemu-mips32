@@ -25,6 +25,7 @@ make_entry() {
     case IT_BR_F: ds = ds->false_next; break;
     case IT_J: ds = ds->j_next; break;
     case IT_JR: ds = ds->jr_next; break;
+    case IT_DS: ds = ds->ds_next; break;
     default: assert(0); break;
     }
 

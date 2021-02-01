@@ -38,8 +38,9 @@ struct decode_state_t {
     };
     struct decode_state_t *j_next;
     struct decode_state_t *jr_next;
+    struct decode_state_t *ds_next;
   };
-  enum { IT_COM, IT_BR_T, IT_BR_F, IT_J, IT_JR } itype;
+  enum { IT_COM, IT_BR_T, IT_BR_F, IT_J, IT_JR, IT_DS } itype;
   int sel; /* put here will improve performance */
   struct decode_state_t *l_next;
 

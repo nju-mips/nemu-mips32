@@ -35,8 +35,19 @@ static ALWAYS_INLINE decode_state_t *decode_cache_fetch(
   return ds;
 }
 
+// delayslot
+static ALWAYS_INLINE decode_state_t *ds_set_ds(
+    decode_state_t *ds, uint32_t pc) {
+  if (ds->next) return ds->next;
+
+  ds->itype = IT_DS;
+  ds->ds_next = decode_cache_fetch(cpu.pc + 4);
+  return ds->ds_next;
+}
+
 static void ALWAYS_INLINE ds_set_br_true(
     decode_state_t *ds, uint32_t pc) {
+  ON_CONFIG(DELAYSLOT, ds = ds_set_ds(ds, pc));
   if (ds->true_next)
     ds->next = ds->true_next;
   else {
@@ -48,6 +59,7 @@ static void ALWAYS_INLINE ds_set_br_true(
 
 static void ALWAYS_INLINE ds_set_br_false(
     decode_state_t *ds, uint32_t pc) {
+  ON_CONFIG(DELAYSLOT, ds = ds_set_ds(ds, pc));
   if (ds->false_next)
     ds->next = ds->false_next;
   else {
@@ -59,6 +71,7 @@ static void ALWAYS_INLINE ds_set_br_false(
 
 static void ALWAYS_INLINE ds_set_j(
     decode_state_t *ds, uint32_t pc) {
+  ON_CONFIG(DELAYSLOT, ds = ds_set_ds(ds, pc));
   if (ds->j_next)
     ds->next = ds->j_next;
   else {
@@ -69,6 +82,7 @@ static void ALWAYS_INLINE ds_set_j(
 
 static void ALWAYS_INLINE ds_set_jr(
     decode_state_t *ds, uint32_t pc) {
+  ON_CONFIG(DELAYSLOT, ds = ds_set_ds(ds, pc));
   if (ds->jr_next && ds->jr_next->pc == pc)
     ds->next = ds->jr_next;
   else {
