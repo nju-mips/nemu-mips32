@@ -11,12 +11,17 @@ SHARED ?= $(BUILD_DIR)/$(NAME).so
 -include linux.mk
 
 # Compilation flags
-CC = gcc # clang-7
-LD = gcc # clang-7
-AR = ar
-INCLUDES  = $(addprefix -I, $(INC_DIR))
-CFLAGS   += -O2 -MMD -Wall -ggdb
-CFLAGS   += -fno-strict-aliasing $(INCLUDES)
+ifeq ($(CONFIG_MARCH_BENCH),y)
+CC       := clang-7
+LD       := clang-7
+CFLAGS   += -O3
+else
+CC       := gcc
+LD       := gcc
+CFLAGS   += -O2
+endif
+CFLAGS   += -MMD -Wall -ggdb -fno-strict-aliasing
+CFLAGS   += $(addprefix -I, $(INC_DIR))
 CFLAGS   += -include include/generated/autoconf.h
 # CFLAGS   += -fsanitize=undefined
 

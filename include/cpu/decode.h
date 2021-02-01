@@ -8,7 +8,7 @@ struct decode_state_t {
   const void *handler;
   struct decode_state_t *next;
 
-  uint32_t id;
+  uint32_t pc;
   union {
     struct {
       int rs;
