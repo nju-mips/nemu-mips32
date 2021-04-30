@@ -56,8 +56,9 @@ make_entry() {
 #if CONFIG_DELAYSLOT
 make_label(inst_end) {
   if (cpu.is_delayslot) {
-    ON_CONFIG(DECODE_CACHE,
-        ds = decode_cache_fetch(cpu.pc = cpu.br_target));
+    cpu.pc = cpu.br_target;
+    ON_CONFIG(
+        DECODE_CACHE, ds = decode_cache_fetch(cpu.pc));
     cpu.is_delayslot = false;
   } else {
     cpu.pc += 4;
