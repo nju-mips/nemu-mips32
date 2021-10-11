@@ -65,7 +65,7 @@ void tlb_write(uint32_t i) {
   tlb[i].p0.d = cpu.cp0.entry_lo0.d;
   tlb[i].p0.v = cpu.cp0.entry_lo0.v;
 
-  tlb[i].p1.pfn = cpu.cp0.entry_lo1.pfn & ~cpu.cp0.pagemask.mask;
+  // tlb[i].p1.pfn = cpu.cp0.entry_lo1.pfn & ~cpu.cp0.pagemask.mask;
   tlb[i].p1.c = cpu.cp0.entry_lo1.c;
   tlb[i].p1.d = cpu.cp0.entry_lo1.d;
   tlb[i].p1.v = cpu.cp0.entry_lo1.v;
