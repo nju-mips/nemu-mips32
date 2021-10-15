@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+unsigned napi_get_woop_log_cycles_st();
+unsigned napi_get_woop_log_cycles_ed();
+bool napi_get_woop_enable_bug_flag();
+
 void napi_init(int argc, const char *argv[]);
 void napi_exec(uint64_t n);
 uint32_t napi_mmio_peek(uint32_t paddr, int len);

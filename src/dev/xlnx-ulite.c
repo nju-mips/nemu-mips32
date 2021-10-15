@@ -128,22 +128,6 @@ static void xlnx_ulite_write(
   }
 }
 
-static void check_ctrl_x_commands(char ch) {
-  if (ch == 0x18) {
-    /* ^X */
-    printf("^X [q:quit]: ");
-    fflush(stdout);
-    switch (getchar()) {
-    case 'q':
-      resume_console();
-      nemu_exit();
-      break;
-    default:
-      break;
-    }
-  }
-}
-
 static bool xlnx_ulite_update_irq() {
   int n = nchars_stdin();
   if (n <= 0) return false;
@@ -151,7 +135,6 @@ static bool xlnx_ulite_update_irq() {
   char *data = malloc(n);
   read_s(0, data, n);
   for (int i = 0; i < n; i++) {
-    check_ctrl_x_commands(data[i]);
     xlnx_ulite_enqueue(data[i]);
   }
   free(data);
@@ -182,8 +165,8 @@ static void xlnx_ulite_init() {
   fifo_init(ulite_q);
 
 #if CONFIG_INTR
-  signal(SIGINT, ulite_ctrl_code_handler);
-  signal(SIGTSTP, ulite_ctrl_code_handler);
+  // signal(SIGINT, ulite_ctrl_code_handler);
+  // signal(SIGTSTP, ulite_ctrl_code_handler);
 #endif
 }
 

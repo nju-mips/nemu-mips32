@@ -61,3 +61,19 @@ void napi_dump_states() {
 uint32_t napi_get_gpr(int i) { return cpu.gpr[i]; }
 
 void napi_set_gpr(int i, uint32_t val) { cpu.gpr[i] = val; }
+
+extern unsigned woop_log_cycles_st;
+extern unsigned woop_log_cycles_ed;
+extern bool woop_enable_bug;
+
+unsigned napi_get_woop_log_cycles_st() {
+  return woop_log_cycles_st;
+}
+
+unsigned napi_get_woop_log_cycles_ed() {
+  return woop_log_cycles_ed;
+}
+
+bool napi_get_woop_enable_bug_flag() {
+  return woop_enable_bug;
+}

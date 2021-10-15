@@ -17,6 +17,10 @@ const char *boot_cmdline = "";
 static char *img_file = NULL;
 // static char *kernel_img = NULL;
 
+unsigned woop_log_cycles_st = 0;
+unsigned woop_log_cycles_ed = 0;
+bool woop_enable_bug = false;
+
 vaddr_t elf_entry = CPU_INIT_PC;
 work_mode_t work_mode = MODE_GDB;
 
@@ -100,6 +104,9 @@ enum {
   OPT_DIFF_TEST,
   OPT_BOOT_CMDLINE,
   OPT_PRINT_DEVICES,
+  OPT_LOG_CYCLES_BEGIN,
+  OPT_LOG_CYCLES_END,
+  OPT_ENABLE_BUG,
 };
 
 const struct option long_options[] = {
@@ -117,6 +124,9 @@ const struct option long_options[] = {
     {"diff-test", 0, NULL, OPT_DIFF_TEST},
     {"cmdline", 1, NULL, OPT_BOOT_CMDLINE},
     {"print-devices", 0, NULL, OPT_PRINT_DEVICES},
+    {"log-cycles-begin", 1, NULL, OPT_LOG_CYCLES_BEGIN},
+    {"log-cycles-end", 1, NULL, OPT_LOG_CYCLES_END},
+    {"enable-bug", 0, NULL, OPT_ENABLE_BUG},
     {NULL, 0, NULL, 0},
 };
 
@@ -279,6 +289,15 @@ void parse_args(int argc, char *argv[]) {
             dev->update_irq ? "+Uirq" : "");
       }
       exit(0);
+      break;
+    case OPT_LOG_CYCLES_BEGIN:
+      woop_log_cycles_st = strtol(optarg, NULL, 10);
+      break;
+    case OPT_LOG_CYCLES_END:
+      woop_log_cycles_ed = strtol(optarg, NULL, 10);
+      break;
+    case OPT_ENABLE_BUG:
+      woop_enable_bug = true;
       break;
     case 'h':
     default: print_help(argv[0]); exit(0);
