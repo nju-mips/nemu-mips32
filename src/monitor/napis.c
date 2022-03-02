@@ -24,6 +24,10 @@ void napi_init(int argc, const char *argv[]) {
 
 void napi_exec(uint64_t n) { cpu_exec(n); }
 
+bool napi_cpu_is_end() {
+  return nemu_state == NEMU_END;
+}
+
 uint32_t napi_mmio_peek(uint32_t paddr, int len) {
   return paddr_peek(paddr, len);
 }
@@ -61,3 +65,11 @@ void napi_dump_states() {
 uint32_t napi_get_gpr(int i) { return cpu.gpr[i]; }
 
 void napi_set_gpr(int i, uint32_t val) { cpu.gpr[i] = val; }
+
+static int napi_ulite_data = -1;
+void napi_ulite_set_data(int data) {
+  napi_ulite_data = data;
+}
+int napi_ulite_get_data() {
+  return napi_ulite_data;
+}

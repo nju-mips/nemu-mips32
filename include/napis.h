@@ -16,5 +16,10 @@ void napi_set_irq(int irqno, bool val);
 void napi_dump_states();
 uint32_t napi_get_gpr(int i);
 void napi_set_gpr(int i, uint32_t val);
+bool napi_cpu_is_end();
+
+void napi_ulite_set_data(int data);
+int napi_ulite_get_data();
+void napi_stop_cpu_when_ulite_send(const char *data);
 
 #endif

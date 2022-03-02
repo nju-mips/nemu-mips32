@@ -2,6 +2,7 @@
 #include <stdbool.h>
 
 #include "device.h"
+#include "napis.h"
 #include "utils/console.h"
 #include "utils/fifo.h"
 #include "utils/file.h"
@@ -54,17 +55,19 @@ void stop_cpu_when_ulite_send(const char *string) {
   xlnx_ulite_stop_string_ptr = string;
 }
 
+void napi_stop_cpu_when_ulite_send(const char *data) {
+  stop_cpu_when_ulite_send(data);
+}
+
 static void stop_cpu_check(char ch) {
   if (!xlnx_ulite_stop_string_ptr) return;
 
   if (*xlnx_ulite_stop_string_ptr == ch) {
     xlnx_ulite_stop_string_ptr++;
     if (*xlnx_ulite_stop_string_ptr == 0) {
-      eprintf("ulite recv '%s', stop the cpu\n",
-          xlnx_ulite_stop_string);
       kdbg_print_frames();
       kdbg_print_backtraces();
-      nemu_state = NEMU_STOP;
+      nemu_state = NEMU_END;
     }
   } else {
     xlnx_ulite_stop_string_ptr = xlnx_ulite_stop_string;
@@ -107,6 +110,7 @@ static void xlnx_ulite_write(
   switch (addr) {
   case Tx:
     putchar((char)data);
+    napi_ulite_set_data((char)data);
     stop_cpu_check(data);
     fflush(stdout);
     if ((char)data == '\n') {
@@ -138,8 +142,7 @@ static void check_ctrl_x_commands(char ch) {
       resume_console();
       nemu_exit();
       break;
-    default:
-      break;
+    default: break;
     }
   }
 }
@@ -182,8 +185,8 @@ static void xlnx_ulite_init() {
   fifo_init(ulite_q);
 
 #if CONFIG_INTR
-  signal(SIGINT, ulite_ctrl_code_handler);
-  signal(SIGTSTP, ulite_ctrl_code_handler);
+  // signal(SIGINT, ulite_ctrl_code_handler);
+  // signal(SIGTSTP, ulite_ctrl_code_handler);
 #endif
 }
 

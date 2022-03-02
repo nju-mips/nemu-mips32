@@ -15,6 +15,7 @@ const char *elf_file = NULL;
 const char *symbol_file = NULL;
 const char *boot_cmdline = "";
 static char *img_file = NULL;
+bool print_ninstr_flag = false;
 // static char *kernel_img = NULL;
 
 vaddr_t elf_entry = CPU_INIT_PC;
@@ -100,6 +101,7 @@ enum {
   OPT_DIFF_TEST,
   OPT_BOOT_CMDLINE,
   OPT_PRINT_DEVICES,
+  OPT_PRINT_NINSTRS,
 };
 
 const struct option long_options[] = {
@@ -117,6 +119,7 @@ const struct option long_options[] = {
     {"diff-test", 0, NULL, OPT_DIFF_TEST},
     {"cmdline", 1, NULL, OPT_BOOT_CMDLINE},
     {"print-devices", 0, NULL, OPT_PRINT_DEVICES},
+    {"print-ninstrs", 0, NULL, OPT_PRINT_NINSTRS},
     {NULL, 0, NULL, 0},
 };
 
@@ -279,6 +282,9 @@ void parse_args(int argc, char *argv[]) {
             dev->update_irq ? "+Uirq" : "");
       }
       exit(0);
+      break;
+    case OPT_PRINT_NINSTRS:
+      print_ninstr_flag = true;
       break;
     case 'h':
     default: print_help(argv[0]); exit(0);

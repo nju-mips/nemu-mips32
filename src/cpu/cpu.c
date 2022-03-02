@@ -268,6 +268,7 @@ static ALWAYS_INLINE void check_intrs() {
 #endif
 
 void nemu_epilogue() {
+  return;
 #if CONFIG_MMU_CACHE_PERF
   printf("mmu_cache: %lu/%lu = %lf\n", mmu_cache_hit,
       mmu_cache_hit + mmu_cache_miss,
@@ -471,6 +472,9 @@ void cpu_exec(uint64_t n) {
 
     ON_CONFIG(INSTR_LOG, instr_enqueue_pc(cpu.pc));
     ON_CONFIG(ELF_PERF, elfperf_record(cpu.pc));
+
+    extern uint32_t nemu_ninstr;
+    nemu_ninstr ++;
 
 #if CONFIG_EXCEPTION
     if ((cpu.pc & 0x3) != 0) {

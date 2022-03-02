@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "monitor.h"
@@ -10,6 +11,8 @@ int init_monitor(void);
 void gdb_mainloop();
 void difftest();
 void cpu_exec(uint64_t);
+extern bool print_ninstr_flag;
+uint32_t nemu_ninstr = 0;
 
 int main(int argc, char *argv[]) {
   parse_args(argc, argv);
@@ -23,6 +26,8 @@ int main(int argc, char *argv[]) {
       difftest();
     } else {
       cpu_exec(-1);
+      if (print_ninstr_flag)
+        printf("\nNEMU: %u\n", nemu_ninstr);
       nemu_exit(0);
     }
   } else {
