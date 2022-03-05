@@ -87,13 +87,17 @@ void init_scr_wh(int *w, int *h) {
 }
 
 void init_console() {
+#if 0
   wrap_get_term_attr(&raw_termio);
   disable_buffer();
   echo_off();
+#endif
 }
 
 void resume_console() {
+#if 0
   echo_on();
   enable_buffer();
   wrap_set_term_attr(&raw_termio);
+#endif
 }
