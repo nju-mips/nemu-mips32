@@ -1,0 +1,62 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# This is a configure for nemu-mips32
+#
+# CONFIG_MARCH_BENCH is not set
+# CONFIG_MARCH_MIPS32_R1 is not set
+CONFIG_MARCH_NOOP=y
+
+#
+# NEMU-MIPS32 features
+#
+CONFIG_DELAYSLOT=y
+CONFIG_PAGING=y
+CONFIG_EXCEPTION=y
+CONFIG_CMDLINE_ADDR=0xbfc10000
+# CONFIG_MMU_CACHE is not set
+# CONFIG_DECODE_CACHE is not set
+# end of NEMU-MIPS32 features
+
+#
+# NEMU-MIPS32 debug options
+#
+# CONFIG_INSTR_PERF is not set
+# CONFIG_MMU_CACHE_PERF is not set
+# CONFIG_DECODE_CACHE_PERF is not set
+# CONFIG_ELF_PERF is not set
+# CONFIG_DIFF_WITH_QEMU is not set
+CONFIG_INSTR_LOG=y
+# CONFIG_FUNCTION_TRACE_LOG is not set
+# end of NEMU-MIPS32 debug options
+
+#
+# Kernel debug options
+#
+CONFIG_KERNEL_DEBUG_SERIAL=y
+# CONFIG_CHECK_IMAGE is not set
+CONFIG_WARN_PC_EQUALS_ZERO=y
+# CONFIG_DUMP_SYSCALL is not set
+# end of Kernel debug options
+
+#
+# Device simulation
+#
+# CONFIG_GRAPHICS is not set
+CONFIG_BRAM=y
+CONFIG_BRAM_BASE=0x1fc00000
+CONFIG_DDR=y
+CONFIG_DDR_BASE=0x00000000
+CONFIG_NEMU_TRAP=y
+CONFIG_NEMU_TRAP_BASE=0x10000000
+# CONFIG_NEMU_KEYBOARD is not set
+# CONFIG_NEMU_PMU is not set
+CONFIG_NEMU_CLOCK=y
+CONFIG_NEMU_CLOCK_BASE=0x10002000
+# CONFIG_NEMU_DISK is not set
+CONFIG_NEMU_DISK_BASE=0x1fe97000
+CONFIG_XLNX_ULITE=y
+CONFIG_XLNX_ULITE_BASE=0x1fe50000
+CONFIG_XLNX_SPI=y
+CONFIG_XLNX_SPI_BASE=0x1fe80000
+# CONFIG_NETWORK is not set
+# end of Device simulation
